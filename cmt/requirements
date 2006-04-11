@@ -1,0 +1,33 @@
+package MuonSpectrometer/MuonDetDescr/MuonTrackingGeometry
+
+author Sarka Todorova, <Sarka.Todorova@cern.ch>
+manager Sarka Todorova, <Sarka.Todorova@cern.ch>
+
+
+use AtlasPolicy         AtlasPolicy-01-*
+use GaudiInterface      GaudiInterface-01-*   External
+use AtlasCLHEP          AtlasCLHEP-00-*       External
+use StoreGate           StoreGate-02-*        Control
+
+use BFieldAth		  BFieldAth-*	             MagneticField 
+
+use TrkDetDescrInterfaces  TrkDetDescrInterfaces-*    Tracking/TrkDetDescr
+use TrkDetDescrUtils       TrkDetDescrUtils-*         Tracking/TrkDetDescr
+use TrkExInterfaces        TrkExInterfaces-*          Tracking/TrkExtrapolation
+use TrkGeometry            TrkGeometry-00-*           Tracking/TrkDetDescr
+use TrkVolumes             TrkVolumes-00-*            Tracking/TrkDetDescr
+use TrkExUtils             TrkExUtils-01-*            Tracking/TrkExtrapolation
+use TrkMagFieldTools       TrkMagFieldTools-00-*      Tracking/TrkMagneticField      
+use TrkMagFieldUtils       TrkMagFieldUtils-00-*      Tracking/TrkMagneticField      
+
+library MuonTrackingGeometry *.cxx components/*.cxx
+apply_pattern component_library
+apply_pattern declare_joboptions files="*.py"
+apply_pattern declare_non_standard_include name=doc
+
+private
+#macro cppdebugflags '$(cppdebugflags_s)'
+#macro_remove componentshr_linkopts "-Wl,-s"
+
+macro DOXYGEN_IMAGE_PATH "../doc/images"
+macro DOXYGEN_INLINE_INHERITED_MEMB "YES"

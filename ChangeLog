@@ -1,0 +1,26 @@
+
+13/02/2006 version 00-00-01 /S.T./
+
+	returns closed tracking geometry in 2 versions
+	a/ "MuonSimple = True" single global volume (analog to worldVolume)
+	b/ "MuonSimple = False" mimics MuonEnvelope with cut out for cavern description
+	                                
+	consists of : muonBarrel      [rmin=4300; rmax=13000;  -6740<z<+6740 ]
+                     +muonInnerEndcap [rmin=  70; rmax=13000;   6740<z<+12900 ]     
+                     -muonInnerEndcap [rmin=  70; rmax=13000;  -6740>z>-12900 ]     
+	             +muonOuterEndcap [rmin=  70; rmax=12500;  12900<z<+22030 ]
+ 	             -muonOuterEndcap [rmin=  70; rmax=12500; -12900>z>-22030 ] 
+
+	additional volumes necessary to close the geometry:
+
+	   beamPipe [rmax=70; -22030> z > 22030] 
+	   other    [rmin=70; rmax=4300;  -6740<z<+6740 ]   supplies ID+Calo
+	 +-cavern   [rmin=12500;rmax=13000; as outerEndCap ]  to fill the cutout
+
+       Envelope volumes:
+	   barrel = muonBarrel + other 
+	   outerEndcap = muonOuterEndcap + cavern
+	   detector = barrel + muonInnerEndcap + outerEndcap
+	   globalVolume = detector + beamPipe
+
+---------------------------------------------------------------------------------	

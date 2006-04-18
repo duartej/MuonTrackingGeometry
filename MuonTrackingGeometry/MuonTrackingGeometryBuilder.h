@@ -65,7 +65,7 @@ namespace Muon {
       /** AlgTool finalize method */
       StatusCode finalize();
       /** TrackingGeometry Interface methode */
-      const Trk::TrackingGeometry* trackingGeometry(const Trk::VolumeBounds* volbo = 0) const; 
+      const Trk::TrackingGeometry* trackingGeometry(const Trk::TrackingVolume* tvol = 0, std::vector<const Trk::TrackingVolume*>* gluevol=0) const; 
 
     private:
       /** Private method to fill default material */

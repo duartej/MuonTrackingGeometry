@@ -18,8 +18,6 @@
 #include "TrkVolumes/CylinderVolumeBounds.h"
 #include "TrkVolumes/CuboidVolumeBounds.h"
 #include "TrkVolumes/BoundarySurface.h"
-#include "TrkSurfaces/DiscBounds.h"
-#include "TrkSurfaces/RectangleBounds.h"
 #include "TrkGeometry/CylinderLayer.h"
 #include "TrkGeometry/DiscLayer.h"
 #include "TrkGeometry/PlaneLayer.h"
@@ -36,8 +34,6 @@
 
 // BField
 #include "BFieldAth/MagFieldAthena.h"
-// temporary
-#include "TrkParameters/Perigee.h"
 
 //CLHEP
 #include "CLHEP/Units/SystemOfUnits.h"
@@ -126,7 +122,7 @@ StatusCode Muon::MuonTrackingGeometryBuilder::initialize()
 }
 
 
-const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry(const Trk::VolumeBounds* volbo) const
+const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry(const Trk::TrackingVolume* tvol, std::vector<const Trk::TrackingVolume*>* gluevol) const
 {
 
     MsgStream log( msgSvc(), name() );
@@ -165,6 +161,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    }     
 
     log << MSG::INFO  << name() <<" barrel+innerEndcap+outerEndcap" << endreq;    
+// if input, redefine dimensions
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MuonSpectrometer contains:
@@ -236,7 +233,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
                                                      0,0,
 						     "MuonNegativeOuterEndcap");
    positiveOuterEndcapBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
-                                                             m_outerBarrelRadius,
+                                                             m_outerEndcapRadius,
                                                              outerEndcapZHalfSize);
    Hep3Vector posOuterEndcapPosition(0.,0., m_innerEndcapZ+outerEndcapZHalfSize);
    positiveMuonOuterEndcap = new Trk::TrackingVolume(new HepTransform3D(Trk::s_idRotation,posOuterEndcapPosition),
@@ -314,6 +311,21 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    posOuterEndcapNavVolumes.push_back(posCavern);
    Trk::BinnedArray<Trk::TrackingVolume>* posOuterEndcapNavArray =
    m_trackingVolumeArrayCreator->cylinderVolumesArrayInR(posOuterEndcapNavVolumes, true);
+// glue volumes/volume arrays in Z
+// endcaps
+   Trk::IGeometryBuilder::setOutsideVolume(*negativeMuonOuterEndcap,Trk::positiveFaceXY,negativeMuonInnerEndcap);
+   Trk::IGeometryBuilder::setOutsideVolume(*negCavern,Trk::positiveFaceXY,negativeMuonInnerEndcap);
+   Trk::IGeometryBuilder::setOutsideVolumeArray(*negativeMuonInnerEndcap,Trk::negativeFaceXY,negOuterEndcapNavArray);
+   Trk::IGeometryBuilder::setOutsideVolumeArray(*positiveMuonInnerEndcap,Trk::positiveFaceXY,posOuterEndcapNavArray);
+   Trk::IGeometryBuilder::setOutsideVolume(*positiveMuonOuterEndcap,Trk::negativeFaceXY,positiveMuonInnerEndcap);
+   Trk::IGeometryBuilder::setOutsideVolume(*posCavern,Trk::negativeFaceXY,positiveMuonInnerEndcap);
+// barrel glued to endcap
+   Trk::IGeometryBuilder::setOutsideVolume(*other,Trk::negativeFaceXY,negativeMuonInnerEndcap);
+   Trk::IGeometryBuilder::setOutsideVolume(*other,Trk::positiveFaceXY,positiveMuonInnerEndcap);
+   Trk::IGeometryBuilder::setOutsideVolume(*muonBarrel,Trk::negativeFaceXY,negativeMuonInnerEndcap);
+   Trk::IGeometryBuilder::setOutsideVolume(*muonBarrel,Trk::positiveFaceXY,positiveMuonInnerEndcap);
+   Trk::IGeometryBuilder::setOutsideVolumeArray(*negativeMuonInnerEndcap,Trk::positiveFaceXY,barrelNavArray);
+   Trk::IGeometryBuilder::setOutsideVolumeArray(*positiveMuonInnerEndcap,Trk::negativeFaceXY,barrelNavArray);
 // define enveloping volumes
    barrelBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
                                                 m_outerBarrelRadius,
@@ -344,16 +356,6 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
                                            0,posOuterEndcapNavArray, 
                                            "PositiveOuterEndcap");
     log << MSG::INFO  << name() <<" enveloping volumes ok " << endreq;    
-// glue detector volumes in Z
-   IGeometryBuilder::glueVolumes(*posOuterEndcap         , Trk::negativeFaceXY,
-                                 *positiveMuonInnerEndcap, Trk::positiveFaceXY);
-   IGeometryBuilder::glueVolumes(*positiveMuonInnerEndcap, Trk::negativeFaceXY,
-                                 *barrel                 , Trk::positiveFaceXY);
-   IGeometryBuilder::glueVolumes(*barrel                 , Trk::negativeFaceXY,
-                                 *negativeMuonInnerEndcap, Trk::positiveFaceXY);
-   IGeometryBuilder::glueVolumes(*negativeMuonInnerEndcap, Trk::negativeFaceXY,
-                                 *negOuterEndcap         , Trk::positiveFaceXY);
-    log << MSG::INFO  << name() <<" gluing in Z ok " << endreq;    
 // create volume array and envelope
    std::vector<const Trk::TrackingVolume*> detectorNavVolumes;
    detectorNavVolumes.push_back(negOuterEndcap);
@@ -374,9 +376,22 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
                                                              "Detector");
     log << MSG::INFO  << name() <<" detector envelope created " << endreq;    
 // finally, glue detectors with beam pipe
-   Trk::IGeometryBuilder::glueVolumes(*detector, Trk::tubeInnerCover,
-                                      *beamPipe, Trk::cylinderCover);
-    log << MSG::INFO  << name() <<" and glued to beam pipe " << endreq;    
+   std::vector<const Trk::TrackingVolume*> detectorGlueVolumes;
+   detectorGlueVolumes.push_back(negativeMuonOuterEndcap);
+   detectorGlueVolumes.push_back(negativeMuonInnerEndcap);
+   detectorGlueVolumes.push_back(other);
+   detectorGlueVolumes.push_back(positiveMuonInnerEndcap);
+   detectorGlueVolumes.push_back(positiveMuonOuterEndcap);
+   Trk::BinnedArray<Trk::TrackingVolume>* detectorGlueArray =
+   m_trackingVolumeArrayCreator->cylinderVolumesArrayInZ(detectorGlueVolumes, true);
+   Trk::IGeometryBuilder::setOutsideVolumeArray(*beamPipe, Trk::tubeOuterCover,
+                                                 detectorGlueArray);
+   Trk::IGeometryBuilder::setInsideVolume(*negativeMuonOuterEndcap, Trk::tubeInnerCover,beamPipe);
+   Trk::IGeometryBuilder::setInsideVolume(*negativeMuonInnerEndcap, Trk::tubeInnerCover,beamPipe);
+   Trk::IGeometryBuilder::setInsideVolume(*other, Trk::tubeInnerCover,beamPipe);
+   Trk::IGeometryBuilder::setInsideVolume(*positiveMuonInnerEndcap, Trk::tubeInnerCover,beamPipe);
+   Trk::IGeometryBuilder::setInsideVolume(*positiveMuonOuterEndcap, Trk::tubeInnerCover,beamPipe);
+   log << MSG::INFO  << name() <<"volumes glued to beam pipe " << endreq;    
 //
    std::vector<const Trk::TrackingVolume*>  globalNavVolumes;
    globalNavVolumes.push_back(beamPipe);

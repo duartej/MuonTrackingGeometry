@@ -9,6 +9,6 @@ DECLARE_TOOL_FACTORY( MuonTrackingGeometryBuilder )
 DECLARE_FACTORY_ENTRIES( MuonTrackingGeometry )
 {
     DECLARE_TOOL( MuonTrackingGeometryBuilder )  
-};
+}
 
 

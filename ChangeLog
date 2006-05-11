@@ -1,4 +1,9 @@
-
+2006/05/11 Sarka Todorova <sarka.todorova@cern.ch>
+        * first attempt to close the global tracking geometry
+	* using up-to-date gluing tools
+	* tagged MuonTrackingGeometry-00-00-05
+	* intermediate versions concerned bux fixing and modified interface (obsolete) 
+	
 13/02/2006 version 00-00-01 /S.T./
 
 	returns closed tracking geometry in 2 versions

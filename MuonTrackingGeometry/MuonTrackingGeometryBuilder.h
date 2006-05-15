@@ -11,6 +11,7 @@
 #include "TrkGeometry/MaterialProperties.h"
 // Gaudi
 #include "GaudiKernel/AlgTool.h"
+#include "MuonTrackingGeometry/MuonStationBuilder.h"
 
 namespace Trk {
  class TrackingGeometry;
@@ -65,6 +66,10 @@ namespace Muon {
       std::string                         m_layerArrayCreatorName;        //!< Name of the LayerCreator implementation
       std::string                         m_layerArrayCreatorInstanceName;//!< Instance Name of the Layer Creator
       */
+
+      Trk::IDetachedTrackingVolumeBuilder*      m_stationBuilder;            //!< A Tool for station type creation
+      std::string                         m_stationBuilderName;        //!< Name of the station type implementation
+      std::string                         m_stationBuilderInstanceName;//!< Instance Name of the station type builder
       
       Trk::ITrackingVolumeArrayCreator*   m_trackingVolumeArrayCreator;             //!< Helper Tool to create TrackingVolume Arrays
       std::string                         m_trackingVolumeArrayCreatorName;         //!< Name of the helper tool

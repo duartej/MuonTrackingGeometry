@@ -200,7 +200,6 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
      const Trk::TrackingVolume* posBeamPipe = 0;
      Trk::CylinderVolumeBounds* negBeamPipeBounds = 0;
      Trk::CylinderVolumeBounds* posBeamPipeBounds = 0;
-     const Trk::TrackingVolume* enclosed = 0;
      Trk::CylinderVolumeBounds* enclosedBounds = 0;
      const Trk::TrackingVolume* negCavern = 0;
      const Trk::TrackingVolume* posCavern = 0;
@@ -421,7 +420,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    negBPVol.push_back(negativeMuonInnerEndcap);
    Trk::BinnedArray<Trk::TrackingVolume>* negBPGlueArray =
    m_trackingVolumeArrayCreator->cylinderVolumesArrayInZ(negBPVol, true);
-   m_trackingVolumeHelper->setOutsideTrackingVolumeArray(*negBeamPipe, Trk::tubeOuterCover,
+   m_trackingVolumeHelper->setOutsideTrackingVolumeArray(*negBeamPipe, Trk::cylinderCover,
                                                  negBPGlueArray);
    m_trackingVolumeHelper->setInsideTrackingVolume(*negativeMuonOuterEndcap, Trk::tubeInnerCover,negBeamPipe);
    m_trackingVolumeHelper->setInsideTrackingVolume(*negativeMuonInnerEndcap, Trk::tubeInnerCover,negBeamPipe);
@@ -430,7 +429,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    posBPVol.push_back(positiveMuonOuterEndcap);
    Trk::BinnedArray<Trk::TrackingVolume>* posBPGlueArray =
    m_trackingVolumeArrayCreator->cylinderVolumesArrayInZ(posBPVol, true);
-   m_trackingVolumeHelper->setOutsideTrackingVolumeArray(*posBeamPipe, Trk::tubeOuterCover,
+   m_trackingVolumeHelper->setOutsideTrackingVolumeArray(*posBeamPipe, Trk::cylinderCover,
                                                  posBPGlueArray);
    m_trackingVolumeHelper->setInsideTrackingVolume(*positiveMuonOuterEndcap, Trk::tubeInnerCover,posBeamPipe);
    m_trackingVolumeHelper->setInsideTrackingVolume(*positiveMuonInnerEndcap, Trk::tubeInnerCover,posBeamPipe);

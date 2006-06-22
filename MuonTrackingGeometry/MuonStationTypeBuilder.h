@@ -12,6 +12,7 @@
 #include "TrkGeometry/MaterialProperties.h"
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkDetDescrUtils/SharedObject.h"
+#include "TrkDetDescrGeoModelCnv/GeoMaterialConverter.h"
 // Gaudi
 #include "GaudiKernel/AlgTool.h"
 #include "GeoModelKernel/GeoVPhysVol.h"
@@ -34,6 +35,7 @@ namespace Trk {
  class IMagneticFieldTool;
  class CuboidVolumeBounds;
  class TrapezoidVolumeBounds;
+ class DoubleTrapezoidVolumeBounds;
  class PlaneLayer;   
 }
 
@@ -70,16 +72,22 @@ namespace Muon {
       const Trk::TrackingVolumeArray* processBoxStationComponents(const GeoVPhysVol* cv, Trk::CuboidVolumeBounds* envBounds) const; 
       const Trk::TrackingVolumeArray* processTrdStationComponents(const GeoVPhysVol* cv, Trk::TrapezoidVolumeBounds* envBounds) const; 
       const Trk::TrackingVolume* processCscStation(const GeoVPhysVol* cv, std::string name) const; 
+      std::vector<const Trk::TrackingVolume*> processTgcStation(const GeoVPhysVol* cv) const; 
       /** components */
       const Trk::TrackingVolume* processMdtBox(Trk::Volume*&,const GeoVPhysVol*&, HepTransform3D*&) const;
       const Trk::TrackingVolume* processMdtTrd(Trk::Volume*&,const GeoVPhysVol*&, HepTransform3D*&) const;
       const Trk::TrackingVolume* processRpc(Trk::Volume*&,std::vector<const GeoVPhysVol*>,std::vector<HepTransform3D*>) const;
       const Trk::TrackingVolume* processSpacer(Trk::Volume*&,std::vector<const GeoVPhysVol*>,std::vector<HepTransform3D*>) const;
+      const Trk::LayerArray* processCSCTrdComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, HepTransform3D*&) const;
+      const Trk::LayerArray* processCSCDiamondComponent(const GeoVPhysVol*&, Trk::DoubleTrapezoidVolumeBounds*&, HepTransform3D*&) const;
+      const Trk::LayerArray* processTGCComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, HepTransform3D*&) const;
       const Trk::MaterialProperties getLayerMaterial(std::string mat, double thickness) const;
-      const Trk::MaterialProperties processLayerMaterial(const GeoMaterial* mat, double thickness) const;
-    private:
+   
       const void printChildren(const GeoVPhysVol*) const ;
+  private:
       const double get_x_size(const GeoVPhysVol*) const ;
+      const Trk::MaterialProperties* getAveragedLayerMaterial(const GeoVPhysVol*,double,double) const;
+      Trk::MaterialProperties collectMaterial(const GeoVPhysVol*,Trk::MaterialProperties ,double) const;
       /** Private method to fill default material */
       //void fillDefaultServiceMaterial();
 
@@ -94,6 +102,17 @@ namespace Muon {
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
       Trk::MagneticFieldProperties        m_muonMagneticField;          //!< the magnetic Field
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
+      mutable Trk::MaterialProperties*    m_mdtTubeMat;                  //
+      mutable Trk::MaterialProperties*    m_mdtFoamMat;                  //
+      mutable Trk::MaterialProperties*    m_rpc46;                  //
+      mutable Trk::MaterialProperties*    m_rpcDed50;                  //
+      mutable Trk::MaterialProperties*    m_matCSC01;                  //
+      mutable Trk::MaterialProperties*    m_matCSCspacer1;                  //
+      mutable Trk::MaterialProperties*    m_matCSC02;                  //
+      mutable Trk::MaterialProperties*    m_matCSCspacer2;                  //
+      mutable Trk::MaterialProperties*    m_matTGC01;                  //
+      mutable Trk::MaterialProperties*    m_matTGC06;                  //
+      Trk::GeoMaterialConverter*          m_materialConverter;
 
     };
 

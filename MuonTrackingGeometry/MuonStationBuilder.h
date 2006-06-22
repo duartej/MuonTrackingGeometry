@@ -24,6 +24,7 @@ namespace Trk {
  class Layer;
  class ITrackingVolumeBuilder;
  class ITrackingVolumeArrayCreator;
+ class ITrackingVolumeHelper;
  class ILayerBuilder;
  class ILayerArrayCreator;
  class IMagneticFieldTool;
@@ -41,6 +42,7 @@ namespace Muon {
   /** @class MuonStationBuilder
   
       The Muon::MuonStationBuilder retrieves muon stations from Muon Geometry Tree
+      prototypes built with help of Muon::MuonStationTypeBuilder
       
       by Sarka.Todorova@cern.ch
     */
@@ -62,17 +64,28 @@ namespace Muon {
 
     private:
 
+      void glueComponents(const Trk::DetachedTrackingVolume* ) const;    
+ 
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
       Muon::MuonStationTypeBuilder*       m_muonStationTypeBuilder;             //!< Helper Tool to create TrackingVolume Arrays
       std::string                         m_muonStationTypeBuilderName;         //!< Name of the helper tool
       std::string                         m_muonStationTypeBuilderInstanceName; //!< Instance of the helper tool
+
+      Trk::ITrackingVolumeHelper*         m_trackingVolumeHelper;             //!< Helper Tool to create TrackingVolumes
+      std::string                         m_trackingVolumeHelperName;         //!< Name of the helper tool
+      std::string                         m_trackingVolumeHelperInstanceName; //!< Instance of the helper tool
+
       Trk::IMagneticFieldTool*            m_magFieldTool;                //!< Tracking Interface to Magnetic Field
       std::string                         m_magFieldToolName;            //!< Name of the Tracking Magnetic Field Svc
       std::string                         m_magFieldToolInstanceName;    //!< Instance Name of Tracking Magnetic Field Svc
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
       Trk::MagneticFieldProperties        m_muonMagneticField;          //!< the magnetic Field
+      bool                                m_buildBarrel;
+      bool                                m_buildEndcap;
+      bool                                m_buildCsc;
+      bool                                m_buildTgc;  
     };
 
 

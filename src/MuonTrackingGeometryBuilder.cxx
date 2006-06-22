@@ -54,6 +54,9 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_stationBuilder(0),
   m_stationBuilderName("Muon::MuonStationBuilder"),
   m_stationBuilderInstanceName("MuonStationBuilder"),
+  m_inertBuilder(0),
+  m_inertBuilderName("Muon::MuonInertMaterialBuilder"),
+  m_inertBuilderInstanceName("MuonInertMaterialBuilder"),
   m_trackingVolumeArrayCreator(0),
   m_trackingVolumeArrayCreatorName("Trk::TrackingVolumeArrayCreator"),
   m_trackingVolumeArrayCreatorInstanceName("TrackingVolumeArrayCreator"),
@@ -64,23 +67,25 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_trackingVolumeDisplayerName("Trk::TrackingVolumeDisplayer"),
   m_trackingVolumeDisplayerInstanceName("TrackingVolumeDisplayer"),
   m_muonSimple(false),
-  m_enclosingVolumes(true),
+  m_muonActive(false),
+  m_muonInert(false),
   m_innerBarrelRadius(4300.),
   m_outerBarrelRadius(13000.),
   m_barrelZ(6740.),
   m_innerEndcapZ(12900.),
-  m_outerEndcapZ(22030.),
+  //m_outerEndcapZ(22030.),
+  m_outerEndcapZ(25000.),
   m_beamPipeRadius(70.),
   m_outerEndcapRadius(12500.)
 {
   declareInterface<Trk::IGeometryBuilder>(this);
 
   declareProperty("SimpleMuonGeometry",               m_muonSimple);  
+  declareProperty("BuildActiveMaterial",              m_muonActive);  
+  declareProperty("BuildInertMaterial",               m_muonInert);  
   declareProperty("MagneticFieldTool",                m_magFieldToolName);  
   declareProperty("MagneticFieldTool",                m_magFieldToolName);  
   declareProperty("MagneticFieldToolInstance",        m_magFieldToolInstanceName);
-  //declareProperty("LayerArrayCreator",                m_layerArrayCreatorName);
-  //declareProperty("LayerArrayCreatorInstance",        m_layerArrayCreatorInstanceName); 
   // the overall dimensions
   declareProperty("InnerBarrelRadius",              m_innerBarrelRadius);
   declareProperty("OuterBarrelRadius",              m_outerBarrelRadius);
@@ -122,21 +127,23 @@ StatusCode Muon::MuonTrackingGeometryBuilder::initialize()
       log <<" Creation of Gap Volumes will fail." << endreq;
     }
 
-    s = toolSvc()->retrieveTool(m_stationBuilderName, m_stationBuilderInstanceName, m_stationBuilder);
-    if (s.isFailure())
-    {
-      log << MSG::ERROR << "Could not retrieve " << m_stationBuilderName << " from ToolSvc. ";
-      log <<" Creation of stations might fail." << endreq;
+    if (m_muonActive) { 
+      s = toolSvc()->retrieveTool(m_stationBuilderName, m_stationBuilderInstanceName, m_stationBuilder);
+      if (s.isFailure())
+      {
+        log << MSG::ERROR << "Could not retrieve " << m_stationBuilderName << " from ToolSvc. ";
+        log <<" Creation of stations might fail." << endreq;
+      }
     }
 
-    /*
-    s = toolSvc()->retrieveTool(m_layerArrayCreatorName, m_layerArrayCreatorInstanceName, m_layerArrayCreator);
-    if (s.isFailure())
-    {
-      log << MSG::ERROR << "Could not retrieve " << m_layerArrayCreatorName << " from ToolSvc. ";
-      log <<" Creation of LayerArrays might fail." << endreq;
+    if (m_muonInert) {
+      s = toolSvc()->retrieveTool(m_inertBuilderName, m_inertBuilderInstanceName, m_inertBuilder);
+      if (s.isFailure())
+      {
+        log << MSG::ERROR << "Could not retrieve " << m_inertBuilderName << " from ToolSvc. ";
+        log <<" Creation of inert material objects might fail." << endreq;
+      }
     }
-    */
 
     s = toolSvc()->retrieveTool(m_trackingVolumeArrayCreatorName, m_trackingVolumeArrayCreatorInstanceName, m_trackingVolumeArrayCreator);
     if (s.isFailure())
@@ -158,10 +165,12 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 
     log << MSG::INFO  << name() <<" building tracking geometry" << endreq;    
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-    // process stations
+    // process muon material objects
     const std::vector<const Trk::DetachedTrackingVolume*>* stations=0;
+    const std::vector<const Trk::DetachedTrackingVolume*>* inertObjs=0;
      
-    if (m_stationBuilder) stations = m_stationBuilder->buildDetachedTrackingVolumes();
+    if (m_muonActive && m_stationBuilder) stations = m_stationBuilder->buildDetachedTrackingVolumes();
+    if (m_muonInert && m_inertBuilder) inertObjs = m_inertBuilder->buildDetachedTrackingVolumes();
 
 // 0) Preparation //////////////////////////////////////////////////////////////////////////////////////
   // if no muon materials are declared, take default ones
@@ -262,13 +271,18 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    barrelBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
                                                 m_outerBarrelRadius,
                                                 m_barrelZ);
-// enclosed muon stations ? 
+// enclosed muon objects ? 
    std::vector<const Trk::DetachedTrackingVolume*>* barrelStations = 0;
    std::vector<const Trk::DetachedTrackingVolume*> barrelMS;
    const Trk::Volume barrelVol(new HepTransform3D(),barrelBounds);
    if (stations != 0) {
      for (unsigned int i=0; i< (*stations).size(); i++) {
        if ( barrelVol.inside((*stations)[i]->trackingVolume()->center(),0.) ) barrelMS.push_back((*stations)[i]);
+     } 
+   }
+   if (inertObjs != 0) {
+     for (unsigned int i=0; i< (*inertObjs).size(); i++) {
+       if ( barrelVol.inside((*inertObjs)[i]->trackingVolume()->center(),0.) ) barrelMS.push_back((*inertObjs)[i]);
      } 
    }
    if (barrelMS.size()) barrelStations= new std::vector<const Trk::DetachedTrackingVolume*>(barrelMS); 
@@ -286,12 +300,17 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    Hep3Vector negInnerEndcapPosition(0.,0.,-m_barrelZ-innerEndcapZHalfSize);
    HepTransform3D* negInnerEndcapTransf = new HepTransform3D(Trk::s_idRotation,negInnerEndcapPosition);
    const Trk::Volume negIECVol(negInnerEndcapTransf,negativeInnerEndcapBounds);
-// enclosed muon stations ? 
+// enclosed muon objects ? 
    std::vector<const Trk::DetachedTrackingVolume*>* negIECStations = 0;
    std::vector<const Trk::DetachedTrackingVolume*> negIECMS;
    if (stations != 0) {
      for (unsigned int i=0; i< (*stations).size(); i++) {
        if ( negIECVol.inside((*stations)[i]->trackingVolume()->center(),0.) ) negIECMS.push_back((*stations)[i]);
+     } 
+   }
+   if (inertObjs != 0) {
+     for (unsigned int i=0; i< (*inertObjs).size(); i++) {
+       if ( negIECVol.inside((*inertObjs)[i]->trackingVolume()->center(),0.) ) negIECMS.push_back((*inertObjs)[i]);
      } 
    }
    if (negIECMS.size()) negIECStations= new std::vector<const Trk::DetachedTrackingVolume*>(negIECMS); 
@@ -307,12 +326,17 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    Hep3Vector posInnerEndcapPosition(0.,0.,m_barrelZ+innerEndcapZHalfSize);
    HepTransform3D* posInnerEndcapTransf = new HepTransform3D(Trk::s_idRotation,posInnerEndcapPosition);
    const Trk::Volume posIECVol(posInnerEndcapTransf,positiveInnerEndcapBounds);
-// enclosed muon stations ? 
+// enclosed muon objects ? 
    std::vector<const Trk::DetachedTrackingVolume*>* posIECStations = 0;
    std::vector<const Trk::DetachedTrackingVolume*> posIECMS;
    if (stations != 0) {
      for (unsigned int i=0; i< (*stations).size(); i++) {
        if ( posIECVol.inside((*stations)[i]->trackingVolume()->center(),0.) ) posIECMS.push_back((*stations)[i]);
+     } 
+   }
+   if (inertObjs != 0) {
+     for (unsigned int i=0; i< (*inertObjs).size(); i++) {
+       if ( posIECVol.inside((*inertObjs)[i]->trackingVolume()->center(),0.) ) posIECMS.push_back((*inertObjs)[i]);
      } 
    }
    if (posIECMS.size()) posIECStations= new std::vector<const Trk::DetachedTrackingVolume*>(posIECMS); 
@@ -327,21 +351,52 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
                                                              m_outerEndcapRadius,
                                                              outerEndcapZHalfSize);
    Hep3Vector negOuterEndcapPosition(0.,0.,-m_innerEndcapZ-outerEndcapZHalfSize);
-   negativeMuonOuterEndcap = new Trk::TrackingVolume(new HepTransform3D(Trk::s_idRotation,negOuterEndcapPosition),
-						     negativeOuterEndcapBounds,
+   HepTransform3D* negOuterEndcapTransf = new HepTransform3D(Trk::s_idRotation,negOuterEndcapPosition);
+   const Trk::Volume negOECVol(negOuterEndcapTransf,negativeOuterEndcapBounds);
+// enclosed muon objects ? 
+   std::vector<const Trk::DetachedTrackingVolume*>* negOECStations = 0;
+   std::vector<const Trk::DetachedTrackingVolume*> negOECMS;
+   if (stations != 0) {
+     for (unsigned int i=0; i< (*stations).size(); i++) {
+       if ( negOECVol.inside((*stations)[i]->trackingVolume()->center(),0.) ) negOECMS.push_back((*stations)[i]);
+     } 
+   }
+   if (inertObjs != 0) {
+     for (unsigned int i=0; i< (*inertObjs).size(); i++) {
+       if ( negOECVol.inside((*inertObjs)[i]->trackingVolume()->center(),0.) ) negOECMS.push_back((*inertObjs)[i]);
+     } 
+   }
+   if (negOECMS.size()) negOECStations= new std::vector<const Trk::DetachedTrackingVolume*>(negOECMS); 
+   negativeMuonOuterEndcap = new Trk::TrackingVolume(negOECVol,
                                                      m_muonMaterial,
                                                      m_muonMagneticField,
-                                                     0,0,
+                                                     negOECStations,
 						     "Muon::Detectors::NegativeOuterEndcap");
+//
    positiveOuterEndcapBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
                                                              m_outerEndcapRadius,
                                                              outerEndcapZHalfSize);
    Hep3Vector posOuterEndcapPosition(0.,0., m_innerEndcapZ+outerEndcapZHalfSize);
-   positiveMuonOuterEndcap = new Trk::TrackingVolume(new HepTransform3D(Trk::s_idRotation,posOuterEndcapPosition),
-						     positiveOuterEndcapBounds, 
+   HepTransform3D* posOuterEndcapTransf = new HepTransform3D(Trk::s_idRotation,posOuterEndcapPosition);
+   const Trk::Volume posOECVol(posOuterEndcapTransf,positiveOuterEndcapBounds);
+// enclosed muon objects ? 
+   std::vector<const Trk::DetachedTrackingVolume*>* posOECStations = 0;
+   std::vector<const Trk::DetachedTrackingVolume*> posOECMS;
+   if (stations != 0) {
+     for (unsigned int i=0; i< (*stations).size(); i++) {
+       if ( posOECVol.inside((*stations)[i]->trackingVolume()->center(),0.) ) posOECMS.push_back((*stations)[i]);
+     } 
+   }
+   if (inertObjs != 0) {
+     for (unsigned int i=0; i< (*inertObjs).size(); i++) {
+       if ( posOECVol.inside((*inertObjs)[i]->trackingVolume()->center(),0.) ) posOECMS.push_back((*inertObjs)[i]);
+     } 
+   }
+   if (posOECMS.size()) posOECStations= new std::vector<const Trk::DetachedTrackingVolume*>(posOECMS); 
+   positiveMuonOuterEndcap = new Trk::TrackingVolume(posOECVol, 
                                                      m_muonMaterial,
                                                      m_muonMagneticField,
-                                                     0,0,
+                                                     posOECStations,
 						     "Muon::Detectors::PositiveOuterEndcap");
 // beamPipe
    negBeamPipeBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
@@ -364,9 +419,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
                                       "Muons::Gaps::PositiveBeamPipe");
 // enclosed (ID+Calo)
    if (!tvol) {
-      enclosedBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
-                                               m_innerBarrelRadius,
-                                               m_barrelZ);
+      enclosedBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
+                                                     m_barrelZ);
       tvol = new Trk::TrackingVolume(0,
                                    enclosedBounds,
                                    m_muonMaterial,
@@ -401,14 +455,14 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 // radially , create corresponding volume arrays
     if ( enclosedCentralFaceVolumes.size()== 0 ) {
        m_trackingVolumeHelper->glueTrackingVolumes(*muonBarrel, Trk::tubeInnerCover,
-                                                   *tvol, Trk::tubeOuterCover);
+                                                   *tvol, Trk::cylinderCover);
        enclosedNegativeFaceVolumes.push_back(tvol);
        enclosedNegativeFaceVolumes.push_back(muonBarrel);
        enclosedPositiveFaceVolumes.push_back(tvol);
        enclosedPositiveFaceVolumes.push_back(muonBarrel);
     } else {
        m_trackingVolumeHelper->glueTrackingVolumes(*muonBarrel, Trk::tubeInnerCover,
-				                   enclosedCentralFaceVolumes, Trk::tubeOuterCover);
+				                   enclosedCentralFaceVolumes, Trk::cylinderCover);
        enclosedNegativeFaceVolumes.push_back(muonBarrel);
        enclosedPositiveFaceVolumes.push_back(muonBarrel);
     }
@@ -455,11 +509,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    for (unsigned int i=0; i<enclosedPositiveFaceVolumes.size();i++){ 
      m_trackingVolumeHelper->setOutsideTrackingVolume(*(enclosedPositiveFaceVolumes[i]),Trk::positiveFaceXY,positiveMuonInnerEndcap);
    }
-   std::cout << "gluing barrel to endcap" << std::endl;
    m_trackingVolumeHelper->setOutsideTrackingVolumeArray(*negativeMuonInnerEndcap,Trk::positiveFaceXY,barrelNegNavArray);
-   std::cout << "neg ok" << std::endl;
    m_trackingVolumeHelper->setOutsideTrackingVolumeArray(*positiveMuonInnerEndcap,Trk::negativeFaceXY,barrelPosNavArray);
-   std::cout << "pos ok" << std::endl;
 // glue beam pipe - > at navigation level in Z
    m_trackingVolumeHelper->setOutsideTrackingVolume(*negBeamPipe,Trk::positiveFaceXY,enclosedNegativeFaceVolumes[0]);
    m_trackingVolumeHelper->setOutsideTrackingVolume(*posBeamPipe,Trk::negativeFaceXY,enclosedPositiveFaceVolumes[0]);
@@ -469,10 +520,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    negBPVol.push_back(negativeMuonInnerEndcap);
    Trk::BinnedArray<Trk::TrackingVolume>* negBPGlueArray =
    m_trackingVolumeArrayCreator->cylinderVolumesArrayInZ(negBPVol, true);
-   std::cout << "glue beam pipe " << std::endl;
    m_trackingVolumeHelper->setOutsideTrackingVolumeArray(*negBeamPipe, Trk::cylinderCover,
                                                  negBPGlueArray);
-   std::cout << "neg ok " << std::endl;
    m_trackingVolumeHelper->setInsideTrackingVolume(*negativeMuonOuterEndcap, Trk::tubeInnerCover,negBeamPipe);
    m_trackingVolumeHelper->setInsideTrackingVolume(*negativeMuonInnerEndcap, Trk::tubeInnerCover,negBeamPipe);
    std::vector<const Trk::TrackingVolume*> posBPVol;
@@ -482,7 +531,6 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    m_trackingVolumeArrayCreator->cylinderVolumesArrayInZ(posBPVol, true);
    m_trackingVolumeHelper->setOutsideTrackingVolumeArray(*posBeamPipe, Trk::cylinderCover,
                                                  posBPGlueArray);
-   std::cout << "pos ok  " << std::endl;
    m_trackingVolumeHelper->setInsideTrackingVolume(*positiveMuonOuterEndcap, Trk::tubeInnerCover,posBeamPipe);
    m_trackingVolumeHelper->setInsideTrackingVolume(*positiveMuonInnerEndcap, Trk::tubeInnerCover,posBeamPipe);
    log << MSG::INFO  << name() <<"volumes glued to beam pipe " << endreq;    

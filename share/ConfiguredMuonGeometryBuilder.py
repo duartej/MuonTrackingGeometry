@@ -17,7 +17,7 @@ from AthenaCommon.GlobalFlags import GlobalFlags
 class ConfiguredMuonGeometryBuilder :
    def __init__(self, instname         = None,  
                       magfieldtool     = None,
-                      args = None):
+                      args = 0):
                       
         #load the Dll for this
         if 'MuonTrackingGeometry' not in theApp.Dlls:
@@ -39,13 +39,9 @@ class ConfiguredMuonGeometryBuilder :
         
         # create the link to the ToolSvc name
         self.__toolname__ = 'ToolSvc.'+self.__instname__
-        self.__thisGeoBuilder__ = Service( self.__toolname__ )
-        
-        # save the volume builders
-        #self.__pixelVolumeBuilder__ = 0
-        #self.__sctVolumeBuilder__   = 0
-        #self.__trtVolumeBuilder__   = 0
-        
+        # self.__thisGeoBuilder__ = Service( self.__toolname__ )
+        self.__thisGeoBuilder = Service( self.__toolname__ )
+                
         # set the magnetic field tool with appropriate method
         self.setMagneticFieldTool(magfieldtool)
         # set the beampipe builder with the appropriate method
@@ -61,7 +57,7 @@ class ConfiguredMuonGeometryBuilder :
            
    # Set the MsgStream level      
    def msgStreamLevel(self, level):
-        self.__thisGeoBuilder__.OutputLevel = level
+        self.__thisGeoBuilder.OutputLevel = level
         
    def setMagneticFieldTool(self, magfieldtool=None) :
         # set (a default) magnetic field tool to be used by the GeometryBuilder
@@ -69,8 +65,8 @@ class ConfiguredMuonGeometryBuilder :
            include ( 'TrkMagFieldTools/ConfiguredMagneticFieldTool.py' )
            magfieldtool = ConfiguredMagneticFieldTool()
         # declare the magnetic field tool
-        self.__thisGeoBuilder__.MagneticFieldTool           = magfieldtool.name()
-        self.__thisGeoBuilder__.MagneticFieldToolInstance   = magfieldtool.instance()       
+        self.__thisGeoBuilder.MagneticFieldTool           = magfieldtool.name()
+        self.__thisGeoBuilder.MagneticFieldToolInstance   = magfieldtool.instance()       
 
           
    # Return method for service name

@@ -15,8 +15,11 @@ use TrkDetDescrInterfaces  TrkDetDescrInterfaces-*    Tracking/TrkDetDescr
 use TrkDetDescrUtils       TrkDetDescrUtils-*         Tracking/TrkDetDescr
 use TrkGeometry            TrkGeometry-00-*           Tracking/TrkDetDescr
 use TrkVolumes             TrkVolumes-00-*            Tracking/TrkDetDescr
+use TrkDetDescrGeoModelCnv TrkDetDescrGeoModelCnv-*   Tracking/TrkDetDescr
 use TrkMagFieldTools       TrkMagFieldTools-00-*      Tracking/TrkMagneticField      
 use TrkMagFieldUtils       TrkMagFieldUtils-00-*      Tracking/TrkMagneticField      
+
+use MuonGeoModel           MuonGeoModel-*             MuonSpectrometer
 
 library MuonTrackingGeometry *.cxx components/*.cxx
 apply_pattern component_library

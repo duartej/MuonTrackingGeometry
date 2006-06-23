@@ -1,3 +1,7 @@
+2006/06/23 Sarka Todorova <sarka.todorova@cern.ch>
+	* active material included 
+        * tagged MuonTrackingGeometry-00-00-07
+
 2006/05/15 Sarka Todorova <sarka.todorova@cern.ch>
 	* bug fixed (wrong cylinder surface called for beam pipe glueing) 
         * tagged MuonTrackingGeometry-00-00-06

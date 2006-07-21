@@ -9,7 +9,9 @@
 #include "MuonGeoModel/MuonDetectorManager.h"
 #include "MuonGeoModel/MuonStation.h"
 #include "MuonGeoModel/MdtReadoutElement.h"
-#include "MuonIdHelpers/MuonIdHelper.h"
+#include "MuonGeoModel/RpcReadoutElement.h"
+#include "MuonIdHelpers/MdtIdHelper.h"
+#include "MuonIdHelpers/RpcIdHelper.h"
 // Trk
 //#include "TrkDetDescrInterfaces/ITrackingVolumeBuilder.h"
 #include "TrkDetDescrInterfaces/ILayerArrayCreator.h"
@@ -118,8 +120,8 @@ StatusCode Muon::MuonStationBuilder::initialize()
         log << MSG::ERROR << "Could not get MuonDetectorManager, no layers for muons will be built. " << endreq;
     }
     
-    //const MdtIdHelper* mdtHelp = m_muonMgr-> mdtIdHelper(); 
-    //const RpcIdHelper* rpcHelp = m_muonMgr-> rpcIdHelper();
+    m_mdtIdHelper = m_muonMgr-> mdtIdHelper(); 
+    m_rpcIdHelper = m_muonMgr-> rpcIdHelper();
 
     log << MSG::INFO << m_muonMgr->geometryVersion() << endreq; 
     
@@ -191,18 +193,36 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
       std::string msTypeName = (*msTypeIter)->volumeName();
       const Trk::TrackingVolume* msTV = *msTypeIter;
       const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(msTypeName,msTV);
-      // loop over list of muon stations to position them 
+      // loop over stations to position them
+      if (msTypeName.substr(0,1)=="B" || msTypeName.substr(0,1)=="E") { 
+        for (int eta = -8; eta < 9; eta++) { 
+          for (int phi = 0; phi < 9; phi++) {
+	    MuonGM::MuonStation* mstation = m_muonMgr->getMuonStation(msTypeName.substr(0,3),eta,phi);
+            if (mstation) {
+              HepTransform3D transf = mstation->getTransform(); 
+              const Trk::DetachedTrackingVolume* newStat = typeStat->clone(mstation->getKey(),transf);
+              // glue components
+              glueComponents(newStat);
+              // identify layers
+              identifyLayers(newStat,eta,phi);
+	      // std::cout << "new station built at:" << transf.getTranslation() << std::endl;  
+              mStations.push_back(newStat);  
+            }
+      }}}  // end Barrel/Endcap MDT chambers
+      /*
       for (unsigned is=0; is < m_muonMgr->nMuonStation() ;is++) {
         std::string nameStat = ((m_muonMgr->getStation(is)).second)->getName();
         if ( nameStat.substr(0,4) == msTypeName.substr(0,4) ) {
           HepTransform3D transf = ((m_muonMgr->getStation(is)).first)->getTransform();
-	  // std::cout << "new station to be built at:" << transf.getTranslation() << std::endl;  
+	  // define station name to indicate eta/phi
+	  //std::cout << "current name of the station:" << nameStat <<"," << msTypeName << std::endl;  
           const Trk::DetachedTrackingVolume* newStat = typeStat->clone(nameStat,transf);
-          // and, at last, glue components
+          // glue components
           glueComponents(newStat);
 	  // std::cout << "new station built at:" << transf.getTranslation() << std::endl;  
           mStations.push_back(newStat);
       }}
+      */
       // std::cout << "prototype:" << msTypeName << "processed:" << mStations.size() << std::endl; 
     } // msType   
   }
@@ -427,3 +447,84 @@ void Muon::MuonStationBuilder::glueComponents(const Trk::DetachedTrackingVolume*
    }
 }
 //
+void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume* station, int eta, int phi ) const
+{
+  MsgStream log(msgSvc(), name());
+  log << MSG::INFO  << name() <<" identifying layers " << endreq;    
+  
+  std::string stationName = station->trackingVolume()->volumeName();
+  log << MSG::INFO  << " in station " << station->name() << endreq;    
+  if (stationName.substr(0,1)=="B" || stationName.substr(0,1)=="E" ) { 
+    // MDT
+    for (int multi = 0; multi < 2; multi++ ) {
+      int nameIndex = m_mdtIdHelper->stationNameIndex( stationName.substr(0,3) ); 
+      int nameIndexC = nameIndex;
+      if (stationName.substr(0,3)=="EIS") nameIndexC = 22; 
+      if (stationName.substr(0,3)=="BIM") nameIndexC = 23; 
+      const MuonGM::MdtReadoutElement* multilayer = m_muonMgr->getMdtReadoutElement(nameIndexC,eta+8,phi-1,multi);
+      if (multilayer) {
+	//std::cout << "multilayer found" << multi << std::endl;
+	//std::cout << " is inside the current volume? " << 
+        //               station->trackingVolume()->inside(multilayer->center()) << std::endl;
+        int nLayers = multilayer->getNLayers();
+        int nTubes  = multilayer->getNtubesperlayer();
+        for (int layer =1; layer <= nLayers ; layer++) {
+          Identifier id = m_mdtIdHelper->channelID(nameIndex,eta,phi,multi,layer,nTubes);
+          if (id==0) {
+	    //std::cout << "identifier retrieval failed for :"<<stationName<<","<<eta<<","<<phi
+	    //		     <<","<<multi<<","<<layer<<std::endl;
+          } else {
+            // retrieve associated layer
+	    Trk::GlobalPosition gp = multilayer->tubePos(id);
+            const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gp);
+            const Trk::Layer* assocLay;
+            if (assocVol) assocLay = assocVol->associatedLayer(gp);
+            unsigned int iD = id;
+            if (assocVol && assocLay) assocLay->setIdentifier(iD);
+          }    
+        }
+      } else {
+        // std::cout << "multilayer:" << multi << " not found in chamber " << stationName << std::endl;
+      }     
+    }
+    // RPC ?
+    bool hasRpc = false;
+    const Trk::BinnedArray< Trk::TrackingVolume >* confinedVolumes = station->trackingVolume()->confinedVolumes();
+    if (confinedVolumes){
+      const std::vector<const Trk::TrackingVolume*>& vols = confinedVolumes->arrayObjects();
+      for (unsigned int i=0;i<vols.size();i++) if (vols[i]->volumeName() == "RPC") hasRpc=true;
+    }
+    if ( hasRpc ) {
+      int nameIndex = m_rpcIdHelper->stationNameIndex( stationName.substr(0,3) ); 
+      for (int doubletR = 0; doubletR < 2; doubletR++ ) {
+      for (int doubletZ = 0; doubletZ < 4; doubletZ++ ) {
+        //Identifier iRpcMod = m_rpcIdHelper->elementID(nameIndex,eta+8,phi-1,doubletR);
+        //std::cout << "RPC identifier? " << iRpcMod << std::endl;
+        //if (iRpcMod==0) {
+        //	 std::cout << "RPC identifier retrieval failed for :"<<stationName<<","<<eta<<","<<phi
+        //		   <<","<<doubletR << std::endl;
+        //} else {
+        const MuonGM::RpcReadoutElement* rpc = m_muonMgr->getRpcReadoutElement(nameIndex-2,eta+8,phi-1,doubletR,doubletZ);
+        if (rpc) {
+	  //std::cout << stationName <<","<<doubletR <<"," << doubletZ << " RPC is inside the current volume? " << 
+          //               station->trackingVolume()->inside(rpc->center()) << std::endl;
+          if (rpc && station->trackingVolume()->inside(rpc->center())) {
+              // retrieve associated layer
+	      Trk::GlobalPosition gp = rpc->center();
+              const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gp);
+              const Trk::Layer* assocLay;
+              if (assocVol) assocLay = assocVol->associatedLayer(gp);
+              Identifier idRpc = rpc->identify();
+              unsigned int iD = idRpc;
+              if (assocVol && assocLay) assocLay->setIdentifier(iD);
+          }
+        } else {
+	  // std::cout << stationName <<","<<doubletR <<"," << doubletZ << " RPC not found " << std::endl;
+        }     
+      }}
+    }
+    //
+  } 
+
+
+}

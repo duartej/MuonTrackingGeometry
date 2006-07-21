@@ -17,6 +17,9 @@
 #include "GaudiKernel/AlgTool.h"
 #include "GeoModelKernel/GeoVPhysVol.h"
 
+class MdtIdHelper;
+class RpcIdHelper;
+
 namespace Trk {
  class TrackingGeometry;
  class TrackingVolume;
@@ -65,8 +68,11 @@ namespace Muon {
     private:
 
       void glueComponents(const Trk::DetachedTrackingVolume* ) const;    
+      void identifyLayers(const Trk::DetachedTrackingVolume*, int, int ) const;
  
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
+      const MdtIdHelper*            m_mdtIdHelper;           //!< 
+      const RpcIdHelper*            m_rpcIdHelper;           //!< 
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
       Muon::MuonStationTypeBuilder*       m_muonStationTypeBuilder;             //!< Helper Tool to create TrackingVolume Arrays
       std::string                         m_muonStationTypeBuilderName;         //!< Name of the helper tool

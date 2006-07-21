@@ -1375,7 +1375,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processCscStation(const
      // xy -> yz  rotation
      // the center of DoubleTrapezoidVolume is shifted by (envY1-envY2) in y
      //HepTransform3D* cTr = new HepTransform3D(HepRotateZ3D(90*deg)*HepTranslateY3D(envY1-envY2));
-     HepTransform3D* cTr = new HepTransform3D(HepRotateZ3D(90*deg)*HepTranslateZ3D(envY1-envY2));
+     HepTransform3D* cTr = new HepTransform3D(HepRotateY3D(90*deg)*HepRotateZ3D(90*deg)*HepTranslateY3D(envY1-envY2));
      envelope = new Trk::Volume(cTr,cscBounds);
      //std::cout << "envelope created"<<std::endl;
      // components
@@ -1383,7 +1383,8 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processCscStation(const
      for (unsigned int ic = 0; ic< xSizes.size(); ic++) {
        // component volumes follow the envelope dimension
        xCurr += xSizes[ic];
-       HepTransform3D* compTr = new HepTransform3D(HepRotateZ3D(90*deg)*HepTranslateZ3D(envY1-envY2)*HepTranslateY3D(xCurr));
+       //HepTransform3D* compTr = new HepTransform3D(HepRotateZ3D(90*deg)*HepTranslateZ3D(envY1-envY2)*HepTranslateY3D(xCurr));
+       HepTransform3D* compTr = new HepTransform3D(HepRotateY3D(90*deg)*HepRotateZ3D(90*deg)*HepTranslateY3D(envY1-envY2)*HepTranslateZ3D(xCurr));
        compBounds = new Trk::DoubleTrapezoidVolumeBounds(xMin,envXMed,xMax,envY1,envY2,xSizes[ic]); 
        const Trk::LayerArray* cscLayerArray = processCSCDiamondComponent(compGeoVol[ic],compBounds,compTr); 
        Trk::Volume* compVol = new Trk::Volume(compTr,compBounds);
@@ -1727,7 +1728,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCDiamondComponent(
   Trk::OverlapDescriptor* od=0;
   for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {
     Trk::DiamondBounds* bounds= new Trk::DiamondBounds(minX,medX,maxX,halfY1,halfY2); ;
-    HepTransform3D* cTr = new HepTransform3D( (*transf)* HepRotateX3D(90*deg)  * HepTranslateZ3D(x_array[iloop]) ); // this won't work for multiple layers !!! //
+    HepTransform3D* cTr = new HepTransform3D( (*transf)* HepTranslateZ3D(x_array[iloop]) ); // this won't work for multiple layers !!! //
     Trk::HomogenousLayerMaterial cscMaterial(x_mat[iloop], Trk::oppositePre);  
     layer = new Trk::PlaneLayer(cTr,
                                 bounds,
@@ -1743,17 +1744,18 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCDiamondComponent(
   std::vector<double> binSteps;
   double lowX = - compBounds->halflengthZ() ;
   currX = lowX;
-   
-  for (unsigned int i=0;i<layers.size();i++) { 
-    const HepTransform3D* ltransf = new HepTransform3D(layers[i]->transform());
-    layerOrder.push_back(LayTr(Trk::SharedObject<const Trk::Layer>(layers[i]), ltransf ));
-    if (i>0) {
-      binSteps.push_back(ltransf->getTranslation()[0] -currX);
-    } else {
-      binSteps.push_back(2*(ltransf->getTranslation()[0] -currX));
-    } 
-    currX = ltransf->getTranslation()[0];
+
+  if (layers.size()) {
+     lowX = layers[0]->transform().getTranslation()[0]-0.5*layers[0]->thickness();
+     currX = lowX; 
+     for (unsigned int i=0;i<layers.size();i++) { 
+       const HepTransform3D* ltransf = new HepTransform3D(layers[i]->transform());
+       layerOrder.push_back(LayTr(Trk::SharedObject<const Trk::Layer>(layers[i]), ltransf ));
+       binSteps.push_back(ltransf->getTranslation()[0]+0.5*layers[i]->thickness()-currX);
+       currX = ltransf->getTranslation()[0]+0.5*layers[i]->thickness();     
+     }
   }
+   
   Trk::BinUtility* binUtility = new Trk::BinUtility1DX( lowX, new std::vector<double>(binSteps));
   Trk::LayerArray* cscLayerArray = 0;
   cscLayerArray = new Trk::NavBinnedArray1D<Trk::Layer>(layerOrder, binUtility, new HepTransform3D());     

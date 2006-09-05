@@ -1,7 +1,6 @@
-2006/07/21 Sarka Todorova <sarka.todorova@cern.ch>
-	* CSC chambers corrected
-	* stations named
-	* MDT/RPC active layers identified  
+2006/09/05 Sarka Todorova <sarka.todorova@cern.ch>
+	* identification of active layers
+	* inert material included (barrel toroids) 
         * tagged MuonTrackingGeometry-00-00-08
 
 2006/06/23 Sarka Todorova <sarka.todorova@cern.ch>

@@ -13,11 +13,16 @@
 #include "TrkGeometry/MaterialProperties.h"
 #include "TrkGeometry/DetachedTrackingVolume.h"
 #include "TrkGeometry/TrackingVolume.h"
-#include "TrkVolumes/CylinderVolumeBounds.h"
 // Gaudi
 #include "GaudiKernel/AlgTool.h"
 #include "GeoModelKernel/GeoVPhysVol.h"
-#include "GeoModelKernel/GeoShape.h"
+//mw
+#include "TrkDetDescrGeoModelCnv/GeoMaterialConverter.h"
+#include "TrkVolumes/TrapezoidVolumeBounds.h"
+#include "TrkVolumes/CuboidVolumeBounds.h"
+#include "TrkVolumes/BevelledCylinderVolumeBounds.h"
+#include "TrkVolumes/CylinderVolumeBounds.h"
+
 
 namespace Trk {
  class TrackingGeometry;
@@ -29,6 +34,9 @@ namespace Trk {
  class ILayerBuilder;
  class ILayerArrayCreator;
  class IMagneticFieldTool;
+//mw
+ class MaterialProperties;
+
 }
 
 namespace MuonGM {
@@ -40,9 +48,9 @@ namespace Muon {
         
   /** @class MuonInertMaterialBuilder
   
-      The Muon::MuonInertMaterialBuilder retrieves and translates muon inert objects from Muon Geometry Tree
+      The Muon::MuonInertMaterialBuilder retrieves muon stations from Muon Geometry Tree
       
-      by Sarka.Todorova@cern.ch
+      by Sarka.Todorova@cern.ch, Marcin.Wolter@cern.ch
     */
     
   class MuonInertMaterialBuilder : public AlgTool,
@@ -62,9 +70,12 @@ namespace Muon {
 
     private:
 
-      const void MuonInertMaterialBuilder::decodeShape(const GeoShape* pv) const;
-      const Trk::CylinderVolumeBounds* MuonInertMaterialBuilder::decodeBaseTube(const GeoShape* pv) const;
-      const void MuonInertMaterialBuilder::printChildren(const GeoVPhysVol* pv) const;
+//        void checkObject( const Trk::TrackingVolume* objs) const;
+      void checkObject( const std::vector<const Trk::DetachedTrackingVolume*>*trkVolumes) const;
+
+      Trk::TrapezoidVolumeBounds* decodeColdSegment(const GeoShape* sh) const;
+      Trk::VolumeBounds* decodeECTSegment(const GeoShape* sh) const;
+      Trk::BevelledCylinderVolumeBounds* decodeBevelledCylinder(const GeoShape* sh) const;
 
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
@@ -74,7 +85,11 @@ namespace Muon {
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
       Trk::MagneticFieldProperties        m_muonMagneticField;          //!< the magnetic Field
+
+//mw
+      Trk::GeoMaterialConverter*           m_materialConverter;          //!< material converter
     };
+
 
 } // end of namespace
 

@@ -24,6 +24,7 @@
 #include "TrkVolumes/BevelledCylinderVolumeBounds.h"
 #include "TrkVolumes/CuboidVolumeBounds.h"
 #include "TrkVolumes/BoundarySurface.h"
+//#include "TrkGeometry/SimplifiedMaterialProperties.h"
 #include "TrkMagFieldTools/IMagneticFieldTool.h"
 #include "TrkMagFieldUtils/MagneticFieldMode.h"
 #include "TrkMagFieldUtils/MagneticFieldMap.h"
@@ -89,7 +90,7 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
 
   declareProperty("SimpleMuonGeometry",               m_muonSimple);  
   declareProperty("BuildActiveMaterial",              m_muonActive);  
-  declareProperty("BuildInertMaterial",               m_muonInert);  
+  declareProperty("BuildInertMaterial",               m_muonInert);
   declareProperty("MagneticFieldTool",                m_magFieldToolName);  
   declareProperty("MagneticFieldTool",                m_magFieldToolName);  
   declareProperty("MagneticFieldToolInstance",        m_magFieldToolInstanceName);
@@ -606,6 +607,8 @@ const std::vector<const Muon::Span*>* Muon::MuonTrackingGeometryBuilder::findVol
       (&((*objs)[iobj]->trackingVolume()->volumeBounds()));
     const Trk::BevelledCylinderVolumeBounds* bcyl = dynamic_cast<const Trk::BevelledCylinderVolumeBounds*>
       (&((*objs)[iobj]->trackingVolume()->volumeBounds()));
+    const Trk::CylinderVolumeBounds* cyl = dynamic_cast<const Trk::CylinderVolumeBounds*>
+      (&((*objs)[iobj]->trackingVolume()->volumeBounds()));
     // loop over edges ...
     double minZ = m_outerEndcapZ ; double maxZ = - m_outerEndcapZ;
     double minPhi = 2*M_PI; double maxPhi = 0.;
@@ -649,6 +652,10 @@ const std::vector<const Muon::Span*>* Muon::MuonTrackingGeometryBuilder::findVol
       edges.push_back( Trk::GlobalPosition(0.,0., bcyl->halflengthZ()) );
       edges.push_back( Trk::GlobalPosition(0.,0.,-bcyl->halflengthZ()) );
     }
+    if (cyl) {
+      edges.push_back( Trk::GlobalPosition(0.,0., cyl->halflengthZ()) );
+      edges.push_back( Trk::GlobalPosition(0.,0.,-cyl->halflengthZ()) );
+    }
     // apply transform and get span
     for (unsigned int ie=0; ie < edges.size() ; ie++) {
       Trk::GlobalPosition gp = transform*edges[ie];
@@ -669,12 +676,17 @@ const std::vector<const Muon::Span*>* Muon::MuonTrackingGeometryBuilder::findVol
       span.push_back( minPhi - phiTol );  
       span.push_back( maxPhi + phiTol );  
     } else if (bcyl) {
-      span.push_back( minZ - bcyl->outerRadius()-zTol );  
-      span.push_back( maxZ + bcyl->outerRadius()+zTol );  
-      span.push_back( minPhi - phiTol );  
-      span.push_back( maxPhi + phiTol );  
+      span.push_back( minZ - bcyl->outerRadius()-zTol );
+      span.push_back( maxZ + bcyl->outerRadius()+zTol );
+      span.push_back( minPhi - phiTol );
+      span.push_back( maxPhi + phiTol );
+    } else if (cyl) {
+      span.push_back( minZ - cyl->outerRadius()-zTol );
+      span.push_back( maxZ + cyl->outerRadius()+zTol );
+      span.push_back( minPhi - phiTol );
+      span.push_back( maxPhi + phiTol );
     } else {
-      log << MSG::ERROR  << name() <<" volume shape not recognized: "<< (*objs)[iobj]->name() << endreq;   
+      log << MSG::ERROR  << name() <<" volume shape not recognized: "<< (*objs)[iobj]->name() << endreq;
       for (int i=0; i<4; i++) span.push_back(0.);
     }
     const Muon::Span* newSpan=new Muon::Span(span);

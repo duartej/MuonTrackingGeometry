@@ -4,20 +4,21 @@ author Sarka Todorova, <Sarka.Todorova@cern.ch>
 manager Sarka Todorova, <Sarka.Todorova@cern.ch>
 
 
-use AtlasPolicy         AtlasPolicy-01-*
-use GaudiInterface      GaudiInterface-01-*   External
-use AtlasCLHEP          AtlasCLHEP-00-*       External
-use StoreGate           StoreGate-02-*        Control
+use AtlasPolicy         AtlasPolicy-*
+use GaudiInterface      GaudiInterface-*      External
+use AtlasCLHEP          AtlasCLHEP-*          External
+use StoreGate           StoreGate-*           Control
 
 use BFieldAth		  BFieldAth-*	             MagneticField 
 
 use TrkDetDescrInterfaces  TrkDetDescrInterfaces-*    Tracking/TrkDetDescr
 use TrkDetDescrUtils       TrkDetDescrUtils-*         Tracking/TrkDetDescr
-use TrkGeometry            TrkGeometry-00-*           Tracking/TrkDetDescr
-use TrkVolumes             TrkVolumes-00-*            Tracking/TrkDetDescr
+use TrkDetDescrTools       TrkDetDescrTools-*         Tracking/TrkDetDescr
+use TrkGeometry            TrkGeometry-*              Tracking/TrkDetDescr
+use TrkVolumes             TrkVolumes-*               Tracking/TrkDetDescr
 use TrkDetDescrGeoModelCnv TrkDetDescrGeoModelCnv-*   Tracking/TrkDetDescr
-use TrkMagFieldTools       TrkMagFieldTools-00-*      Tracking/TrkMagneticField      
-use TrkMagFieldUtils       TrkMagFieldUtils-00-*      Tracking/TrkMagneticField      
+use TrkMagFieldTools       TrkMagFieldTools-*         Tracking/TrkMagneticField      
+use TrkMagFieldUtils       TrkMagFieldUtils-*         Tracking/TrkMagneticField      
 
 use MuonGeoModel           MuonGeoModel-*             MuonSpectrometer
 

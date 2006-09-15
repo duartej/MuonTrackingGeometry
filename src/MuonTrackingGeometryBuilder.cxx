@@ -737,6 +737,9 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     } 
     // create subvolumes & BinnedArray
     std::vector<Trk::TrackingVolumeOrderPosition> subVolumes;
+    std::vector<const Trk::TrackingVolume*> sVols;                // for gluing
+    std::vector<const Trk::TrackingVolume*> sVolsNeg;             // for gluing
+    std::vector<const Trk::TrackingVolume*> sVolsPos;             // for gluing
     for (unsigned int eta = 0; eta < etaN; eta++) {
       for (unsigned int phi = 0; phi < phiN; phi++) {
         // define subvolume
@@ -755,6 +758,21 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	Trk::GlobalPosition gp(subBds->outerRadius(),0.,0.);
         subVolumes.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
                                                              new Trk::GlobalPosition((*transf)*gp)));
+        //glue subVolumes
+        sVols.push_back(sVol); 
+        if (eta==0)      sVolsNeg.push_back(sVol); 
+        if (eta==etaN-1) sVolsPos.push_back(sVol); 
+        // in phi
+        if ( phiN>1 && phi>0) {
+          m_trackingVolumeHelper->glueTrackingVolumes(*sVol, Trk::tubeSectorNegativePhi,
+						      *(sVols[eta*phiN+phi-1]), Trk::tubeSectorPositivePhi);
+          if ( phi==phiN-1 )  m_trackingVolumeHelper->glueTrackingVolumes(*sVol, Trk::tubeSectorPositivePhi,
+						      *(sVols[eta*phiN]), Trk::tubeSectorNegativePhi);
+	}
+        // in eta
+        if ( etaN>1 && eta>0) m_trackingVolumeHelper->glueTrackingVolumes(*sVol, Trk::negativeFaceXY,
+						      *(sVols[(eta-1)*phiN+phi]), Trk::positiveFaceXY);        
+        //
       }
     }
     Trk::BinUtility2DPhiZ* volBinUtil=new Trk::BinUtility2DPhiZ(phiN,etaN,subBds->outerRadius(),cyl->halflengthZ(),-M_PI, new HepTransform3D());
@@ -765,6 +783,13 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 				    m_muonMagneticField,
 				    0,subVols,
 				    volumeName);
+    // register glue volumes
+    const Trk::GlueVolumesDescriptor& volGlueVolumes = tVol->glueVolumesDescriptor();
+    volGlueVolumes.registerGlueVolumes(Trk::tubeInnerCover,sVols);
+    volGlueVolumes.registerGlueVolumes(Trk::tubeOuterCover,sVols);
+    volGlueVolumes.registerGlueVolumes(Trk::negativeFaceXY,sVolsNeg);
+    volGlueVolumes.registerGlueVolumes(Trk::positiveFaceXY,sVolsPos);
+
   } else {
     // enclosed muon objects ? 
     std::vector<const Trk::DetachedTrackingVolume*>* muonObjs = getDetachedObjects( vol );

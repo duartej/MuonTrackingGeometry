@@ -11,16 +11,20 @@ use StoreGate           StoreGate-*           Control
 
 use BFieldAth		  BFieldAth-*	             MagneticField 
 
+use GeoModelKernel        GeoModelKernel-*           DetectorDescription/GeoModel 
+
 use TrkDetDescrInterfaces  TrkDetDescrInterfaces-*    Tracking/TrkDetDescr
 use TrkDetDescrUtils       TrkDetDescrUtils-*         Tracking/TrkDetDescr
 use TrkDetDescrTools       TrkDetDescrTools-*         Tracking/TrkDetDescr
 use TrkGeometry            TrkGeometry-*              Tracking/TrkDetDescr
+use TrkSurfaces            TrkSurfaces-*              Tracking/TrkDetDescr 
 use TrkVolumes             TrkVolumes-*               Tracking/TrkDetDescr
 use TrkDetDescrGeoModelCnv TrkDetDescrGeoModelCnv-*   Tracking/TrkDetDescr
 use TrkMagFieldTools       TrkMagFieldTools-*         Tracking/TrkMagneticField      
 use TrkMagFieldUtils       TrkMagFieldUtils-*         Tracking/TrkMagneticField      
 
 use MuonGeoModel           MuonGeoModel-*             MuonSpectrometer
+use MuonIdHelpers          MuonIdHelpers-*            MuonSpectrometer
 
 library MuonTrackingGeometry *.cxx components/*.cxx
 apply_pattern component_library

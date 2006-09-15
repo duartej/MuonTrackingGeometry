@@ -1,4 +1,10 @@
 
+2006/09/15 Sarka Todorova <sarka.todorova@cern.ch>
+	* update requirements (use statements) 
+	* add printInfo() to the configuration script
+	* fix stations with cutouts
+	* tagged MuonTrackingGeometry-00-00-12 
+
 2006/09/08 Sarka Todorova <sarka.todorova@cern.ch>
 	* update requirements
 	* tagged MuonTrackingGeometry-00-00-11 

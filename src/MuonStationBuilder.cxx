@@ -43,8 +43,6 @@
 
 // BField
 #include "BFieldAth/MagFieldAthena.h"
-// temporary
-#include "TrkParameters/Perigee.h"
 
 //CLHEP
 #include "CLHEP/Units/SystemOfUnits.h"
@@ -57,6 +55,7 @@
 
 #include "GeoModelKernel/GeoShape.h"
 #include "GeoModelKernel/GeoShapeShift.h"
+#include "GeoModelKernel/GeoShapeSubtraction.h"
 #include "GeoModelKernel/GeoBox.h"
 #include "GeoModelKernel/GeoTrd.h"
 
@@ -326,19 +325,26 @@ const std::vector<const Trk::TrackingVolume*>* Muon::MuonStationBuilder::buildDe
                 }
               }
             } else {    
-            const GeoTrd* trd=dynamic_cast<const GeoTrd*> (clv->getShape());
-            if (clv->getShape()->type()=="Shift") {
-	       const GeoShapeShift* shift = dynamic_cast<const GeoShapeShift*> (clv->getShape());
-               // std::cout << shift->getOp()->type()<<std::endl; 
-	       trd = dynamic_cast<const GeoTrd*> (shift->getOp());
-	    } 
-            double halfX1=0.;
-            double halfX2=0.;
-            double halfY1=0.;
-            double halfY2=0.;
-            double halfZ=0.;   
-	    if (trd) {
-	      //
+	      const GeoTrd* trd=dynamic_cast<const GeoTrd*> (clv->getShape());
+	      if (clv->getShape()->type()=="Shift") {
+		const GeoShapeShift* shift = dynamic_cast<const GeoShapeShift*> (clv->getShape());
+		// std::cout << shift->getOp()->type()<<std::endl; 
+		trd = dynamic_cast<const GeoTrd*> (shift->getOp());
+	      } 
+	      if (clv->getShape()->type()=="Subtraction") {
+	       const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction*> (clv->getShape());
+               while (  sub->getOpA()->type() =="Subtraction" ) {
+                  sub = dynamic_cast<const GeoShapeSubtraction*> (sub->getOpA()); 
+               }       
+	       trd = dynamic_cast<const GeoTrd*> (sub->getOpA());
+	      } 
+	      double halfX1=0.;
+	      double halfX2=0.;
+	      double halfY1=0.;
+	      double halfY2=0.;
+	      double halfZ=0.;   
+	      if (trd) {
+		//
               /*
 	      std::cout << "dimensions:"<< trd->getXHalfLength1() <<","
                                         << trd->getXHalfLength2() <<","  
@@ -347,60 +353,60 @@ const std::vector<const Trk::TrackingVolume*>* Muon::MuonStationBuilder::buildDe
 			                << trd->getZHalfLength() <<std::endl; 
 	      */
 	      //
-              halfX1 = trd->getXHalfLength1();
-              halfX2 = trd->getXHalfLength2();
-              halfY1 = trd->getYHalfLength1();
-              halfY2 = trd->getYHalfLength2();
-              halfZ  = trd->getZHalfLength();              
-            } else {
-	      std::cout << "station other than Trd shape ?"<< std::endl;
-            }
-            // define enveloping volume
-            const Trk::TrackingVolumeArray* confinedVolumes = 0; 
-	    Trk::Volume* envelope = 0;
- 	    std::string shape = "Trd";
-            if (halfX1==halfX2 && halfY1==halfY2) shape = "Box";
-            if (shape=="Box") { 
-	      Trk::CuboidVolumeBounds* envBounds = new Trk::CuboidVolumeBounds(halfX1,halfY1,halfZ);
-              // station components
-              if (m_muonStationTypeBuilder) confinedVolumes = 
-                    m_muonStationTypeBuilder->processBoxStationComponents(cv,envBounds); 
-              // enveloping volume
-	      envelope= new Trk::Volume(new HepTransform3D(),envBounds);
-	    }
-            if (shape=="Trd") {
-	      //std::cout << "Trd station dimensions:"<<halfX1<<","<<halfX2<<","<<halfY1<<","<<halfY2<<","<<halfZ<<std::endl;
-	      Trk::TrapezoidVolumeBounds* envBounds = 0;
-              HepTransform3D* transf =new HepTransform3D(); 
-              if (halfY1==halfY2) {
-                envBounds = new Trk::TrapezoidVolumeBounds(halfX1,halfX2,halfY1,halfZ);
-		std::cout << "CAUTION!!!: this trapezoid volume does not require XY -> YZ switch" << std::endl;
-              }
-              if (halfY1!=halfY2 && halfX1 == halfX2 ) {
-	        //transf = new HepTransform3D( HepRotateY3D(-90*deg)*HepRotateZ3D(90*deg) );
-	        transf = new HepTransform3D( HepRotateY3D(90*deg)* HepRotateZ3D(90*deg) );
-	        //envBounds = new Trk::TrapezoidVolumeBounds(halfY1,halfY2,halfX1,halfZ); 
-	        envBounds = new Trk::TrapezoidVolumeBounds(halfY1,halfY2,halfZ,halfX1); 
-              }
-              if (halfX1!=halfX2 && halfY1!=halfY2 ) std::cout << "station envelope arbitrary trapezoid?" << std::endl;
-              // station components
-              if (m_muonStationTypeBuilder) confinedVolumes = 
-	          m_muonStationTypeBuilder->processTrdStationComponents(cv,envBounds); 
-              // enveloping volume
-	      envelope= new Trk::Volume(transf,envBounds);
-            }
-	  // hack to verify BI/BM stations
-	  //  if (name.substr(0,2)=="BI") name = gmStation->getKey();
-	  //  if (name.substr(0,2)=="BM") name = gmStation->getKey();
-
-	  // ready to build the station prototype
-	  const Trk::TrackingVolume* newType= new Trk::TrackingVolume( *envelope,
-                                                                 m_muonMaterial,
-                                                                 m_muonMagneticField,
-                                                                 0,confinedVolumes,
-                                                                 name);         
-           
-          stations.push_back(newType); 
+		halfX1 = trd->getXHalfLength1();
+		halfX2 = trd->getXHalfLength2();
+		halfY1 = trd->getYHalfLength1();
+		halfY2 = trd->getYHalfLength2();
+		halfZ  = trd->getZHalfLength();              
+	      } else {
+		std::cout << "station other than Trd shape ?" << std::endl;
+	      }
+	      // define enveloping volume
+	      const Trk::TrackingVolumeArray* confinedVolumes = 0; 
+	      Trk::Volume* envelope = 0;
+	      std::string shape = "Trd";
+	      if (halfX1==halfX2 && halfY1==halfY2) shape = "Box";
+	      if (shape=="Box") { 
+		Trk::CuboidVolumeBounds* envBounds = new Trk::CuboidVolumeBounds(halfX1,halfY1,halfZ);
+		// station components
+		if (m_muonStationTypeBuilder) confinedVolumes = 
+						m_muonStationTypeBuilder->processBoxStationComponents(cv,envBounds); 
+		// enveloping volume
+		envelope= new Trk::Volume(new HepTransform3D(),envBounds);
+	      }
+	      if (shape=="Trd") {
+		//std::cout << "Trd station dimensions:"<<halfX1<<","<<halfX2<<","<<halfY1<<","<<halfY2<<","<<halfZ<<std::endl;
+		Trk::TrapezoidVolumeBounds* envBounds = 0;
+		HepTransform3D* transf =new HepTransform3D(); 
+		if (halfY1==halfY2) {
+		  envBounds = new Trk::TrapezoidVolumeBounds(halfX1,halfX2,halfY1,halfZ);
+		  std::cout << "CAUTION!!!: this trapezoid volume does not require XY -> YZ switch" << std::endl;
+		}
+		if (halfY1!=halfY2 && halfX1 == halfX2 ) {
+		  //transf = new HepTransform3D( HepRotateY3D(-90*deg)*HepRotateZ3D(90*deg) );
+		  transf = new HepTransform3D( HepRotateY3D(90*deg)* HepRotateZ3D(90*deg) );
+		  //envBounds = new Trk::TrapezoidVolumeBounds(halfY1,halfY2,halfX1,halfZ); 
+		  envBounds = new Trk::TrapezoidVolumeBounds(halfY1,halfY2,halfZ,halfX1); 
+		}
+		if (halfX1!=halfX2 && halfY1!=halfY2 ) std::cout << "station envelope arbitrary trapezoid?" << std::endl;
+		// station components
+		if (m_muonStationTypeBuilder) confinedVolumes = 
+						m_muonStationTypeBuilder->processTrdStationComponents(cv,envBounds); 
+		// enveloping volume
+		envelope= new Trk::Volume(transf,envBounds);
+	      }
+	      // hack to verify BI/BM stations
+	      //  if (name.substr(0,2)=="BI") name = gmStation->getKey();
+	      //  if (name.substr(0,2)=="BM") name = gmStation->getKey();
+	      
+	      // ready to build the station prototype
+	      const Trk::TrackingVolume* newType= new Trk::TrackingVolume( *envelope,
+									   m_muonMaterial,
+									   m_muonMagneticField,
+									   0,confinedVolumes,
+									   name);         
+	      
+	      stations.push_back(newType); 
 	    }
 	  } // end new station type 
 	} // end if "Shift" (station)

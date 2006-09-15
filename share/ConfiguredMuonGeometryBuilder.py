@@ -77,3 +77,9 @@ class ConfiguredMuonGeometryBuilder :
    def instance(self):
        return self.__instname__        
                
+   # output
+   def printInfo(self):
+       print '***** ConfiguredGeometryBuilder *******************************************************'
+       print '*'
+          
+               

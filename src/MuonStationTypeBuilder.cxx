@@ -51,8 +51,6 @@
 
 // BField
 #include "BFieldAth/MagFieldAthena.h"
-// temporary
-#include "TrkParameters/Perigee.h"
 
 //CLHEP
 #include "CLHEP/Units/SystemOfUnits.h"

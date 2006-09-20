@@ -1,4 +1,9 @@
 
+2006/09/20 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix volumes with ordered layers 
+	  (bin utility covers the whole volume even if layers do not)
+	* tagged MuonTrackingGeometry-00-00-13 
+
 2006/09/15 Sarka Todorova <sarka.todorova@cern.ch>
 	* update requirements (use statements) 
 	* add printInfo() to the configuration script

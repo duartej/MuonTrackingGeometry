@@ -842,16 +842,21 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
   std::vector<LayTr> layerOrder;
   std::vector<double> binSteps;
   // check if additional (navigation) layers needed
-  double minX = - volBounds->halflengthX();
+  // fix lower and upper bound of step vector to volume boundary
+  // double minX = - volBounds->halflengthX();
+  double minX = transf->getTranslation()[0] - volBounds->halflengthX();
   if (layers.size()) {
-     minX = layers[0]->transform().getTranslation()[0]-0.5*layers[0]->thickness();
-     currX = minX; 
-     for (unsigned int i=0;i<layers.size();i++) { 
-       const HepTransform3D* ltransf = new HepTransform3D(layers[i]->transform());
-       layerOrder.push_back(LayTr(Trk::SharedObject<const Trk::Layer>(layers[i]), ltransf ));
-       binSteps.push_back(ltransf->getTranslation()[0]+0.5*layers[i]->thickness()-currX);
-       currX = ltransf->getTranslation()[0]+0.5*layers[i]->thickness();     
-     }
+    //minX = layers[0]->transform().getTranslation()[0]-0.5*layers[0]->thickness();
+    currX = minX; 
+    for (unsigned int i=0;i<layers.size();i++) { 
+      const HepTransform3D* ltransf = new HepTransform3D(layers[i]->transform());
+      layerOrder.push_back(LayTr(Trk::SharedObject<const Trk::Layer>(layers[i]), ltransf ));
+      if (i<layers.size()-1) { 
+	binSteps.push_back(ltransf->getTranslation()[0]+0.5*layers[i]->thickness()-currX);
+	currX = ltransf->getTranslation()[0]+0.5*layers[i]->thickness();     
+      }
+    }
+    binSteps.push_back(transf->getTranslation()[0]+volBounds->halflengthX()-currX);
   }
   Trk::BinUtility* binUtility = new Trk::BinUtility1DX( minX, new std::vector<double>(binSteps));
   Trk::LayerArray* mdtLayerArray = 0;
@@ -987,16 +992,20 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
   std::vector<LayTr> layerOrder;
   std::vector<double> binSteps;
   // 
-  double minX = - volBounds->halflengthZ();
+  // double minX = - volBounds->halflengthZ();
+  double minX = transf->getTranslation()[0] - volBounds->halflengthZ();
   if (layers.size()) {
-     minX = layers[0]->transform().getTranslation()[0]-0.5*layers[0]->thickness();
-     currX = minX; 
-     for (unsigned int i=0;i<layers.size();i++) { 
-       const HepTransform3D* ltransf = new HepTransform3D(layers[i]->transform());
-       layerOrder.push_back(LayTr(Trk::SharedObject<const Trk::Layer>(layers[i]), ltransf ));
-       binSteps.push_back(ltransf->getTranslation()[0]+0.5*layers[i]->thickness()-currX);
-       currX = ltransf->getTranslation()[0]+0.5*layers[i]->thickness();     
-     }
+    //minX = layers[0]->transform().getTranslation()[0]-0.5*layers[0]->thickness();
+    currX = minX; 
+    for (unsigned int i=0;i<layers.size();i++) { 
+      const HepTransform3D* ltransf = new HepTransform3D(layers[i]->transform());
+      layerOrder.push_back(LayTr(Trk::SharedObject<const Trk::Layer>(layers[i]), ltransf ));
+      if ( i < layers.size()-1 ) { 
+	binSteps.push_back(ltransf->getTranslation()[0]+0.5*layers[i]->thickness()-currX);
+	currX = ltransf->getTranslation()[0]+0.5*layers[i]->thickness();
+      }     
+    }
+    binSteps.push_back( transf->getTranslation()[0] + volBounds->halflengthZ() - currX );
   }
   /*
   for (unsigned int i=0;i<layers.size();i++) { 

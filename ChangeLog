@@ -1,4 +1,8 @@
 
+2006/09/27 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix offending statements in MuonInertMaterialBuilder
+	* tagged MuonTrackingGeometry-00-00-14 
+
 2006/09/20 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix volumes with ordered layers 
 	  (bin utility covers the whole volume even if layers do not)

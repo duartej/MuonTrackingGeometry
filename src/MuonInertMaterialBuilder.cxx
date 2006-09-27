@@ -368,6 +368,8 @@ StatusCode Muon::MuonInertMaterialBuilder::finalize()
 
 Trk::BevelledCylinderVolumeBounds* Muon::MuonInertMaterialBuilder::decodeBevelledCylinder(const GeoShape* sh) const
 {
+
+  Trk::BevelledCylinderVolumeBounds* bcyl=0;
   //std::cout << "  decoding shape " << sh->type() << std::endl;
   while ( sh->type() == "Subtraction" ) {
     const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction*> (sh);
@@ -383,7 +385,7 @@ Trk::BevelledCylinderVolumeBounds* Muon::MuonInertMaterialBuilder::decodeBevelle
     return new Trk::BevelledCylinderVolumeBounds(tube->getRMin(),tube->getRMax(),
               tube->getZHalfLength(),theta,theta);
   }
-  return new Trk::BevelledCylinderVolumeBounds()=0;
+  return bcyl;
 }
 
 
@@ -524,7 +526,8 @@ Trk::VolumeBounds* Muon::MuonInertMaterialBuilder::decodeECTSegment(const GeoSha
 
 Trk::TrapezoidVolumeBounds* Muon::MuonInertMaterialBuilder::decodeColdSegment(const GeoShape* sh) const
 {
-  std::cout << "  decoding shape " << sh->type() << std::endl;
+  //std::cout << "  decoding shape " << sh->type() << std::endl;
+  Trk::TrapezoidVolumeBounds* trap=0;
 
   if (sh->type() == "Trd") {
   	const GeoTrd* trapezoid = dynamic_cast<const GeoTrd*> (sh);
@@ -593,7 +596,7 @@ Trk::TrapezoidVolumeBounds* Muon::MuonInertMaterialBuilder::decodeColdSegment(co
 //
 //   }
 
-  return new Trk::TrapezoidVolumeBounds()=0;
+  return trap;
 }
 
 

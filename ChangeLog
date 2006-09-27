@@ -1,5 +1,10 @@
 
 2006/09/27 Sarka Todorova <sarka.todorova@cern.ch>
+	* eta/phi sectors (optional) implemented
+	* gluing to Calo tested 
+	* tagged MuonTrackingGeometry-00-00-15 
+
+2006/09/27 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix offending statements in MuonInertMaterialBuilder
 	* tagged MuonTrackingGeometry-00-00-14 
 

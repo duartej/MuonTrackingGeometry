@@ -57,9 +57,11 @@ namespace Muon {
       /** Private method to find z/phi span of detached volumes */
       const std::vector<const Span*>* findVolumeSpan(const std::vector<const Trk::DetachedTrackingVolume*>*& objs, double zTol, double phiTol) const;
       /** Private method to define subvolumes and fill them with detached volumes */
-      const Trk::TrackingVolume* processVolume( const Trk::Volume*, unsigned int, unsigned int, std::string) const; 
+      const Trk::TrackingVolume* processVolume( const Trk::Volume*, int, int, std::string) const; 
       /** Private method to find detached volumes */
       std::vector<const Trk::DetachedTrackingVolume*>* getDetachedObjects(const Trk::Volume*) const;
+      /** Private method to check volume properties */
+      void checkVolume(const Trk::TrackingVolume*) const;
            
       Trk::IMagneticFieldTool*            m_magFieldTool;                //!< Tracking Interface to Magnetic Field
       std::string                         m_magFieldToolName;            //!< Name of the Tracking Magnetic Field Svc
@@ -102,10 +104,10 @@ namespace Muon {
 
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
       mutable Trk::TrackingVolume*        m_standaloneTrackingVolume;   // muon standalone tracking volume                 
-      unsigned int                        m_barrelEtaPartition;
-      unsigned int                        m_innerEndcapEtaPartition;
-      unsigned int                        m_outerEndcapEtaPartition;
-      unsigned int                        m_phiPartition;
+      int                                 m_barrelEtaPartition;
+      int                                 m_innerEndcapEtaPartition;
+      int                                 m_outerEndcapEtaPartition;
+      int                                 m_phiPartition;
       mutable const std::vector<const Trk::DetachedTrackingVolume*>*    m_stations;    // muon chambers 
       mutable const std::vector<const Trk::DetachedTrackingVolume*>*    m_inertObjs;   // muon inert material 
       mutable const std::vector<const Span*>*                     m_stationSpan; 

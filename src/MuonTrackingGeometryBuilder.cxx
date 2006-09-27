@@ -188,13 +188,6 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
     m_stationSpan = findVolumeSpan(m_stations, 0.,0.);
     m_inertSpan = findVolumeSpan(m_inertObjs,0.,0.);
 
-    /*
-    for (unsigned int i=0; i<m_stations->size();i++) {
-      std::cout << "span of chamber:" << (*m_stations)[i]->name() << ":" << 
-	(*((*m_stationSpan)[i]))[0] << "," <<	(*((*m_stationSpan)[i]))[1] <<"," <<
-	(*((*m_stationSpan)[i]))[2] << "," <<	(*((*m_stationSpan)[i]))[3] << std::endl;   
-    }
-    */
 // 0) Preparation //////////////////////////////////////////////////////////////////////////////////////
   // if no muon materials are declared, take default ones
   if (m_muonMaterialProperties.size() < 3){
@@ -264,7 +257,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 
       double enclosedDetectorHalflength = enclosedDetectorBounds->halflengthZ();
       double enclosedDetectorOuterRadius = enclosedDetectorBounds->outerRadius();
-      // WHAT ABOUT BEAMPIPE ????????????
+      // 
       log << MSG::INFO  << name() <<" dimensions of enclosed detectors (halfZ,outerR):"
           <<  enclosedDetectorHalflength<<","<< enclosedDetectorOuterRadius << endreq;    
       // check if input makes sense - gives warning if cuts into muon envelope
@@ -387,194 +380,60 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 
     log << MSG::INFO  << name() <<" volumes defined " << endreq;    
 //
-// glue volumes at navigation level 
-// radially , create corresponding volume arrays
-    if ( enclosedCentralFaceVolumes.size()== 0 ) {
-       m_trackingVolumeHelper->glueTrackingVolumes(*muonBarrel, Trk::tubeInnerCover,
-                                                   *tvol, Trk::cylinderCover);
-       enclosedNegativeFaceVolumes.push_back(tvol);
-       enclosedNegativeFaceVolumes.push_back(muonBarrel);
-       enclosedPositiveFaceVolumes.push_back(tvol);
-       enclosedPositiveFaceVolumes.push_back(muonBarrel);
-    } else {
-       m_trackingVolumeHelper->glueTrackingVolumes(*muonBarrel, Trk::tubeInnerCover,
-				                   enclosedCentralFaceVolumes, Trk::cylinderCover);
-       enclosedNegativeFaceVolumes.push_back(muonBarrel);
-       enclosedPositiveFaceVolumes.push_back(muonBarrel);
-    }
-   m_trackingVolumeHelper->glueTrackingVolumes(*negCavern, Trk::tubeInnerCover,
-                                      *negativeMuonOuterEndcap, Trk::tubeOuterCover);
-   m_trackingVolumeHelper->glueTrackingVolumes(*posCavern, Trk::tubeInnerCover,
-                                      *positiveMuonOuterEndcap, Trk::tubeOuterCover);
-    log << MSG::INFO  << name() <<" first radial gluing ok " << endreq;    
-/// create corresponding volumeArrays  
-// barrel
-   std::vector<const Trk::TrackingVolume*> barrelNavVolumes;
-   barrelNavVolumes.push_back(tvol);
-   barrelNavVolumes.push_back(muonBarrel);
-   Trk::BinnedArray<Trk::TrackingVolume>* barrelNavArray =
-   m_trackingVolumeArrayCreator->cylinderVolumesArrayInR(barrelNavVolumes, true);
-   Trk::BinnedArray<Trk::TrackingVolume>* barrelNegNavArray =
-   m_trackingVolumeArrayCreator->cylinderVolumesArrayInR(enclosedNegativeFaceVolumes, true);
-   Trk::BinnedArray<Trk::TrackingVolume>* barrelPosNavArray =
-   m_trackingVolumeArrayCreator->cylinderVolumesArrayInR(enclosedPositiveFaceVolumes, true);
-// negative outer endcap
-   std::vector<const Trk::TrackingVolume*> negOuterEndcapNavVolumes;
-   negOuterEndcapNavVolumes.push_back(negativeMuonOuterEndcap);
-   negOuterEndcapNavVolumes.push_back(negCavern);
-   Trk::BinnedArray<Trk::TrackingVolume>* negOuterEndcapNavArray =
-   m_trackingVolumeArrayCreator->cylinderVolumesArrayInR(negOuterEndcapNavVolumes, true);
-// positive outer endcap
-   std::vector<const Trk::TrackingVolume*> posOuterEndcapNavVolumes;
-   posOuterEndcapNavVolumes.push_back(positiveMuonOuterEndcap);
-   posOuterEndcapNavVolumes.push_back(posCavern);
-   Trk::BinnedArray<Trk::TrackingVolume>* posOuterEndcapNavArray =
-   m_trackingVolumeArrayCreator->cylinderVolumesArrayInR(posOuterEndcapNavVolumes, true);
-// glue volumes/volume arrays in Z
-// endcaps
-   m_trackingVolumeHelper->setOutsideTrackingVolume(*negativeMuonOuterEndcap,Trk::positiveFaceXY,negativeMuonInnerEndcap);
-   m_trackingVolumeHelper->setOutsideTrackingVolume(*negCavern,Trk::positiveFaceXY,negativeMuonInnerEndcap);
-   m_trackingVolumeHelper->setOutsideTrackingVolumeArray(*negativeMuonInnerEndcap,Trk::negativeFaceXY,negOuterEndcapNavArray);
-   m_trackingVolumeHelper->setOutsideTrackingVolumeArray(*positiveMuonInnerEndcap,Trk::positiveFaceXY,posOuterEndcapNavArray);
-   m_trackingVolumeHelper->setOutsideTrackingVolume(*positiveMuonOuterEndcap,Trk::negativeFaceXY,positiveMuonInnerEndcap);
-   m_trackingVolumeHelper->setOutsideTrackingVolume(*posCavern,Trk::negativeFaceXY,positiveMuonInnerEndcap);
-// barrel glued to endcap
-   for (unsigned int i=0; i<enclosedNegativeFaceVolumes.size();i++){ 
-     m_trackingVolumeHelper->setOutsideTrackingVolume(*(enclosedNegativeFaceVolumes[i]),Trk::negativeFaceXY,negativeMuonInnerEndcap);
-   }
-   for (unsigned int i=0; i<enclosedPositiveFaceVolumes.size();i++){ 
-     m_trackingVolumeHelper->setOutsideTrackingVolume(*(enclosedPositiveFaceVolumes[i]),Trk::positiveFaceXY,positiveMuonInnerEndcap);
-   }
-   m_trackingVolumeHelper->setOutsideTrackingVolumeArray(*negativeMuonInnerEndcap,Trk::positiveFaceXY,barrelNegNavArray);
-   m_trackingVolumeHelper->setOutsideTrackingVolumeArray(*positiveMuonInnerEndcap,Trk::negativeFaceXY,barrelPosNavArray);
-// glue beam pipe - > at navigation level in Z
-   m_trackingVolumeHelper->setOutsideTrackingVolume(*negBeamPipe,Trk::positiveFaceXY,enclosedNegativeFaceVolumes[0]);
-   m_trackingVolumeHelper->setOutsideTrackingVolume(*posBeamPipe,Trk::negativeFaceXY,enclosedPositiveFaceVolumes[0]);
-// glue beam pipe - > at navigation level radially
-   std::vector<const Trk::TrackingVolume*> negBPVol;
-   negBPVol.push_back(negativeMuonOuterEndcap);
-   negBPVol.push_back(negativeMuonInnerEndcap);
-   Trk::BinnedArray<Trk::TrackingVolume>* negBPGlueArray =
-   m_trackingVolumeArrayCreator->cylinderVolumesArrayInZ(negBPVol, true);
-   m_trackingVolumeHelper->setOutsideTrackingVolumeArray(*negBeamPipe, Trk::cylinderCover,
-                                                 negBPGlueArray);
-   m_trackingVolumeHelper->setInsideTrackingVolume(*negativeMuonOuterEndcap, Trk::tubeInnerCover,negBeamPipe);
-   m_trackingVolumeHelper->setInsideTrackingVolume(*negativeMuonInnerEndcap, Trk::tubeInnerCover,negBeamPipe);
-   std::vector<const Trk::TrackingVolume*> posBPVol;
-   posBPVol.push_back(positiveMuonInnerEndcap);
-   posBPVol.push_back(positiveMuonOuterEndcap);
-   Trk::BinnedArray<Trk::TrackingVolume>* posBPGlueArray =
-   m_trackingVolumeArrayCreator->cylinderVolumesArrayInZ(posBPVol, true);
-   m_trackingVolumeHelper->setOutsideTrackingVolumeArray(*posBeamPipe, Trk::cylinderCover,
-                                                 posBPGlueArray);
-   m_trackingVolumeHelper->setInsideTrackingVolume(*positiveMuonOuterEndcap, Trk::tubeInnerCover,posBeamPipe);
-   m_trackingVolumeHelper->setInsideTrackingVolume(*positiveMuonInnerEndcap, Trk::tubeInnerCover,posBeamPipe);
-   log << MSG::INFO  << name() <<"volumes glued to beam pipe " << endreq;    
-// define enveloping volumes
-   barrelBounds = new Trk::CylinderVolumeBounds(0.,                       // central beam pipe belongs to enclosed 
-                                                m_outerBarrelRadius,
-                                                m_barrelZ);
-   Trk::TrackingVolume* barrel  =  new Trk::TrackingVolume(0,
-                                   barrelBounds,
-                                   m_muonMaterial,
-                                   m_muonMagneticField,
-                                   0,barrelNavArray,
-                                   "All::Container::Barrel");
-
-   Trk::CylinderVolumeBounds* negOuterEndcapBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
-                                                        m_outerBarrelRadius,
-                                                        outerEndcapZHalfSize);
-   Trk::TrackingVolume* negOuterEndcap  =  new Trk::TrackingVolume(new HepTransform3D(Trk::s_idRotation,negOuterEndcapPosition),
-                                           negOuterEndcapBounds,
-                                           m_muonMaterial,
-                                           m_muonMagneticField,
-                                           0,negOuterEndcapNavArray,
-                                           "Muon::Container::NegativeOuterEndcap");
-   Trk::CylinderVolumeBounds* posOuterEndcapBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
-                                                        m_outerBarrelRadius,
-                                                        outerEndcapZHalfSize);
-   Trk::TrackingVolume* posOuterEndcap  =  new Trk::TrackingVolume(new HepTransform3D(Trk::s_idRotation,posOuterEndcapPosition),
-                                           posOuterEndcapBounds,
-                                           m_muonMaterial,
-                                           m_muonMagneticField,
-                                           0,posOuterEndcapNavArray, 
-                                           "Muon::Container::PositiveOuterEndcap");
-// create volume array and envelope
-   std::vector<const Trk::TrackingVolume*> endcapNegNavVolumes;
-   endcapNegNavVolumes.push_back(negOuterEndcap);
-   endcapNegNavVolumes.push_back(negativeMuonInnerEndcap);
-   Trk::BinnedArray<Trk::TrackingVolume>* endcapNegNavArray =
-   m_trackingVolumeArrayCreator->cylinderVolumesArrayInZ(endcapNegNavVolumes, true);
-   Trk::CylinderVolumeBounds* negNavEndcapBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
-                                                  m_outerBarrelRadius,
-                                                  negBeamPipeBounds->halflengthZ());
-   Trk::TrackingVolume* negNavEndcap  =  new Trk::TrackingVolume(new HepTransform3D(Trk::s_idRotation,negBeamPipePosition),
-                                                             negNavEndcapBounds,
-                                                             m_muonMaterial,
-                                                             m_muonMagneticField,
-                                                             0,endcapNegNavArray,
-                                                             "Muon::Container::NegativeEndcap");
-// create volume array and envelope
-   std::vector<const Trk::TrackingVolume*> endcapPosNavVolumes;
-   endcapPosNavVolumes.push_back(positiveMuonInnerEndcap);
-   endcapPosNavVolumes.push_back(posOuterEndcap);
-   Trk::BinnedArray<Trk::TrackingVolume>* endcapPosNavArray =
-   m_trackingVolumeArrayCreator->cylinderVolumesArrayInZ(endcapPosNavVolumes, true);
-   Trk::CylinderVolumeBounds* posNavEndcapBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
-                                                  m_outerBarrelRadius,
-                                                  posBeamPipeBounds->halflengthZ());
-   Trk::TrackingVolume* posNavEndcap  =  new Trk::TrackingVolume(new HepTransform3D(Trk::s_idRotation,posBeamPipePosition),
-                                                             posNavEndcapBounds,
-                                                             m_muonMaterial,
-                                                             m_muonMagneticField,
-                                                             0,endcapPosNavArray,
-                                                             "Muon::Container::PositiveEndcap");
-// add beam pipe to complete negative endcap 
-   std::vector<const Trk::TrackingVolume*> endcapNegVolumes;
-   endcapNegVolumes.push_back(negBeamPipe);
-   endcapNegVolumes.push_back(negNavEndcap);
-   Trk::BinnedArray<Trk::TrackingVolume>* endcapNegArray =
-   m_trackingVolumeArrayCreator->cylinderVolumesArrayInR(endcapNegVolumes, true);
-   Trk::CylinderVolumeBounds* negEndcapBounds = new Trk::CylinderVolumeBounds( m_outerBarrelRadius,
-                                                                               negBeamPipeBounds->halflengthZ());
-   Trk::TrackingVolume* negEndcap  =  new Trk::TrackingVolume(new HepTransform3D(Trk::s_idRotation,negBeamPipePosition),
-                                                             negEndcapBounds,
-                                                             m_muonMaterial,
-                                                             m_muonMagneticField,
-                                                             0,endcapNegArray,
-                                                             "All::Container::NegativeEndcap");
-// add beam pipe to complete positive endcap
-   std::vector<const Trk::TrackingVolume*> endcapPosVolumes;
-   endcapPosVolumes.push_back(posBeamPipe);
-   endcapPosVolumes.push_back(posNavEndcap);
-   Trk::BinnedArray<Trk::TrackingVolume>* endcapPosArray =
-   m_trackingVolumeArrayCreator->cylinderVolumesArrayInR(endcapPosVolumes, true);
-   Trk::CylinderVolumeBounds* posEndcapBounds = new Trk::CylinderVolumeBounds( m_outerBarrelRadius,
-                                                                               posBeamPipeBounds->halflengthZ());
-   Trk::TrackingVolume* posEndcap  =  new Trk::TrackingVolume(new HepTransform3D(Trk::s_idRotation,posBeamPipePosition),
-                                                             posEndcapBounds,
-                                                             m_muonMaterial,
-                                                             m_muonMagneticField,
-                                                             0,endcapPosArray,
-                                                             "All::Container::PositiveEndcap");
-//  
-   std::vector<const Trk::TrackingVolume*> detectorVolumes;
-   detectorVolumes.push_back(negEndcap);
-   detectorVolumes.push_back(barrel);
-   detectorVolumes.push_back(posEndcap);
-   Trk::BinnedArray<Trk::TrackingVolume>* detectorArray =
-   m_trackingVolumeArrayCreator->cylinderVolumesArrayInZ(detectorVolumes, true);
-   Trk::CylinderVolumeBounds* detectorBounds = new Trk::CylinderVolumeBounds( m_outerBarrelRadius,
-                                                                              m_outerEndcapZ);
-   Trk::TrackingVolume* detector  =  new Trk::TrackingVolume(0,
-                                                             detectorBounds,
-                                                             m_muonMaterial,
-                                                             m_muonMagneticField,
-                                                             0,detectorArray,
-                                                             "All::Container::CompleteDetector");
-    log << MSG::INFO  << name() <<" detector envelope created " << endreq;    
+// glue volumes at navigation level, create enveloping volume 
+// radially
+// enclosed + barrel
+   log << MSG::INFO << name() << "glue barrel+enclosed volumes" << endreq;
+   const Trk::TrackingVolume* barrel = m_trackingVolumeHelper->glueTrackingVolumeArrays(*tvol, Trk::cylinderCover,
+                                                                                        *muonBarrel,Trk::tubeInnerCover, 
+                                                                                        "All::Container::Barrel");
+   checkVolume(barrel);
+// cavern+outerEndcap
+   log << MSG::INFO << name() << "glue cavern+outerEndcap" << endreq;
+   const Trk::TrackingVolume* negOuterEndcap = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negativeMuonOuterEndcap, 
+												Trk::tubeOuterCover,
+												*negCavern, Trk::tubeInnerCover,
+										             "Muon::Container::NegativeOuterEndcap");
+   checkVolume(negOuterEndcap);
+   const Trk::TrackingVolume* posOuterEndcap = m_trackingVolumeHelper->glueTrackingVolumeArrays(*positiveMuonOuterEndcap,
+												Trk::tubeOuterCover,
+												*posCavern, Trk::tubeInnerCover,
+											     "Muon::Container::PositiveOuterEndcap");
+   checkVolume(posOuterEndcap);
+// inner+outerEndcap
+   log << MSG::INFO << name() << "glue inner+outerEndcap" << endreq;
+   const Trk::TrackingVolume* negNavEndcap = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negOuterEndcap, Trk::positiveFaceXY,
+											      *negativeMuonInnerEndcap,
+											      Trk::negativeFaceXY, 
+											      "Muon::Container::NegativeEndcap");  
+   const Trk::TrackingVolume* posNavEndcap = m_trackingVolumeHelper->glueTrackingVolumeArrays(*positiveMuonInnerEndcap,
+											      Trk::positiveFaceXY,
+											      *posOuterEndcap, Trk::negativeFaceXY,
+											      "Muon::Container::PositiveEndcap");  
+   checkVolume(negNavEndcap);
+   checkVolume(posNavEndcap);
+// beam pipe + endcaps
+   log << MSG::INFO << name() << "glue beamPipe+endcaps" << endreq;
+   const Trk::TrackingVolume* negEndcap = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negBeamPipe, Trk::cylinderCover,
+											   *negNavEndcap, Trk::tubeInnerCover,
+										           "All::Container::NegativeEndcap");  
+   const Trk::TrackingVolume* posEndcap = m_trackingVolumeHelper->glueTrackingVolumeArrays(*posBeamPipe, Trk::cylinderCover,
+											   *posNavEndcap, Trk::tubeInnerCover,
+										           "All::Container::PositiveEndcap");  
+   checkVolume(negEndcap);
+   checkVolume(posEndcap);
+// barrel + endcaps
+   log << MSG::INFO << name() << "glue barrel+endcaps" << endreq;
+   const Trk::TrackingVolume* negDet = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negEndcap, Trk::positiveFaceXY,
+                                                                                        *barrel, Trk::negativeFaceXY, 
+									                "All::Container::NegDet");  
+   Trk::TrackingVolume* detector = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negDet, Trk::positiveFaceXY,
+										    *posEndcap, Trk::negativeFaceXY, 
+										    "All::Container::CompleteDetector");  
 //
-   Trk::TrackingGeometry* trackingGeometry = new Trk::TrackingGeometry(detector);
+   Trk::TrackingGeometry* trackingGeometry = new Trk::TrackingGeometry(detector,Trk::globalSearch);
+   log << MSG::INFO << name() << " print volume hierarchy" << endreq;
+   trackingGeometry->printVolumeHierarchy(log);
 
    log << MSG::INFO  << name() <<" returning tracking geometry " << endreq;    
    return trackingGeometry;  
@@ -700,7 +559,7 @@ const std::vector<const Muon::Span*>* Muon::MuonTrackingGeometryBuilder::findVol
   return 0;
 }
 
-const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(const Trk::Volume* vol,unsigned int etaN ,unsigned int phiN, std::string volumeName) const
+const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(const Trk::Volume* vol, int etaN , int phiN, std::string volumeName) const
 {
   MsgStream log(msgSvc(), name());
 
@@ -719,55 +578,49 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
       return 0; 
     }
     // subvolume boundaries
-    Trk::CylinderVolumeBounds* subBds;
-    if ( phiN > 1 && etaN > 1 ) { 
-      subBds = new Trk::CylinderVolumeBounds(cyl->innerRadius(),
-					     cyl->outerRadius(),
-                                             M_PI/phiN, 
-					     (cyl->halflengthZ())/etaN);
-    } else if ( phiN > 1 ) {
-      subBds = new Trk::CylinderVolumeBounds(cyl->innerRadius(),
-					     cyl->outerRadius(),
-                                             M_PI/phiN, 
-					     cyl->halflengthZ());
-    } else {
-      subBds = new Trk::CylinderVolumeBounds(cyl->innerRadius(),
-					     cyl->outerRadius(),
-					     (cyl->halflengthZ())/etaN);
-    } 
+    Trk::CylinderVolumeBounds* subBds=0;
+    double phiSect = M_PI/phiN;
+    double etaSect = (cyl->halflengthZ())/etaN;
+
+    subBds = new Trk::CylinderVolumeBounds(cyl->innerRadius(),
+					   cyl->outerRadius(),
+					   phiSect, 
+					   etaSect);
+
     // create subvolumes & BinnedArray
     std::vector<Trk::TrackingVolumeOrderPosition> subVolumes;
     std::vector<const Trk::TrackingVolume*> sVols;                // for gluing
     std::vector<const Trk::TrackingVolume*> sVolsNeg;             // for gluing
     std::vector<const Trk::TrackingVolume*> sVolsPos;             // for gluing
-    for (unsigned int eta = 0; eta < etaN; eta++) {
-      for (unsigned int phi = 0; phi < phiN; phi++) {
+    for (int eta = 0; eta < etaN; eta++) {
+      for (int phi = 0; phi < phiN; phi++) {
         // define subvolume
-        double posZ = vol->center()[2]+subBds->halflengthZ() * (2*eta+1-etaN) ;
-        HepTransform3D* transf = new HepTransform3D( HepRotateZ3D(2*M_PI/phiN*phi)*HepTranslateZ3D(posZ));
-        const Trk::Volume subVol(transf, subBds);     
-        // enclosed muon objects ? 
-        std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( &subVol );
+        double posZ = (vol->center())[2]+ etaSect * (2.*eta+1.-etaN) ;
+        HepTransform3D* transf = new HepTransform3D( HepRotateZ3D( phiSect*(2*phi+1))*HepTranslateZ3D(posZ));
+        const Trk::Volume* subVol= new Trk::Volume(transf, subBds);     
+	const std::vector<const Trk::Surface*>* bs = subBds->decomposeToSurfaces(*transf);
+        // enclosed muon objects ?   
+        std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol );
 	std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) ; 
-        const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( subVol,
+        const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( *subVol,
 								   m_muonMaterial,
 								   m_muonMagneticField,
 								   detVols,
 								   volName );
         // reference position 
 	Trk::GlobalPosition gp(subBds->outerRadius(),0.,0.);
-        subVolumes.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
+	subVolumes.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
                                                              new Trk::GlobalPosition((*transf)*gp)));
         //glue subVolumes
         sVols.push_back(sVol); 
         if (eta==0)      sVolsNeg.push_back(sVol); 
         if (eta==etaN-1) sVolsPos.push_back(sVol); 
-        // in phi
+        // in phi        
         if ( phiN>1 && phi>0) {
           m_trackingVolumeHelper->glueTrackingVolumes(*sVol, Trk::tubeSectorNegativePhi,
 						      *(sVols[eta*phiN+phi-1]), Trk::tubeSectorPositivePhi);
-          if ( phi==phiN-1 )  m_trackingVolumeHelper->glueTrackingVolumes(*sVol, Trk::tubeSectorPositivePhi,
-						      *(sVols[eta*phiN]), Trk::tubeSectorNegativePhi);
+          if ( phi==phiN-1 )  m_trackingVolumeHelper->glueTrackingVolumes(*(sVols[eta*phiN]), Trk::tubeSectorNegativePhi,
+                                                                          *sVol, Trk::tubeSectorPositivePhi);
 	}
         // in eta
         if ( etaN>1 && eta>0) m_trackingVolumeHelper->glueTrackingVolumes(*sVol, Trk::negativeFaceXY,
@@ -775,7 +628,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         //
       }
     }
-    Trk::BinUtility2DPhiZ* volBinUtil=new Trk::BinUtility2DPhiZ(phiN,etaN,subBds->outerRadius(),cyl->halflengthZ(),-M_PI, new HepTransform3D());
+
+    Trk::BinUtility2DPhiZ* volBinUtil=new Trk::BinUtility2DPhiZ(phiN,etaN,subBds->outerRadius(),cyl->halflengthZ(),M_PI, new HepTransform3D());
     Trk::BinnedArray2D<Trk::TrackingVolume>* subVols=new Trk::BinnedArray2D<Trk::TrackingVolume>(subVolumes,volBinUtil);
 
     tVol = new Trk::TrackingVolume( *vol,
@@ -874,4 +728,25 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
   }
   if (detached.size()>0) detTVs = new std::vector<const Trk::DetachedTrackingVolume*>(detached); 
   return detTVs;
+}
+
+void Muon::MuonTrackingGeometryBuilder::checkVolume(const Trk::TrackingVolume* vol ) const
+{
+  MsgStream log(msgSvc(), name());
+
+  std::cout << "MuonTrackingGeometryBuilder::checkVolume: " << vol->volumeName() << std::endl;
+
+  const Trk::CylinderVolumeBounds* cyl = dynamic_cast<const Trk::CylinderVolumeBounds*> (&(vol->volumeBounds()));
+  if (!cyl) {
+    std::cout << "MuonTrackingGeometryBuilder::checkVolume:not a cylinder, return" << std::endl;
+    return;
+  }
+  std::cout << "cylinder dimensions:innerR,outerR,halfZ,halfPhi:" << cyl->innerRadius() << "," << cyl->outerRadius()
+	    << cyl->halflengthZ() << "," << cyl->halfPhiSector() << std::endl;
+
+  const Trk::GlueVolumesDescriptor& glueDescr = vol->glueVolumesDescriptor();
+  std::cout << "glue volumes:neg,pos,inn,outer" << (glueDescr.glueVolumes(Trk::negativeFaceXY)).size()<<"," 
+                                                << (glueDescr.glueVolumes(Trk::positiveFaceXY)).size()<<","
+                                                << (glueDescr.glueVolumes(Trk::tubeInnerCover)).size()<<","
+	                                        << (glueDescr.glueVolumes(Trk::tubeOuterCover)).size()<<std::endl;
 }

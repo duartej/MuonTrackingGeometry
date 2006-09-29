@@ -240,7 +240,7 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
         }
 	// std::cout << "dimensions:"<<halfX1<<","<<halfX2<<","<<halfY1<<","<<halfY2<<","<<halfZ<<std::endl;
         if ( clv->getShape()->type()!="Trd" && clv->getShape()->type()!="Box" ) {
- 	  std::cout << "WARNING:component shape not Box nor Trapezoid, determining the x size from subcomponents" << std::endl; 
+ 	  //std::cout << "WARNING:component shape not Box nor Trapezoid, determining the x size from subcomponents" << std::endl; 
           double xSize = get_x_size(cv);
 	  //std::cout << "estimated x size:" << xSize << std::endl;
           // printChildren(cv);
@@ -492,7 +492,7 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
           if (halfX1!=halfX2 && halfY1==halfY2 ) {
              volBounds = new Trk::TrapezoidVolumeBounds(halfX1,halfX2,halfY1,halfZ);
           }
-          if (!volBounds) std::cout << "volume shape for component not recognized" << std::endl;
+          //if (!volBounds) std::cout << "volume shape for component not recognized" << std::endl;
         } 
         if ( clv->getShape()->type()=="Box")
         {
@@ -506,7 +506,8 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
         }
 	// std::cout << "dimensions:"<<halfX1<<","<<halfX2<<","<<halfY1<<","<<halfY2<<","<<halfZ<<std::endl;
         if ( clv->getShape()->type()!="Trd" && clv->getShape()->type()!="Box" ) {
- 	  std::cout << "WARNING:component shape not Box nor Trapezoid, determining the x size from subcomponents" << std::endl;                  double xSize = get_x_size(cv);
+ 	  //std::cout << "WARNING:component shape not Box nor Trapezoid, determining the x size from subcomponents" << std::endl;                 
+	  double xSize = get_x_size(cv);
           // printChildren(cv);
           transf = transf*HepRotateY3D(90*deg)*HepRotateZ3D(90*deg);
           volBounds = new Trk::TrapezoidVolumeBounds(envelope->minHalflengthX(),envelope->maxHalflengthX(),envelope->halflengthY(),xSize);
@@ -769,8 +770,8 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
             if (trd) xv = trd->getXHalfLength1();
           }
           if (!trd ) {
-	    std::cout << "MDT MultiFoam shape not recognized in MDT box chamber" << std::endl;
-	    std::cout << clv->getShape()->type() << std::endl;
+	    //std::cout << "MDT MultiFoam shape not recognized in MDT box chamber" << std::endl;
+	    //std::cout << clv->getShape()->type() << std::endl;
           }
           if (!m_mdtFoamMat && trd ) {
             double volume = 8*(trd->getXHalfLength1())*(trd->getYHalfLength1())*(trd->getZHalfLength());
@@ -916,7 +917,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
             if (trd) xv = trd->getXHalfLength1();
           }
           if (!trd) {
-	    std::cout << "MDT MultiFoam shape not recognized in MDT trd chamber" << std::endl;
+	    //std::cout << "MDT MultiFoam shape not recognized in MDT trd chamber" << std::endl;
           }
           if (!m_mdtFoamMat && trd ) {
             double volume = 8*(trd->getXHalfLength1())*(trd->getYHalfLength1())*(trd->getZHalfLength());
@@ -1545,7 +1546,7 @@ const double Muon::MuonStationTypeBuilder::get_x_size(const GeoVPhysVol* pv) con
     if (type=="Subtraction") {
        xh = decodeX(clv->getShape());
     }
-    if ( type!="Trd" && type!="Box" && type!="Tube") std::cout <<"unknown component type? "<< type << std::endl;
+    // if ( type!="Trd" && type!="Box" && type!="Tube") std::cout <<"unknown component type? "<< type << std::endl;
     xlow = fmin(xlow,(transf.getTranslation())[0]-xh);
     xup  = fmax(xup ,(transf.getTranslation())[0]+xh);
   }  
@@ -1892,7 +1893,7 @@ const double Muon::MuonStationTypeBuilder::decodeX(const GeoShape* sh) const
   const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction*> (sh);
 
   if (!trd && !box && !tub && !shift && !uni && !sub ) 
-    std::cout << "MuonStationTypeBuilder::decodeX : unknown shape type ?" <<sh->type() << std::endl;  
+    // std::cout << "MuonStationTypeBuilder::decodeX : unknown shape type ?" <<sh->type() << std::endl;  
 
   //  if (trd ) std::cout << "trapezoid dimensions:" << trd->getXHalfLength1()<<"," << trd->getXHalfLength2()<<
   //	      "," << trd->getYHalfLength1()<<"," << trd->getYHalfLength2()<<"," << trd->getZHalfLength() << std::endl; 

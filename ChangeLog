@@ -1,4 +1,9 @@
 
+2006/09/29 Sarka Todorova <sarka.todorova@cern.ch>
+	* temporary fix for const TrackingVolume* <-> TrackingVolume* conversion
+	* suppress printout in MuonStationTypeBuilder
+	* tagged MuonTrackingGeometry-00-00-16 
+
 2006/09/27 Sarka Todorova <sarka.todorova@cern.ch>
 	* eta/phi sectors (optional) implemented
 	* gluing to Calo tested 

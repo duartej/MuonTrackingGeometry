@@ -427,11 +427,13 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    const Trk::TrackingVolume* negDet = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negEndcap, Trk::positiveFaceXY,
                                                                                         *barrel, Trk::negativeFaceXY, 
 									                "All::Container::NegDet");  
-   Trk::TrackingVolume* detector = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negDet, Trk::positiveFaceXY,
+   const Trk::TrackingVolume* detector = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negDet, Trk::positiveFaceXY,
 										    *posEndcap, Trk::negativeFaceXY, 
 										    "All::Container::CompleteDetector");  
+// define a new volume here to fix nightlies - hope this is temporary only
+   Trk::TrackingVolume* temp_detector = detector;
 //
-   Trk::TrackingGeometry* trackingGeometry = new Trk::TrackingGeometry(detector,Trk::globalSearch);
+   Trk::TrackingGeometry* trackingGeometry = new Trk::TrackingGeometry(temp_detector,Trk::globalSearch);
    log << MSG::INFO << name() << " print volume hierarchy" << endreq;
    trackingGeometry->printVolumeHierarchy(log);
 
@@ -598,7 +600,6 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         double posZ = (vol->center())[2]+ etaSect * (2.*eta+1.-etaN) ;
         HepTransform3D* transf = new HepTransform3D( HepRotateZ3D( phiSect*(2*phi+1))*HepTranslateZ3D(posZ));
         const Trk::Volume* subVol= new Trk::Volume(transf, subBds);     
-	const std::vector<const Trk::Surface*>* bs = subBds->decomposeToSurfaces(*transf);
         // enclosed muon objects ?   
         std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol );
 	std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) ; 

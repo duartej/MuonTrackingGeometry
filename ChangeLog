@@ -1,4 +1,8 @@
 
+2006/10/02 Sarka Todorova <sarka.todorova@cern.ch>
+	* bugfix of phi range in MuonTrackingGeometryBuilder 
+	* tagged MuonTrackingGeometry-00-00-17 
+
 2006/09/29 Sarka Todorova <sarka.todorova@cern.ch>
 	* temporary fix for const TrackingVolume* <-> TrackingVolume* conversion
 	* suppress printout in MuonStationTypeBuilder

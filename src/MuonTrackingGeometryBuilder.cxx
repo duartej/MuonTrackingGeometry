@@ -666,10 +666,11 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
 
   if (!m_stations && !m_inertObjs) return detTVs;
   
-  // get min/max Z/Phi from volume (allways a cylinder volume )
-  Trk::GlobalPosition center = vol->center();  
+  // get min/max Z/Phi from volume (allways a cylinder volume )  
   const Trk::CylinderVolumeBounds* cyl = dynamic_cast<const Trk::CylinderVolumeBounds*> (&(vol->volumeBounds()));
   if (!cyl) return 0; 
+  Trk::GlobalPosition center(cyl->mediumRadius(),0.,0.);
+  center = vol->transform() * center;
 
   double zMin = center[2] - cyl->halflengthZ(); 
   double zMax = center[2] + cyl->halflengthZ();

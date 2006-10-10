@@ -430,10 +430,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    const Trk::TrackingVolume* detector = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negDet, Trk::positiveFaceXY,
 										    *posEndcap, Trk::negativeFaceXY, 
 										    "All::Container::CompleteDetector");  
-// define a new volume here to fix nightlies - hope this is temporary only
-   Trk::TrackingVolume* temp_detector = detector;
 //
-   Trk::TrackingGeometry* trackingGeometry = new Trk::TrackingGeometry(temp_detector,Trk::globalSearch);
+   Trk::TrackingGeometry* trackingGeometry = new Trk::TrackingGeometry( detector, Trk::globalSearch);
    log << MSG::INFO << name() << " print volume hierarchy" << endreq;
    trackingGeometry->printVolumeHierarchy(log);
 

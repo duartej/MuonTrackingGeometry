@@ -1,4 +1,8 @@
 
+2006/10/10 Sarka Todorova <sarka.todorova@cern.ch>
+	* follow change of interface to TrackingGeometry 
+	* tagged MuonTrackingGeometry-00-00-19 
+
 2006/10/05 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix typo in MuonStationTypeBuilder 
 	* tagged MuonTrackingGeometry-00-00-18 

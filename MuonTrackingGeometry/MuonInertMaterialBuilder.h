@@ -7,8 +7,6 @@
 
 //Trk
 #include "TrkDetDescrInterfaces/IDetachedTrackingVolumeBuilder.h"
-#include "TrkEventPrimitives/GlobalPosition.h"
-#include "TrkEventPrimitives/GlobalMomentum.h"
 #include "TrkGeometry/MagneticFieldProperties.h"
 #include "TrkGeometry/MaterialProperties.h"
 #include "TrkGeometry/DetachedTrackingVolume.h"

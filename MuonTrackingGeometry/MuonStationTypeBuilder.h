@@ -6,8 +6,6 @@
 #define MUONTRACKINGGEOMETRY_MUONSTATIONTYPEBUILDER_H
 
 //Trk
-#include "TrkEventPrimitives/GlobalPosition.h"
-#include "TrkEventPrimitives/GlobalMomentum.h"
 #include "TrkGeometry/MagneticFieldProperties.h"
 #include "TrkGeometry/MaterialProperties.h"
 #include "TrkGeometry/TrackingVolume.h"
@@ -105,8 +103,11 @@ namespace Muon {
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
       mutable Trk::MaterialProperties*    m_mdtTubeMat;                  //
       mutable Trk::MaterialProperties*    m_mdtFoamMat;                  //
-      mutable Trk::MaterialProperties*    m_rpc46;                  //
-      mutable Trk::MaterialProperties*    m_rpcDed50;                  //
+      mutable Trk::MaterialProperties*    m_rpc46;                  
+      mutable Trk::MaterialProperties*    m_rpcDed50;                
+      mutable Trk::MaterialProperties*    m_rpcLayer;                  
+      mutable Trk::MaterialProperties*    m_rpcExtPanel;                  
+      mutable Trk::MaterialProperties*    m_rpcMidPanel;                  
       mutable Trk::MaterialProperties*    m_matCSC01;                  //
       mutable Trk::MaterialProperties*    m_matCSCspacer1;                  //
       mutable Trk::MaterialProperties*    m_matCSC02;                  //

@@ -1,4 +1,9 @@
 
+2006/10/16 Sarka Todorova <sarka.todorova@cern.ch>
+	* RPC split into layers + identification
+	* clean-up, remove TrkEvPrimitives dependency 
+	* tagged MuonTrackingGeometry-00-00-20 
+
 2006/10/10 Sarka Todorova <sarka.todorova@cern.ch>
 	* follow change of interface to TrackingGeometry 
 	* tagged MuonTrackingGeometry-00-00-19 

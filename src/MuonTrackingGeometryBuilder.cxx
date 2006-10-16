@@ -429,9 +429,9 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 									                "All::Container::NegDet");  
    const Trk::TrackingVolume* detector = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negDet, Trk::positiveFaceXY,
 										    *posEndcap, Trk::negativeFaceXY, 
-										    "All::Container::CompleteDetector");  
+										    "All::Container::CompleteDetector");
 //
-   Trk::TrackingGeometry* trackingGeometry = new Trk::TrackingGeometry( detector, Trk::globalSearch);
+   Trk::TrackingGeometry* trackingGeometry = new Trk::TrackingGeometry(detector,Trk::globalSearch);
    log << MSG::INFO << name() << " print volume hierarchy" << endreq;
    trackingGeometry->printVolumeHierarchy(log);
 
@@ -471,53 +471,53 @@ const std::vector<const Muon::Span*>* Muon::MuonTrackingGeometryBuilder::findVol
     // loop over edges ...
     double minZ = m_outerEndcapZ ; double maxZ = - m_outerEndcapZ;
     double minPhi = 2*M_PI; double maxPhi = 0.;
-    std::vector<Trk::GlobalPosition> edges;
+    std::vector<HepPoint3D> edges;
     Muon::Span span;  
     if (box) {
-      edges.push_back( Trk::GlobalPosition(box->halflengthX(),box->halflengthY(),box->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(-box->halflengthX(),box->halflengthY(),box->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(box->halflengthX(),-box->halflengthY(),box->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(-box->halflengthX(),-box->halflengthY(),box->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(box->halflengthX(),box->halflengthY(),-box->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(-box->halflengthX(),box->halflengthY(),-box->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(box->halflengthX(),-box->halflengthY(),-box->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(-box->halflengthX(),-box->halflengthY(),-box->halflengthZ()) );
+      edges.push_back( HepPoint3D(box->halflengthX(),box->halflengthY(),box->halflengthZ()) );
+      edges.push_back( HepPoint3D(-box->halflengthX(),box->halflengthY(),box->halflengthZ()) );
+      edges.push_back( HepPoint3D(box->halflengthX(),-box->halflengthY(),box->halflengthZ()) );
+      edges.push_back( HepPoint3D(-box->halflengthX(),-box->halflengthY(),box->halflengthZ()) );
+      edges.push_back( HepPoint3D(box->halflengthX(),box->halflengthY(),-box->halflengthZ()) );
+      edges.push_back( HepPoint3D(-box->halflengthX(),box->halflengthY(),-box->halflengthZ()) );
+      edges.push_back( HepPoint3D(box->halflengthX(),-box->halflengthY(),-box->halflengthZ()) );
+      edges.push_back( HepPoint3D(-box->halflengthX(),-box->halflengthY(),-box->halflengthZ()) );
     }
     if (trd) {
-      edges.push_back( Trk::GlobalPosition(trd->maxHalflengthX(),trd->halflengthY(),trd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(-trd->maxHalflengthX(),trd->halflengthY(),trd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(trd->minHalflengthX(),-trd->halflengthY(),trd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(-trd->minHalflengthX(),-trd->halflengthY(),trd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(trd->maxHalflengthX(),trd->halflengthY(),-trd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(-trd->maxHalflengthX(),trd->halflengthY(),-trd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(trd->minHalflengthX(),-trd->halflengthY(),-trd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(-trd->minHalflengthX(),-trd->halflengthY(),-trd->halflengthZ()) );
+      edges.push_back( HepPoint3D(trd->maxHalflengthX(),trd->halflengthY(),trd->halflengthZ()) );
+      edges.push_back( HepPoint3D(-trd->maxHalflengthX(),trd->halflengthY(),trd->halflengthZ()) );
+      edges.push_back( HepPoint3D(trd->minHalflengthX(),-trd->halflengthY(),trd->halflengthZ()) );
+      edges.push_back( HepPoint3D(-trd->minHalflengthX(),-trd->halflengthY(),trd->halflengthZ()) );
+      edges.push_back( HepPoint3D(trd->maxHalflengthX(),trd->halflengthY(),-trd->halflengthZ()) );
+      edges.push_back( HepPoint3D(-trd->maxHalflengthX(),trd->halflengthY(),-trd->halflengthZ()) );
+      edges.push_back( HepPoint3D(trd->minHalflengthX(),-trd->halflengthY(),-trd->halflengthZ()) );
+      edges.push_back( HepPoint3D(-trd->minHalflengthX(),-trd->halflengthY(),-trd->halflengthZ()) );
     }
     if (dtrd) {
-      edges.push_back( Trk::GlobalPosition( dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),dtrd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(-dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),dtrd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition( dtrd->medHalflengthX(),0.,dtrd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(-dtrd->medHalflengthX(),0.,dtrd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition( dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),dtrd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(-dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),dtrd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition( dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),-dtrd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(-dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),-dtrd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition( dtrd->medHalflengthX(),0.,-dtrd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(-dtrd->medHalflengthX(),0.,-dtrd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition( dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),-dtrd->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(-dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),-dtrd->halflengthZ()) );
+      edges.push_back( HepPoint3D( dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),dtrd->halflengthZ()) );
+      edges.push_back( HepPoint3D(-dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),dtrd->halflengthZ()) );
+      edges.push_back( HepPoint3D( dtrd->medHalflengthX(),0.,dtrd->halflengthZ()) );
+      edges.push_back( HepPoint3D(-dtrd->medHalflengthX(),0.,dtrd->halflengthZ()) );
+      edges.push_back( HepPoint3D( dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),dtrd->halflengthZ()) );
+      edges.push_back( HepPoint3D(-dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),dtrd->halflengthZ()) );
+      edges.push_back( HepPoint3D( dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),-dtrd->halflengthZ()) );
+      edges.push_back( HepPoint3D(-dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),-dtrd->halflengthZ()) );
+      edges.push_back( HepPoint3D( dtrd->medHalflengthX(),0.,-dtrd->halflengthZ()) );
+      edges.push_back( HepPoint3D(-dtrd->medHalflengthX(),0.,-dtrd->halflengthZ()) );
+      edges.push_back( HepPoint3D( dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),-dtrd->halflengthZ()) );
+      edges.push_back( HepPoint3D(-dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),-dtrd->halflengthZ()) );
     }
     if (bcyl) {
-      edges.push_back( Trk::GlobalPosition(0.,0., bcyl->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(0.,0.,-bcyl->halflengthZ()) );
+      edges.push_back( HepPoint3D(0.,0., bcyl->halflengthZ()) );
+      edges.push_back( HepPoint3D(0.,0.,-bcyl->halflengthZ()) );
     }
     if (cyl) {
-      edges.push_back( Trk::GlobalPosition(0.,0., cyl->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(0.,0.,-cyl->halflengthZ()) );
+      edges.push_back( HepPoint3D(0.,0., cyl->halflengthZ()) );
+      edges.push_back( HepPoint3D(0.,0.,-cyl->halflengthZ()) );
     }
     // apply transform and get span
     for (unsigned int ie=0; ie < edges.size() ; ie++) {
-      Trk::GlobalPosition gp = transform*edges[ie];
+      HepPoint3D gp = transform*edges[ie];
       double phi = gp.phi()+M_PI; 
       if ( gp[2]<minZ ) minZ = gp[2];
       if ( gp[2]>maxZ ) maxZ = gp[2];
@@ -607,9 +607,9 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 								   detVols,
 								   volName );
         // reference position 
-	Trk::GlobalPosition gp(subBds->outerRadius(),0.,0.);
+	HepPoint3D gp(subBds->outerRadius(),0.,0.);
 	subVolumes.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
-                                                             new Trk::GlobalPosition((*transf)*gp)));
+                                                             new HepPoint3D((*transf)*gp)));
         //glue subVolumes
         sVols.push_back(sVol); 
         if (eta==0)      sVolsNeg.push_back(sVol); 
@@ -667,7 +667,7 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
   // get min/max Z/Phi from volume (allways a cylinder volume )  
   const Trk::CylinderVolumeBounds* cyl = dynamic_cast<const Trk::CylinderVolumeBounds*> (&(vol->volumeBounds()));
   if (!cyl) return 0; 
-  Trk::GlobalPosition center(cyl->mediumRadius(),0.,0.);
+  HepPoint3D center(cyl->mediumRadius(),0.,0.);
   center = vol->transform() * center;
 
   double zMin = center[2] - cyl->halflengthZ(); 

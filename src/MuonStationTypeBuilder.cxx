@@ -77,7 +77,6 @@ const InterfaceID& Muon::MuonStationTypeBuilder::interfaceID()
   return IID_IMuonStationTypeBuilder;
 }
 
-
 // constructor
 Muon::MuonStationTypeBuilder::MuonStationTypeBuilder(const std::string& t, const std::string& n, const IInterface* p) :
   AlgTool(t,n,p),
@@ -90,6 +89,9 @@ Muon::MuonStationTypeBuilder::MuonStationTypeBuilder(const std::string& t, const
   m_magFieldToolInstanceName("ATLAS_TrackingMagFieldTool"),
   m_mdtTubeMat(0),
   m_mdtFoamMat(0),
+  m_rpcLayer(0),
+  m_rpcExtPanel(0),
+  m_rpcMidPanel(0),
   m_rpc46(0),
   m_rpcDed50(0),
   m_matCSC01(0),
@@ -299,7 +301,7 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
         double uppX = compVol[i]->center()[0]+compBounds->halflengthX();
 	if ( lowX < currX ) std::cout<<"Warning: we have a clash between components here!"<< std::endl;
 	if ( uppX > maxX ) std::cout<<"Warning: we have a clash between component and envelope!"<< std::endl;
-        // close Rpc if no futher components
+        // close Rpc if no further components
         if (openRpc  && compName[i].substr(0,3) != "RPC" && compName[i].substr(0,3) != "Ded"){
           // low edge of current volume
           double Xcurr = compVol[i]->center()[0]-compBounds->halflengthX();
@@ -1035,11 +1037,13 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
 //
 const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*& vol,std::vector<const GeoVPhysVol*> gv, std::vector<HepTransform3D*> transfc) const
 {
+  MsgStream log(msgSvc(), name());
   // layers correspond to DedModules and RpcModules; all substructures averaged in material properties
   std::vector<const Trk::Layer*> layers;
   for (unsigned int ic=0; ic<gv.size(); ++ic) {
-    // std::cout << "processing Rpc component:"<< gv[ic]->getLogVol()->getName() <<std::endl;
+    //std::cout << "processing Rpc component:"<< gv[ic]->getLogVol()->getName() <<std::endl;
     const GeoLogVol* glv = gv[ic]->getLogVol();
+    //std::cout << "shape:"<< glv->getShape()->type() <<std::endl;
     if (glv->getShape()->type()=="Box") {
       const GeoBox* box = dynamic_cast<const GeoBox*> (glv->getShape());
       double xs = box->getXHalfLength();
@@ -1060,23 +1064,24 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
             m_rpcDed50 = getAveragedLayerMaterial(gv[ic],vol,2*xs);
           }
           rpcMat=*m_rpcDed50;  
-        } else { std::cout << "Ded thickness different from 50:" << thickness << std::endl; }
+        } else { log << MSG::WARNING << name() << " Ded thickness different from 50:" << thickness << endreq; }
       } else {
+        //printChildren(gv[ic]);
         if (thickness == 46.0) {
           if (!m_rpc46) {
             double vol = 8*xs*ys*zs;
             m_rpc46 = getAveragedLayerMaterial(gv[ic],vol,2*xs);
           }
           rpcMat=*m_rpc46;  
-        } else { std::cout << "RPC module thickness different from 46:" << thickness << std::endl; }
+        } else { log << MSG::WARNING << name() << "RPC module thickness different from 46:" << thickness << endreq; }
       }
           
       Trk::HomogenousLayerMaterial rpcMaterial(rpcMat, Trk::oppositePre);
       layer = new Trk::PlaneLayer(cTr,
-                                     bounds,
-                                     rpcMaterial,
-                                     thickness,
-                                     od );
+				  bounds,
+				  rpcMaterial,
+				  thickness,
+				  od );
       layers.push_back(layer);
       // make preliminary identification of active layers
       if ((glv->getName()).substr(0,3)!="Ded" ) {
@@ -1098,69 +1103,114 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
         double thickness=2*xs1;
         Trk::OverlapDescriptor* od=0;
         Trk::RectangleBounds* bounds = new Trk::RectangleBounds(ys1,zs); 
+        Trk::RectangleBounds* boundsEta = new Trk::RectangleBounds(zs,ys1); 
         HepTransform3D* cTr = new HepTransform3D((*transfc[ic]) * HepRotateY3D(90*deg) * HepRotateZ3D(90*deg));
+	//std::cout << "component rotation:" << (*cTr)[0][0] <<"," << (*cTr)[1][1] <<"," << (*cTr)[2][2] << std::endl; 
+	//std::cout << "component translation:" << (*cTr).getTranslation() << std::endl; 
+	//std::cout << "component (layer) dimensions:" << ys1 << "," << zs << std::endl;
         Trk::MaterialProperties rpcMat = m_muonMaterial;               // default
         if ( (glv->getName()).substr(0,3)=="Ded" ) {
           if (thickness == 50.0) {
             if (!m_rpcDed50) {
               double vol = 8*xs1*ys1*zs;
-             m_rpcDed50 = getAveragedLayerMaterial(gv[ic],vol,2*xs1);
+	      m_rpcDed50 = getAveragedLayerMaterial(gv[ic],vol,2*xs1);
             }
             rpcMat=*m_rpcDed50;  
-          } else { std::cout << "Ded thickness different from 50:" << thickness << std::endl; }
-        } else {
-          if (thickness == 46.0) {
-            if (!m_rpc46) {
-              double vol = 8*xs1*ys1*zs;
-              m_rpc46 = getAveragedLayerMaterial(gv[ic],vol,2*xs1);
-            }
-            rpcMat=*m_rpc46;  
-          } else { std::cout << "RPC module thickness different from 46:" << thickness << std::endl; }
-        }
-          
-        Trk::HomogenousLayerMaterial rpcMaterial(rpcMat, Trk::oppositePre);
-        layer = new Trk::PlaneLayer(cTr,
-                                     bounds,
-                                     rpcMaterial,
-                                     thickness,
-                                     od );
-        layers.push_back(layer);
-        // make preliminary identification of active layers
-        if ((glv->getName()).substr(0,3)!="Ded" ) {
-	  layer->setLayerType(1);
-        } else {
+          } else { log << MSG::WARNING << name() << "Ded thickness different from 50:" << thickness << endreq; }
+          // create Ded layer
+	  Trk::HomogenousLayerMaterial rpcMaterial(rpcMat, Trk::oppositePre);
+	  layer = new Trk::PlaneLayer(cTr, bounds, rpcMaterial, thickness, od );
+          layers.push_back(layer);
 	  layer->setLayerType(0);
-        }
+        } else {
+          // RPC layer; step one level below to resolve strip planes
+          //printChildren(gv[ic]);
+          unsigned int ngc = gv[ic]->getNChildVols();
+          for (unsigned int igc=0; igc<ngc; igc++) {
+	    HepTransform3D trgc;
+             if (transfc[ic]->getTranslation()[0]>vol->center()[0]) {
+	       //std::cout << "rotating RPC module" << std::endl;
+               trgc = HepRotateZ3D(180*deg)*(gv[ic]->getXToChildVol(igc)); 
+             } else {
+               trgc = gv[ic]->getXToChildVol(igc);
+             }
+	     //std::cout << "rotation RPC layer component:" << trgc[0][0]<<"," << trgc[1][1] <<"," << trgc[2][2]<<std::endl;
+             const GeoVPhysVol* gcv = &(*(gv[ic]->getChildVol(igc)));
+             const GeoLogVol* gclv = gcv->getLogVol();
+	     const GeoTrd* gtrd = dynamic_cast<const GeoTrd*> (gclv->getShape());
+	     double gx = gtrd->getXHalfLength1();
+	     double gy = gtrd->getYHalfLength1();
+	     double gz = gtrd->getZHalfLength();
+             //std::cout << "processing RPC layer component:" << gclv->getName() <<"," << trgc.getTranslation()<< std::endl;
+             if ( (gclv->getName()).substr(0,6)=="RPC_AL" ) {
+	       if (fabs(gx-5.0) < 0.001) {
+		 if (!m_rpcExtPanel) {
+		   double vol = 8*gx*gy*gz;
+                   m_rpcExtPanel = getAveragedLayerMaterial(gcv,vol,2*gx);
+                 }
+                 rpcMat=*m_rpcExtPanel;
+	       } else if (fabs(gx - 4.3) < 0.001) {
+		 if (!m_rpcMidPanel) {
+		   double vol = 8*gx*gy*gz;
+                   m_rpcMidPanel = getAveragedLayerMaterial(gcv,vol,2*gx);
+                 }
+                 rpcMat=*m_rpcMidPanel;
+	       } else {
+		 log << MSG::WARNING << name() << "unknown RPC panel:" << gx << endreq;               
+               }
+	       // create Rpc panel layers 
+               thickness = 2*gx;
+	       Trk::HomogenousLayerMaterial rpcMaterial(rpcMat, Trk::oppositePre);
+	       layer = new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(trgc.getTranslation())*(*cTr)),
+					   bounds, rpcMaterial, thickness, od );
+	       layers.push_back(layer);
+	       layer->setLayerType(0);
+	     } else if  ( (gclv->getName())=="Rpclayer" ) {
+               if ( fabs(gx-6.85)>0.001 )  log << MSG::WARNING << name() << " unusual thickness of RPC layer:" << 2*gx << endreq;
+	       if (!m_rpcLayer) {                   
+		 double vol = 8*gx*gy*gz;
+                 // material allocated to two strip planes ( gas volume suppressed )
+		 m_rpcLayer = getAveragedLayerMaterial(gcv,vol,2*gx);
+	       }
+	       rpcMat=*m_rpcLayer;
+               // define 2 layers for strip planes; rotate the one with phi strips
+               thickness = gx;
+	       Trk::HomogenousLayerMaterial rpcMaterial(rpcMat, Trk::oppositePre);
+	       layer = new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(trgc.getTranslation())*HepTranslateX3D(-0.5*gx)*(*cTr)),
+					   bounds, rpcMaterial, thickness, od );
+	       layers.push_back(layer);
+	       layer->setLayerType(1);
+	       layer = new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(trgc.getTranslation())*HepTranslateX3D(+0.5*gx)*(*cTr)
+							      *HepRotateZ3D(90*deg)), boundsEta, rpcMaterial, thickness, od );
+	       layers.push_back(layer);
+	       layer->setLayerType(1);               
+             } else {
+	       log << MSG::WARNING << name()  << "unknown RPC component? " << gclv->getName() << endreq;
+             }
+	  }
+	}
+          
       } else {
-        std::cout << "RPC true trapezoid layer, not coded yet" <<std::endl;
+         log << MSG::WARNING << name() << "RPC true trapezoid layer, not coded yet" <<endreq;
       }
-      /*
-      const Trk::PlaneLayer* layer;
-      double thickness=2*xs;
-      Trk::OverlapDescriptor* od=0;
-      Trk::RectangleBounds* bounds = new Trk::RectangleBounds(ys,zs); 
-      HepTransform3D* cTr = new HepTransform3D((*transfc[ic]) * HepRotateY3D(90*deg) * HepRotateZ3D(90*deg));
-      const Trk::MaterialProperties material = getLayerMaterial(glv->getName(),thickness);
-      Trk::LayerMaterialProperties rpcMaterial(material, Trk::oppositePre);
-      layer = new Trk::PlaneLayer(cTr,
-                                     bounds,
-                                     rpcMaterial,
-                                     thickness,
-                                     od );
-      layers.push_back(layer);
-      */
     }
   } // end loop over Modules
 
   std::vector<const Trk::Layer*>* rpcLayers = new std::vector<const Trk::Layer*>(layers); 
-
+  /*
+  for (unsigned int i=0; i< rpcLayers->size(); i++) {
+    std::cout << "prototype RPC layer :" << i << ":" << (*rpcLayers)[i]->layerType() << ": center,normal :" 
+    <<((*rpcLayers)[i]->surfaceRepresentation()).center() << "," 
+    <<((*rpcLayers)[i]->surfaceRepresentation()).normal() << std::endl;    
+  }
+  */
   std::string name="RPC";
   const Trk::TrackingVolume* rpc= new Trk::TrackingVolume(*vol,
                                                           m_muonMaterial,
                                                           m_muonMagneticField,
                                                           rpcLayers,
                                                           name);         
-  // std::cout << "Rpc processed with" << layers.size() << " layers" << std::endl;
+  log << MSG::DEBUG << " Rpc component volume processed with" << layers.size() << " layers"  << endreq;
   return rpc;
 }
 //
@@ -1556,16 +1606,20 @@ const double Muon::MuonStationTypeBuilder::get_x_size(const GeoVPhysVol* pv) con
 
 Trk::MaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerMaterial( const GeoVPhysVol* pv, double volume, double thickness) const
 {  
+  MsgStream log(msgSvc(), name());
+
+  log << MSG::INFO << name() << "::getAveragedLayerMaterial:processing "<< std::endl; 
   // loop through the whole hierarchy; collect material
   Trk::MaterialProperties* empty=new Trk::MaterialProperties(0.,10.e8,0.,0.,0.);
   Trk::MaterialProperties total = collectMaterial( pv, *empty, volume/thickness);
-  //std::cout << " combined material thickness: "<< total.thickness() << std::endl; 
-  //std::cout << " actual layer thickness: "<< thickness << std::endl; 
+  log << MSG::INFO << name() << " combined material thickness: "<< total.thickness() << std::endl; 
+  log << MSG::INFO << name() << " actual layer thickness: "<< thickness << std::endl; 
   // scaled material properties to the actual layer thickness
   if (total.thickness() > 0 ) { 
       total *= thickness/total.thickness();
       return new Trk::MaterialProperties(total); 
   }  
+  log << MSG::INFO << name() << " returns 0 " << std::endl; 
   return 0;
 }
 
@@ -1601,7 +1655,7 @@ Trk::MaterialProperties Muon::MuonStationTypeBuilder::collectMaterial(const GeoV
       for (unsigned int ic=0; ic<nc; ic++) {
         const GeoVPhysVol* cv = &(*(pv->getChildVol(ic)));
         if ( cv->getLogVol()->getShape()->volume() > vol ) {
-	  std::cout << "WARNING:collect material : child volume bigger than mother volume" << std::endl; 
+	  //std::cout << "WARNING:collect material : child volume bigger than mother volume" << std::endl; 
         } else {
 	  vol = vol - cv->getLogVol()->getShape()->volume(); 
         }
@@ -1610,8 +1664,8 @@ Trk::MaterialProperties Muon::MuonStationTypeBuilder::collectMaterial(const GeoV
       double d = vol / sf;
       //std::cout << "corrected volume thickness:" << d << std::endl;
 
-      //std::cout << "old material properties:" << matProp.thickness() <<","<<matProp.x0()<<","<<matProp.zOverAtimesRho()<<","<< 
-      //	matProp.averageZ()<<","<<matProp.dEdX() << std::endl;
+      //std::cout << "old material properties:" << matProp.thickness() <<","<<matProp.x0()<<","
+      // <<matProp.zOverAtimesRho()<<","<< matProp.averageZ()<<","<<matProp.dEdX() << std::endl;
       // std::cout << "new material properties:" << d <<","<<newMP.x0()<<","<<newMP.zOverAtimesRho()<<","<< 
       //	newMP.averageZ()<<","<<newMP.dEdX() << std::endl;
       // material properties with thickness
@@ -1621,8 +1675,8 @@ Trk::MaterialProperties Muon::MuonStationTypeBuilder::collectMaterial(const GeoV
       Trk::MaterialProperties newUpdate(d,newMP.x0(),newMP.zOverAtimesRho(),newMP.averageZ(),newMP.dEdX());  
       // combine
       matProp.addMaterial(newUpdate);     
-      //std::cout << "combined material properties:" << matProp.thickness() <<","<<matProp.x0()<<","<<matProp.zOverAtimesRho()<<","<< 
-      // matProp.averageZ()<<","<<matProp.dEdX() << std::endl;
+      //std::cout << "combined material properties:" << matProp.thickness() <<","<<matProp.x0()<<","
+      //<<matProp.zOverAtimesRho()<<","<<  matProp.averageZ()<<","<<matProp.dEdX() << std::endl;
    } 
 
   // subcomponents

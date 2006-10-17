@@ -42,8 +42,6 @@
 
 // BField
 #include "BFieldAth/MagFieldAthena.h"
-// temporary
-#include "TrkParameters/Perigee.h"
 
 //CLHEP
 #include "CLHEP/Units/SystemOfUnits.h"
@@ -358,6 +356,8 @@ StatusCode Muon::MuonInertMaterialBuilder::finalize()
 
 Trk::BevelledCylinderVolumeBounds* Muon::MuonInertMaterialBuilder::decodeBevelledCylinder(const GeoShape* sh) const
 {
+  Trk::BevelledCylinderVolumeBounds* bevCylBounds=0;
+
   while ( sh->type() == "Subtraction" ) {
     const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction*> (sh);
     sh = sub->getOpA();
@@ -369,7 +369,7 @@ Trk::BevelledCylinderVolumeBounds* Muon::MuonInertMaterialBuilder::decodeBevelle
     return new Trk::BevelledCylinderVolumeBounds(tube->getRMin(),tube->getRMax(),
               tube->getZHalfLength(),theta,theta);
   }
-  return new Trk::BevelledCylinderVolumeBounds()=0;
+  return bevCylBounds;
 }
 
 
@@ -379,6 +379,7 @@ Trk::BevelledCylinderVolumeBounds* Muon::MuonInertMaterialBuilder::decodeBevelle
 Trk::VolumeBounds* Muon::MuonInertMaterialBuilder::decodeECTSegment(const GeoShape* sh) const
 {
 //  std::cout << "MW ECT  decoding shape " << sh->type() << std::endl;
+  Trk::VolumeBounds* retBounds=0;
 
   while ( sh->type() == "Subtraction" || sh->type() == "Union" ) {
     if (sh->type() == "Subtraction") {
@@ -490,9 +491,7 @@ Trk::VolumeBounds* Muon::MuonInertMaterialBuilder::decodeECTSegment(const GeoSha
 
   }
 
-  return new Trk::CylinderVolumeBounds();
-//  return new Trk::CylinderVolumeBounds(1000.,1200.,2000.);
-
+  return retBounds;
 }
 
 
@@ -502,6 +501,8 @@ Trk::VolumeBounds* Muon::MuonInertMaterialBuilder::decodeECTSegment(const GeoSha
 Trk::TrapezoidVolumeBounds* Muon::MuonInertMaterialBuilder::decodeColdSegment(const GeoShape* sh) const
 {
 //  std::cout << "  decoding shape " << sh->type() << std::endl;
+
+  Trk::TrapezoidVolumeBounds* trapBounds = 0;
 
   if (sh->type() == "Trd") {
   	const GeoTrd* trapezoid = dynamic_cast<const GeoTrd*> (sh);
@@ -527,7 +528,7 @@ Trk::TrapezoidVolumeBounds* Muon::MuonInertMaterialBuilder::decodeColdSegment(co
   }
 
 
-  return new Trk::TrapezoidVolumeBounds()=0;
+  return trapBounds;
 }
 
 

@@ -1,4 +1,9 @@
 
+2006/10/17 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix MIMB for SLC4 ( bug reintroduced in the previous update)
+	* clean-up, remove TrkParameters include 
+	* tagged MuonTrackingGeometry-00-00-21 
+
 2006/10/16 Sarka Todorova <sarka.todorova@cern.ch>
 	* RPC split into layers + identification
 	* clean-up, remove TrkEvPrimitives dependency 

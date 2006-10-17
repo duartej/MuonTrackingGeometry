@@ -515,7 +515,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
             if (assocVol && assocLay) {
 	      Identifier idi = m_mdtIdHelper->channelID(nameIndex,eta,phi,multi+1,layer,1);           
 	      HepPoint3D gpi = multilayer->tubePos(idi);
-	      const Trk::LocalPosition* locPos = (assocLay->surfaceRepresentation()).globalToLocal(gpi,0.001);
+	      //const Trk::LocalPosition* locPos = (assocLay->surfaceRepresentation()).globalToLocal(gpi,0.001);
               //assocLay->setRef((*locPos)[1]);
               /*
               for (unsigned int i=1; i<3; i++) {
@@ -559,16 +559,16 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 		  //std::cout << "strip position:"<<rpc->stripPos(etaId) << std::endl;
          	  Identifier etaId1 = m_rpcIdHelper->channelID(nameIndex,eta,phi,
 							    doubletR+1,doubletZ+1,doubletPhi+1,gasGap+1,0,1); 
-         	  Identifier etaId2 = m_rpcIdHelper->channelID(nameIndex,eta,phi,
-							    doubletR+1,doubletZ+1,doubletPhi+1,gasGap+1,0,2); 
+         	  //Identifier etaId2 = m_rpcIdHelper->channelID(nameIndex,eta,phi,
+		  //					    doubletR+1,doubletZ+1,doubletPhi+1,gasGap+1,0,2); 
          	  Identifier phiId1 = m_rpcIdHelper->channelID(nameIndex,eta,phi,
 							    doubletR+1,doubletZ+1,doubletPhi+1,gasGap+1,1,1); 
-         	  Identifier phiId2 = m_rpcIdHelper->channelID(nameIndex,eta,phi,
-							    doubletR+1,doubletZ+1,doubletPhi+1,gasGap+1,1,2); 
-         	  Identifier etaId1d = m_rpcIdHelper->channelID(nameIndex,eta,phi,
-							    doubletR+1,doubletZ+1,doubletPhi+2,gasGap+1,0,1); 
-         	  Identifier phiId1d = m_rpcIdHelper->channelID(nameIndex,eta,phi,
-							    doubletR+1,doubletZ+1,doubletPhi+2,gasGap+1,1,1); 
+         	  //Identifier phiId2 = m_rpcIdHelper->channelID(nameIndex,eta,phi,
+		  //					    doubletR+1,doubletZ+1,doubletPhi+1,gasGap+1,1,2); 
+         	  //Identifier etaId1d = m_rpcIdHelper->channelID(nameIndex,eta,phi,
+		  //					    doubletR+1,doubletZ+1,doubletPhi+2,gasGap+1,0,1); 
+         	  //Identifier phiId1d = m_rpcIdHelper->channelID(nameIndex,eta,phi,
+		  //					    doubletR+1,doubletZ+1,doubletPhi+2,gasGap+1,1,1); 
 		  for (unsigned int il=0;il<layers->size();il++) {
 		    if ((*layers)[il]->layerType() != 0 && (*layers)[il]->isOnLayer(rpc->stripPos(etaId)) ) {
 		      //std::cout << "isOnLayer?:" << il << std::endl;

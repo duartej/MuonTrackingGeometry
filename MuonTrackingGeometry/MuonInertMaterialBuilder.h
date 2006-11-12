@@ -70,6 +70,10 @@ namespace Muon {
 
 //        void checkObject( const Trk::TrackingVolume* objs) const;
       void checkObject( const std::vector<const Trk::DetachedTrackingVolume*>*trkVolumes) const;
+      const void printInfo(const GeoVPhysVol* pv) const;
+      const void printChildren(const GeoVPhysVol* pv) const;
+      const void decodeShape(const GeoShape* sh) const;
+      Trk::Volume* translateGeoShape(const GeoShape* sh, HepTransform3D* tr) const;
 
       Trk::TrapezoidVolumeBounds* decodeColdSegment(const GeoShape* sh) const;
       Trk::VolumeBounds* decodeECTSegment(const GeoShape* sh) const;

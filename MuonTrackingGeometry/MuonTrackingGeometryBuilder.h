@@ -55,13 +55,14 @@ namespace Muon {
 
     private:
       /** Private method to find z/phi span of detached volumes */
-      const std::vector<const Span*>* findVolumeSpan(const std::vector<const Trk::DetachedTrackingVolume*>*& objs, double zTol, double phiTol) const;
+      const Span* findVolumeSpan(const Trk::VolumeBounds* volBounds, HepTransform3D transf, double zTol, double phiTol) const;
+      const std::vector<const Span*>* findVolumesSpan(const std::vector<const Trk::DetachedTrackingVolume*>*& objs, double zTol, double phiTol) const;
       /** Private method to define subvolumes and fill them with detached volumes */
       const Trk::TrackingVolume* processVolume( const Trk::Volume*, int, int, std::string) const; 
-      /** Private method to find detached volumes */
-      std::vector<const Trk::DetachedTrackingVolume*>* getDetachedObjects(const Trk::Volume*) const;
       /** Private method to check volume properties */
       void checkVolume(const Trk::TrackingVolume*) const;
+      /** Private method to find detached volumes */
+      std::vector<const Trk::DetachedTrackingVolume*>* getDetachedObjects(const Trk::Volume*) const;
            
       Trk::IMagneticFieldTool*            m_magFieldTool;                //!< Tracking Interface to Magnetic Field
       std::string                         m_magFieldToolName;            //!< Name of the Tracking Magnetic Field Svc

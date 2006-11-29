@@ -1,4 +1,7 @@
-
+2006-11-29 Sarka Todorova <sarka.todorova@cern.ch>
+	* CSC/TGC active layers added (one per gas gap)
+	* tagged MuonTrackingGeometry-00-00-23
+	
 2006/11/12 Sarka Todorova <sarka.todorova@cern.ch>
 	* complete transcript of inert material from GeoModel
 	* MTGB handling of subtracted/combined volumes (span) 

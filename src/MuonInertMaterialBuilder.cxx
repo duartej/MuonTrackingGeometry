@@ -15,9 +15,6 @@
 #include "TrkDetDescrInterfaces/ITrackingVolumeArrayCreator.h"
 #include "TrkDetDescrInterfaces/ILayerBuilder.h"
 #include "TrkDetDescrInterfaces/IDetachedTrackingVolumeBuilder.h"
-#include "TrkDetDescrUtils/BinUtility1DR.h"
-#include "TrkDetDescrUtils/BinUtility1DZ.h"
-#include "TrkDetDescrUtils/BinnedArray.h"
 #include "TrkDetDescrUtils/GeometryStatics.h"
 #include "TrkDetDescrUtils/SharedObject.h"
 #include "TrkVolumes/CuboidVolumeBounds.h"
@@ -29,15 +26,14 @@
 #include "TrkSurfaces/RectangleBounds.h"
 #include "TrkGeometry/DiscLayer.h"
 #include "TrkGeometry/PlaneLayer.h"
-
-#include "TrkMagFieldTools/IMagneticFieldTool.h"
+#include "TrkGeometry/TrackingVolume.h"
+#include "TrkGeometry/TrackingGeometry.h"
+#include "TrkMagFieldInterfaces/IMagneticFieldTool.h"
 #include "TrkMagFieldUtils/MagneticFieldMode.h"
 #include "TrkMagFieldUtils/MagneticFieldMap.h"
 #include "TrkMagFieldUtils/MagneticFieldMapConstant.h"
 #include "TrkMagFieldUtils/MagneticFieldMapGrid3D.h"
 #include "TrkMagFieldUtils/MagneticFieldMapSolenoid.h"
-#include "TrkGeometry/TrackingVolume.h"
-#include "TrkGeometry/TrackingGeometry.h"
 
 // StoreGate
 #include "StoreGate/StoreGateSvc.h"
@@ -114,12 +110,6 @@ StatusCode Muon::MuonInertMaterialBuilder::initialize()
     }
 
     log << MSG::INFO << m_muonMgr->geometryVersion() << endreq; 
-    
-    s = toolSvc()->retrieveTool(m_magFieldToolName, m_magFieldToolInstanceName, m_magFieldTool);
-    if (s.isFailure())
-    {
-      log << MSG::ERROR << "Could not retrieve " << m_magFieldToolName << " from ToolSvc. MagneticField will be 0. " << endreq;
-    }
  
     // if no muon materials are declared, take default ones
     if (m_muonMaterialProperties.size() < 3){
@@ -134,7 +124,13 @@ StatusCode Muon::MuonInertMaterialBuilder::initialize()
                                              m_muonMaterialProperties[1],
                                              m_muonMaterialProperties[2]);
 
-    Trk::MagneticFieldProperties muonMagneticFieldProperties(m_magFieldTool, Trk::RealisticField);    
+    s = toolSvc()->retrieveTool(m_magFieldToolName, m_magFieldToolInstanceName, m_magFieldTool);
+    if (s.isFailure())
+    {
+      log << MSG::ERROR << "Could not retrieve " << m_magFieldToolName << " from ToolSvc. MagneticField will be 0. " << endreq;
+    }
+
+    Trk::MagneticFieldProperties muonMagneticFieldProperties(m_magFieldTool, Trk::RealisticField);
     m_muonMagneticField = muonMagneticFieldProperties;
 
 // mw
@@ -165,7 +161,6 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
         const GeoLogVol* clv = cv->getLogVol();
         std::string vname = clv->getName();
 	HepTransform3D* transf = new HepTransform3D( top->getXToChildVol(ichild) );
-	std::cout <<"MW volume: "<<vname<<" position:" << transf->getTranslation() << std::endl;
 	std::vector<const Trk::TrackingVolume*>::const_iterator msTypeIter = msTypes->begin();
 	
 	for (; msTypeIter != msTypes->end(); ++msTypeIter) {
@@ -176,7 +171,6 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
             const Trk::DetachedTrackingVolume* newStat = typeStat->clone(vname,*transf);
 	      
 	    mInert.push_back(newStat);
-	    std::cout<<"MW building inert element: "<<vname<<" position "<<transf->getTranslation()<<std::endl;
 	  }
 	} // msType
       }
@@ -229,7 +223,7 @@ const std::vector<const Trk::TrackingVolume*>* Muon::MuonInertMaterialBuilder::b
 	  if (!found ) {
 	    objName.push_back(vname);
 	    objCount.push_back(1);
-	    printInfo(cv);
+	    // printInfo(cv);
 
 	    const Trk::Volume* envelope = translateGeoShape(clv->getShape(),new HepTransform3D());
 	    if (envelope) {  
@@ -247,7 +241,7 @@ const std::vector<const Trk::TrackingVolume*>* Muon::MuonInertMaterialBuilder::b
    }
 
     // print statistics
-    for (unsigned int i=0;i<objName.size();i++) std::cout << "statistics:" << objName[i] << "," << objCount[i] << std::endl; 
+    //for (unsigned int i=0;i<objName.size();i++) std::cout << "statistics:" << objName[i] << "," << objCount[i] << std::endl; 
 
    const std::vector<const Trk::TrackingVolume*>* mObjects = new std::vector<const Trk::TrackingVolume*>(objs);
    return mObjects;
@@ -284,123 +278,6 @@ Trk::BevelledCylinderVolumeBounds* Muon::MuonInertMaterialBuilder::decodeBevelle
   return bevCylBounds;
 }
 
-
-//////////////////////////
-/*
-
-  void Muon::MuonInertMaterialBuilder::checkObject( const std::vector<const Trk::DetachedTrackingVolume*>* trkVolumes) const{
-
-
-
-
-
-       std::vector<const Trk::DetachedTrackingVolume*>::const_iterator msTypeIter = trkVolumes->begin();
-//// printout loop
-       int ij=0;
-       for (; msTypeIter != trkVolumes->end(); ++msTypeIter) {
-         ij++;
-         std::cout<<"MW InertElement "<<ij<<" "<<(*msTypeIter)->name()<<std::endl;
-
-         if (((*msTypeIter)->name()).substr(0,6)=="BTCold") {
-           const Trk::TrapezoidVolumeBounds* tzVolumeBounds = dynamic_cast<const Trk::TrapezoidVolumeBounds*> (&((*msTypeIter)->trackingVolume()->volumeBounds()));
-
-           tzVolumeBounds->dump(std::cout);
-           std::cout<<std::endl;
-           const HepTransform3D& transf =(*msTypeIter)->trackingVolume()->transform();
-	   std::cout<<transf.getTranslation()<<transf.getRotation()<<std::endl;
-
-	   const std::vector<const Trk::Surface*>* tzSurfaces =  tzVolumeBounds->decomposeToSurfaces(*(new HepTransform3D()) );
-           std::vector<const Trk::Surface*>::const_iterator Iter = tzSurfaces->begin();
-           for (; Iter != tzSurfaces->end(); ++Iter) {
-             (*Iter)->dump(std::cout);
-	     std::cout<<std::endl;
-
-	   }
-	 }
-
-
-         if (((*msTypeIter)->name()).substr(0,10)=="BTBevelled") {
-           const Trk::BevelledCylinderVolumeBounds* bcVolumeBounds = dynamic_cast<const Trk::BevelledCylinderVolumeBounds*> (&((*msTypeIter)->trackingVolume()->volumeBounds()));
-           bcVolumeBounds->dump(std::cout);
-           std::cout<<std::endl;
-           const HepTransform3D& transf =(*msTypeIter)->trackingVolume()->transform();
-	   std::cout<<transf.getTranslation()<<transf.getRotation()<<std::endl;
-
-	   const std::vector<const Trk::Surface*>* bcSurfaces =  bcVolumeBounds->decomposeToSurfaces(*(new HepTransform3D()) );
-           std::vector<const Trk::Surface*>::const_iterator Iter = bcSurfaces->begin();
-           for (; Iter != bcSurfaces->end(); ++Iter) {
-             (*Iter)->dump(std::cout);
-	     std::cout<<std::endl;
-	     HepVector3D Normal = ((*Iter)->normal());
-             HepTransform3D transf2 = transf;
-             HepVector3D  Normal2 = transf2*Normal;
-             std::cout<<"Center "<<transf2*((*Iter)->center())<<std::endl;
-             std::cout<<"Normal "<<Normal<<" "<<Normal2<<std::endl;
-	   }
-	 }
-       }
-//// end of printout loop
-
-       std::fstream myfile;
-       myfile.open ("example.txt",std::ios::out);
-
-
-       double Xmin= -10000. ;
-       double Xmax= -7000. ;
-       double Ymin=  2500. ;
-       double Ymax=  4500. ;
-       double Zmin=  11000. ;
-       double Zmax=  13000. ;
-
-      int N = 10;
-       for (int i=0;i<N;i++){
-        for (int j=0;j<N;j++){
-         for (int k=0;k<N;k++){
-          double xx=Xmin+(double)(i)/(double)(N)*(Xmax-Xmin);
-          double yy=Ymin+(double)(j)/(double)(N)*(Ymax-Ymin);
-          double zz=Zmin+(double)(k)/(double)(N)*(Zmax-Zmin);
-//
-          const HepPoint3D* center2 = new HepPoint3D(xx,yy,zz);
-
-          int is=0;
-
-          std::vector<const Trk::DetachedTrackingVolume*>::const_iterator msTypeIter = trkVolumes->begin();
-          for (; msTypeIter != trkVolumes->end(); ++msTypeIter) {
-
-
-           const HepTransform3D* transf = new HepTransform3D((*msTypeIter)->trackingVolume()->transform().inverse());
-           const HepPoint3D* centerHnew = new HepPoint3D((*transf)*(*center2));
-
-	    bool isInside = false;
-	    if (((*msTypeIter)->name()).substr(0,10)=="BTBevelled") {
-                const Trk::BevelledCylinderVolumeBounds* bcVolumeBounds
-		= dynamic_cast<const Trk::BevelledCylinderVolumeBounds*> (&((*msTypeIter)->trackingVolume()->volumeBounds()));
-                isInside = bcVolumeBounds->inside(*(centerHnew),0.);
-            }
-            if (((*msTypeIter)->name()).substr(0,6)=="BTCold") {
-                const Trk::TrapezoidVolumeBounds* tzVolumeBounds
-		= dynamic_cast<const Trk::TrapezoidVolumeBounds*> (&((*msTypeIter)->trackingVolume()->volumeBounds()));
-                isInside = tzVolumeBounds->inside(*(centerHnew),0.);
-            }
-            if (isInside) {
-	       myfile <<xx<<" "<<yy<<" "<<zz<<" "<<is<<std::endl;
-
-           }
-           is++;
-
-           if (transf) delete transf;
-           if (centerHnew) delete centerHnew;
-          }
-
-
-         }
-        }
-       }
-       myfile.close();
-
-  }
-*/
-
 const void Muon::MuonInertMaterialBuilder::printInfo(const GeoVPhysVol* pv) const
 {
   const GeoLogVol* lv = pv->getLogVol();
@@ -421,21 +298,17 @@ const void Muon::MuonInertMaterialBuilder::decodeShape(const GeoShape* sh) const
 
   if ( sh->type()=="Trd") {
     const GeoTrd* trd = dynamic_cast<const GeoTrd*> (sh);
-    //
     std::cout << "dimensions:"<< trd->getXHalfLength1() <<","
 	      << trd->getXHalfLength2() <<","  
 	      << trd->getYHalfLength1() <<","  
 	      << trd->getYHalfLength2() <<","  
 	      << trd->getZHalfLength() <<std::endl; 
-    //
   } 
   if ( sh->type()=="Box") {
     const GeoBox* box = dynamic_cast<const GeoBox*> (sh);
-    //
     std::cout << "dimensions:"<< box->getXHalfLength() <<","
 	      << box->getYHalfLength() <<","  
 	      << box->getZHalfLength() <<std::endl; 
-    //
   } 
 
   if ( sh->type() == "Tube" ) {
@@ -495,18 +368,19 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
   Trk::Volume* vol=0;
   double tol = 0.1;
  
-  std::cout << "  " ;
-  std::cout << "translating shape:"<< sh->type() << std::endl;
+  //std::cout << "  " ;
+  //std::cout << "translating shape:"<< sh->type() << std::endl;
   if ( sh->type()=="Trap") {
-    std::cout << "very general trapezoid, trying to convert into ordinary trapezoid" << std::endl;
+    //std::cout << "very general trapezoid, trying to convert into ordinary trapezoid" << std::endl;
     const GeoTrap* trap = dynamic_cast<const GeoTrap*> (sh);
+    /*
     std::cout << "dimensions anyway:z,Theta,Phi,..." << trap->getZHalfLength() <<","
 	      << trap->getTheta() <<","  << trap->getPhi() <<","
 	      << trap->getDydzn() <<","  << trap->getDxdyndzn() <<","
 	      << trap->getDxdypdzn() <<","  << trap->getAngleydzn() <<","
 	      << trap->getDydzp() <<","  << trap->getDxdyndzp() <<","
 	      << trap->getDxdypdzp() <<","  << trap->getAngleydzp() <<std::endl;
-
+    */ 
     Trk::TrapezoidVolumeBounds* volBounds=new Trk::TrapezoidVolumeBounds(trap->getDxdyndzp(),trap->getDxdyndzn(),
 									 trap->getDydzn(),trap->getZHalfLength() );
     // vol = new Trk::Volume(new HepTransform3D(*transf * HepRotateZ3D(90*deg) ), volBounds );
@@ -516,12 +390,13 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
   }
 
   if ( sh->type()=="Pgon") {
-    std::cout << "Processing polygon:" << std::endl;
+    //std::cout << "Processing polygon:" << std::endl;
     const GeoPgon* pgon = dynamic_cast<const GeoPgon*>(sh);
+    /*
     std::cout << "polygon: "<<pgon->getNPlanes()<<" planes "<<pgon->getSPhi()<<" "<<pgon->getDPhi()<<" "<<pgon->getNSides()<<std::endl;
     for (unsigned ii=0;ii<pgon->getNPlanes(); ii++) 
       std::cout << "polygon: "<<pgon->getZPlane(ii)<<" "<<pgon->getRMinPlane(ii)<<" "<<pgon->getRMaxPlane(ii)<<std::endl;
-
+    */
     double hlz = 0.5*fabs(pgon->getZPlane(1)-pgon->getZPlane(0));
     double phiH = pgon->getDPhi()/(2.*pgon->getNSides()); 
     double hly = 0.5*cos(phiH)*(pgon->getRMaxPlane(0)-pgon->getRMinPlane(0));
@@ -570,7 +445,7 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
  
     if (pgon->getNSides() == 1 ) {
 
-        std::cout<<"Polygon as 1-side trapezoid "<<hlxmin<<" "<<hlxmax<<" "<<hly<<" "<<hlz<<std::endl;
+      //std::cout<<"Polygon as 1-side trapezoid "<<hlxmin<<" "<<hlxmax<<" "<<hly<<" "<<hlz<<std::endl;
 
 	Trk::TrapezoidVolumeBounds* volBounds = new Trk::TrapezoidVolumeBounds(hlxmin,hlxmax,hlz,hly);
 	//Trk::TrapezoidVolumeBounds* volBounds = new Trk::TrapezoidVolumeBounds(hlxmin,hlxmax,hly,hlz);
@@ -583,16 +458,15 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
        
     if (pgon->getNSides() == 2) {
 
-	Trk::TrapezoidVolumeBounds* volBounds1 = new Trk::TrapezoidVolumeBounds(hlxmin,hlxmax,hlz,hly);
-	Trk::TrapezoidVolumeBounds* volBounds2 = new Trk::TrapezoidVolumeBounds(hlxmin,hlxmax,hlz,hly);
-        std::cout<<"Polygon as 2-side trapezoid "<<hlxmin<<" "<<hlxmax<<" "<<hly<<" "<<hlz<<std::endl;
-	Trk::Volume* vol1 = new Trk::Volume(new HepTransform3D(*transf*HepRotateZ3D(+phiH-90*deg)*HepTranslateY3D(dly)*HepRotateX3D(-90*deg)),volBounds1);
-	Trk::Volume* vol2 = new Trk::Volume(new HepTransform3D(*transf*HepRotateZ3D(-phiH-90*deg)*HepTranslateY3D(dly)*HepRotateX3D(-90*deg)),volBounds2);
-       
-	// Trk::CombinedVolumeBounds* combBounds = new Trk::CombinedVolumeBounds(vol1,vol2,false);
-	// vol = new Trk::Volume(new HepTransform3D(), combBounds ); 
-	Trk::CylinderVolumeBounds* cylBounds = new Trk::CylinderVolumeBounds(0,dly+hly,hlz);
-	vol = new Trk::Volume(new HepTransform3D(), cylBounds ); 
+      //Trk::TrapezoidVolumeBounds* volBounds1 = new Trk::TrapezoidVolumeBounds(hlxmin,hlxmax,hlz,hly);
+      //Trk::TrapezoidVolumeBounds* volBounds2 = new Trk::TrapezoidVolumeBounds(hlxmin,hlxmax,hlz,hly);
+      //std::cout<<"Polygon as 2-side trapezoid "<<hlxmin<<" "<<hlxmax<<" "<<hly<<" "<<hlz<<std::endl;
+      //Trk::Volume* vol1 = new Trk::Volume(new HepTransform3D(*transf*HepRotateZ3D(+phiH-90*deg)*HepTranslateY3D(dly)*HepRotateX3D(-90*deg)),volBounds1);
+      //Trk::Volume* vol2 = new Trk::Volume(new HepTransform3D(*transf*HepRotateZ3D(-phiH-90*deg)*HepTranslateY3D(dly)*HepRotateX3D(-90*deg)),volBounds2);
+      // Trk::CombinedVolumeBounds* combBounds = new Trk::CombinedVolumeBounds(vol1,vol2,false);
+      // vol = new Trk::Volume(new HepTransform3D(), combBounds ); 
+      Trk::CylinderVolumeBounds* cylBounds = new Trk::CylinderVolumeBounds(0,dly+hly,hlz);
+      vol = new Trk::Volume(new HepTransform3D(), cylBounds ); 
 
         return vol;
     }
@@ -642,10 +516,10 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
     double x = para->getXHalfLength();
     double y = para->getYHalfLength();  
     double z = para->getZHalfLength(); 
-    double alpha = para->getAlpha();
-    double theta = para->getTheta();
-    double phi   = para->getPhi();
-    std::cout << " para:dim:" << x <<"," << y << "," << z << "," << alpha << "," << theta << "," << phi << std::endl;
+    //double alpha = para->getAlpha();
+    //double theta = para->getTheta();
+    //double phi   = para->getPhi();
+    //std::cout << " para:dim:" << x <<"," << y << "," << z << "," << alpha << "," << theta << "," << phi << std::endl;
     Trk::CuboidVolumeBounds* volBounds=new Trk::CuboidVolumeBounds(x,y,z);
     vol = new Trk::Volume(new HepTransform3D(*transf), volBounds );
     return vol;
@@ -708,12 +582,12 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
     Trk::Volume* volA = translateGeoShape(shA, transf);
     Trk::Volume* volB = translateGeoShape(shB, transf);
     if (!volA || !volB ) return vol;
-    std::cout << "Subtracting volumes:" << std::endl;   
+    //std::cout << "Subtracting volumes:" << std::endl;   
     Trk::SubtractedVolumeBounds* volBounds = new Trk::SubtractedVolumeBounds(volA, volB);
     //                                                volA->transform().inverse() * volB->transform());
-    std::cout << "volume bounds processed" << std::endl;
+    //std::cout << "volume bounds processed" << std::endl;
     vol = new Trk::Volume(new HepTransform3D(), volBounds );
-    std::cout << "volume processed" << std::endl;
+    //std::cout << "volume processed" << std::endl;
     return vol;
   }
 
@@ -724,13 +598,13 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
     Trk::Volume* volA = translateGeoShape(shA, transf);
     Trk::Volume* volB = translateGeoShape(shB, transf);
     if (!volA || !volB ) return vol;
-    std::cout << "Combining volumes:" << std::endl;
+    //std::cout << "Combining volumes:" << std::endl;
     Trk::CombinedVolumeBounds* volBounds = new Trk::CombinedVolumeBounds(volA,volB,false);
     //                                           volA->transform().inverse() * volB->transform());
     std::cout << "volume bounds processed" << std::endl;
     // vol = new Trk::Volume(new HepTransform3D(volA->transform()), volBounds );
     vol = new Trk::Volume(new HepTransform3D(), volBounds );
-    std::cout << "volume processed" << std::endl;
+    //std::cout << "volume processed" << std::endl;
     return vol;
   }
 
@@ -741,13 +615,13 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
     Trk::Volume* volA = translateGeoShape(shA, transf);
     Trk::Volume* volB = translateGeoShape(shB, transf);
     if (!volA || !volB ) return vol;
-    std::cout << "Intersecting volumes:" << std::endl;
+    //std::cout << "Intersecting volumes:" << std::endl;
     Trk::CombinedVolumeBounds* volBounds = new Trk::CombinedVolumeBounds(volA,volB,true);
     //                                           volA->transform().inverse() * volB->transform());
-    std::cout << "volume bounds processed" << std::endl;
+    //std::cout << "volume bounds processed" << std::endl;
     //vol = new Trk::Volume(new HepTransform3D(volA->transform()), volBounds );
     vol = new Trk::Volume(new HepTransform3D(), volBounds );
-    std::cout << "volume processed" << std::endl;
+    //std::cout << "volume processed" << std::endl;
     return vol;
   }
 
@@ -755,7 +629,7 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
     const GeoShapeShift* shift = dynamic_cast<const GeoShapeShift*> (sh);
     const GeoShape* shA = shift->getOp();
     const HepTransform3D tr = shift->getX();
-    std::cout << "Moving volume:" << std::endl;
+    //std::cout << "Moving volume:" << std::endl;
     Trk::Volume* vol = translateGeoShape(shA, new HepTransform3D(*transf * tr));
     return vol;
   }

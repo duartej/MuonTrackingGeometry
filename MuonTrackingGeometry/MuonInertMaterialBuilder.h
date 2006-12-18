@@ -32,6 +32,7 @@ namespace Trk {
  class ILayerBuilder;
  class ILayerArrayCreator;
  class IMagneticFieldTool;
+
 //mw
  class MaterialProperties;
 
@@ -81,11 +82,11 @@ namespace Muon {
 
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
+      mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
+      mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
       Trk::IMagneticFieldTool*            m_magFieldTool;                //!< Tracking Interface to Magnetic Field
       std::string                         m_magFieldToolName;            //!< Name of the Tracking Magnetic Field Svc
       std::string                         m_magFieldToolInstanceName;    //!< Instance Name of Tracking Magnetic Field Svc
-      mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
-      mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
       Trk::MagneticFieldProperties        m_muonMagneticField;          //!< the magnetic Field
 
 //mw

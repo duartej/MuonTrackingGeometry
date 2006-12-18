@@ -27,7 +27,7 @@
 #include "TrkVolumes/CombinedVolumeBounds.h"
 #include "TrkVolumes/BoundarySurface.h"
 //#include "TrkGeometry/SimplifiedMaterialProperties.h"
-#include "TrkMagFieldTools/IMagneticFieldTool.h"
+#include "TrkMagFieldInterfaces/IMagneticFieldTool.h"
 #include "TrkMagFieldUtils/MagneticFieldMode.h"
 #include "TrkMagFieldUtils/MagneticFieldMap.h"
 #include "TrkMagFieldUtils/MagneticFieldMapConstant.h"

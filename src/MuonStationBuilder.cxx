@@ -29,7 +29,7 @@
 #include "TrkVolumes/BoundarySurfaceFace.h"
 #include "TrkSurfaces/DiscBounds.h"
 #include "TrkSurfaces/RectangleBounds.h"
-#include "TrkMagFieldTools/IMagneticFieldTool.h"
+#include "TrkMagFieldInterfaces/IMagneticFieldTool.h"
 #include "TrkMagFieldUtils/MagneticFieldMode.h"
 #include "TrkMagFieldUtils/MagneticFieldMap.h"
 #include "TrkMagFieldUtils/MagneticFieldMapConstant.h"

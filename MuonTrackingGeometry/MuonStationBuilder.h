@@ -17,6 +17,8 @@
 
 class MdtIdHelper;
 class RpcIdHelper;
+class CscIdHelper;
+class TgcIdHelper;
 
 namespace Trk {
  class TrackingGeometry;
@@ -72,6 +74,8 @@ namespace Muon {
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       const MdtIdHelper*            m_mdtIdHelper;           //!< 
       const RpcIdHelper*            m_rpcIdHelper;           //!< 
+      const CscIdHelper*            m_cscIdHelper;           //!< 
+      const TgcIdHelper*            m_tgcIdHelper;           //!< 
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
 
       Trk::IMagneticFieldTool*            m_magFieldTool;                //!< Tracking Interface to Magnetic Field

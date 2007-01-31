@@ -1,4 +1,4 @@
-package MuonSpectrometer/MuonDetDescr/MuonTrackingGeometry
+package MuonTrackingGeometry
 
 author Sarka Todorova, <Sarka.Todorova@cern.ch>
 manager Sarka Todorova, <Sarka.Todorova@cern.ch>
@@ -20,8 +20,8 @@ use TrkGeometry            TrkGeometry-*              Tracking/TrkDetDescr
 use TrkSurfaces            TrkSurfaces-*              Tracking/TrkDetDescr 
 use TrkVolumes             TrkVolumes-*               Tracking/TrkDetDescr
 use TrkDetDescrGeoModelCnv TrkDetDescrGeoModelCnv-*   Tracking/TrkDetDescr
-use TrkMagFieldTools       TrkMagFieldTools-*         Tracking/TrkMagneticField      
 use TrkMagFieldUtils       TrkMagFieldUtils-*         Tracking/TrkMagneticField      
+use TrkMagFieldInterfaces  TrkMagFieldInterfaces-*    Tracking/TrkMagneticField      
 
 use MuonGeoModel           MuonGeoModel-*             MuonSpectrometer
 use MuonIdHelpers          MuonIdHelpers-*            MuonSpectrometer

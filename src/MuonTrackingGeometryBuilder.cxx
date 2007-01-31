@@ -209,7 +209,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 
    Trk::VolumeBounds* globalBounds = new Trk::CylinderVolumeBounds(m_outerBarrelRadius,
                                                                    m_outerEndcapZ);
-                                                              
+
    if (m_muonSimple) {             
        Trk::TrackingVolume* topVolume = new Trk::TrackingVolume(new HepTransform3D,
                                                                 globalBounds,
@@ -612,8 +612,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         HepTransform3D* transf = new HepTransform3D( HepRotateZ3D( phiSect*(2*phi+1))*HepTranslateZ3D(posZ));
         const Trk::Volume* subVol= new Trk::Volume(transf, subBds);     
         // enclosed muon objects ?   
-        std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol );
 	std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) ; 
+        std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol );
         const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( *subVol,
 								   m_muonMaterial,
 								   m_muonMagneticField,
@@ -641,7 +641,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
       }
     }
 
-    Trk::BinUtility2DPhiZ* volBinUtil=new Trk::BinUtility2DPhiZ(phiN,etaN,subBds->outerRadius(),cyl->halflengthZ(),M_PI, new HepTransform3D());
+    Trk::BinUtility2DPhiZ* volBinUtil=new Trk::BinUtility2DPhiZ(phiN,etaN,subBds->outerRadius(),cyl->halflengthZ(),M_PI, new HepTransform3D(vol->transform()));
     Trk::BinnedArray2D<Trk::TrackingVolume>* subVols=new Trk::BinnedArray2D<Trk::TrackingVolume>(subVolumes,volBinUtil);
 
     tVol = new Trk::TrackingVolume( *vol,

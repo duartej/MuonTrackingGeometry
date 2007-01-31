@@ -10,6 +10,8 @@
 #include "MuonGeoModel/MuonStation.h"
 #include "MuonGeoModel/MdtReadoutElement.h"
 #include "MuonGeoModel/RpcReadoutElement.h"
+#include "MuonGeoModel/CscReadoutElement.h"
+#include "MuonGeoModel/TgcReadoutElement.h"
 #include "MuonIdHelpers/MdtIdHelper.h"
 #include "MuonIdHelpers/RpcIdHelper.h"
 // Trk
@@ -37,6 +39,7 @@
 #include "TrkMagFieldUtils/MagneticFieldMapSolenoid.h"
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkGeometry/TrackingGeometry.h"
+#include "TrkGeometry/Layer.h"
 #include<fstream>
 // StoreGate
 #include "StoreGate/StoreGateSvc.h"
@@ -113,6 +116,8 @@ StatusCode Muon::MuonStationBuilder::initialize()
     
     m_mdtIdHelper = m_muonMgr-> mdtIdHelper(); 
     m_rpcIdHelper = m_muonMgr-> rpcIdHelper();
+    m_cscIdHelper = m_muonMgr-> cscIdHelper();
+    m_tgcIdHelper = m_muonMgr-> tgcIdHelper();
 
     log << MSG::INFO << m_muonMgr->geometryVersion() << endreq; 
     
@@ -211,7 +216,8 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
           */
         }
         if (msTV && gmStation) {
-          const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(stName,msTV);
+          const Trk::Layer* layerRepresentation = m_muonStationTypeBuilder -> createLayerRepresentation(msTV);
+          const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(stName,msTV,layerRepresentation);
           HepTransform3D transf = gmStation->getTransform(); 
           const Trk::DetachedTrackingVolume* newStat = typeStat->clone(gmStation->getKey(),transf);
           // glue components
@@ -231,17 +237,31 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
       std::string msTypeName = (*msTypeIter)->volumeName();
       if ( msTypeName.substr(0,1)=="C" ||  msTypeName.substr(0,1)=="T" ) {
         const Trk::TrackingVolume* msTV = *msTypeIter;
-        const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(msTypeName,msTV);
+        const Trk::Layer* layerRepresentation = m_muonStationTypeBuilder -> createLayerRepresentation(msTV);
+        const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(msTypeName,msTV,layerRepresentation);
         // loop over stations to position 
         for (unsigned is=0; is < m_muonMgr->nMuonStation() ;is++) {
           std::string nameStat = ((m_muonMgr->getStation(is)).second)->getName();
           if ( nameStat.substr(0,4) == msTypeName.substr(0,4) ) {
             HepTransform3D transf = ((m_muonMgr->getStation(is)).first)->getTransform();
 	    // define station name to indicate eta/phi
+            int eta = 1;
+            int phi = 0;
 	    //std::cout << "current name of the station:" << nameStat <<"," << msTypeName << std::endl;  
+	    //std::cout << "current station transform:"<<transf.getTranslation()<<","<<transf.getTranslation().phi()<<std::endl;
+            if (msTypeName.substr(0,1)=="C") {
+	      if (transf.getTranslation().z() < 0 ) eta = 0;
+	      double phic = transf.getTranslation().phi();  
+	      phi = phic<0 ? 4*phic/M_PI+8 : 4*phic/M_PI;
+            } else {
+              double phic = transf.getTranslation().phi();
+              phi = phic<0 ? 24*phic/M_PI+48 : 24*phic/M_PI;
+            }  
             const Trk::DetachedTrackingVolume* newStat = typeStat->clone(nameStat,transf);
             // glue components
             glueComponents(newStat);
+            // identify layers
+            identifyLayers(newStat,eta,phi);
 	    // std::cout << "new station built at:" << transf.getTranslation() << std::endl;  
             mStations.push_back(newStat);
         }}
@@ -475,7 +495,7 @@ void Muon::MuonStationBuilder::glueComponents(const Trk::DetachedTrackingVolume*
      }
    }
 }
-//
+
 void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume* station, int eta, int phi ) const
 {
   MsgStream log(msgSvc(), name());
@@ -483,6 +503,46 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 
   std::string stationName = station->trackingVolume()->volumeName();
   log << MSG::INFO  << " in station " << station->name() << endreq;    
+
+  if (stationName.substr(0,1)=="C") {
+    int st = stationName.substr(0,3)=="CSS" ? 0 : 1;
+    const MuonGM::CscReadoutElement* cscRE = m_muonMgr->getCscReadoutElement(st,eta,phi,0);    
+    if (cscRE) {
+      for (int gasgap = 0; gasgap < cscRE->Ngasgaps(); gasgap++) {
+        int etaId = eta;
+        if (etaId < 1 ) etaId = -1;
+	Identifier idi = m_cscIdHelper->channelID(st-50,etaId,phi+1,1,gasgap+1,0,cscRE->NetaStrips(gasgap));          
+        const HepPoint3D gpi = cscRE->stripPos(idi);
+        //const HepPoint3D gp = cscRE->stripPos(eta,0,gasgap+1,0,cscRE->NetaStrips(gasgap));
+        const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gpi);
+        const Trk::Layer* assocLay = 0;
+        if (assocVol) assocLay = assocVol->associatedLayer(gpi);
+        unsigned int iD = idi;
+        if (assocVol && assocLay) assocLay->setLayerType(iD); 
+      }
+    } 
+  }
+
+  if (stationName.substr(0,1)=="T") {
+    for (int st = 0; st < 8; st++ ) {
+      for (int eta = 0; eta < 10; eta++ ) {
+
+	 const MuonGM::TgcReadoutElement* tgcRE = m_muonMgr->getTgcReadoutElement(st,eta,phi);
+	 if (tgcRE) {
+	   for (int gasgap = 0; gasgap < tgcRE->Ngasgaps(); gasgap++) {
+             const HepPoint3D gp1 = tgcRE->stripPos(gasgap,1);
+             //if (station->trackingVolume()->inside(gp1,0.)) std::cout << "valid pos1:" << gp1 <<","<<st<<","<<eta << std::endl;
+	     const HepPoint3D gp = tgcRE->stripPos(gasgap,tgcRE->Nstrips(gasgap));
+	     //const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gp);
+	     //if (assocVol && station->trackingVolume()->inside(gp,0.)) std::cout << "verifying position:"
+	     //		     <<gp<<","<<st<<","<<eta<<","<<phi<<","<<assocVol->volumeName()<<
+	     //		      ","<<station->trackingVolume()->inside(gp,0.)<<std::endl;
+	   }
+	 }
+    
+      }
+    } 
+  }
 
   if (stationName.substr(0,1)=="B" || stationName.substr(0,1)=="E" ) { 
     // MDT
@@ -515,16 +575,8 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
             if (assocVol && assocLay) {
 	      Identifier idi = m_mdtIdHelper->channelID(nameIndex,eta,phi,multi+1,layer,1);           
 	      HepPoint3D gpi = multilayer->tubePos(idi);
-	      //const Trk::LocalPosition* locPos = (assocLay->surfaceRepresentation()).globalToLocal(gpi,0.001);
-              //assocLay->setRef((*locPos)[1]);
-              /*
-              for (unsigned int i=1; i<3; i++) {
-		Identifier idi = m_mdtIdHelper->channelID(nameIndex,eta,phi,multi+1,layer,i);           
-		HepPoint3D gpi = multilayer->tubePos(idi);
-		const Trk::LocalPosition* locPos = (assocLay->surfaceRepresentation()).globalToLocal(gpi,0.001);
-		std::cout << "local position:tube:" <<i <<"," << (*locPos) << std::endl;  
-	      }
-              */
+	      const Trk::LocalPosition* locPos = (assocLay->surfaceRepresentation()).globalToLocal(gpi,0.001);
+              assocLay->setRef((*locPos)[Trk::locY]);              
             }
           }    
         }
@@ -569,40 +621,32 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 		  //					    doubletR+1,doubletZ+1,doubletPhi+2,gasGap+1,0,1); 
          	  //Identifier phiId1d = m_rpcIdHelper->channelID(nameIndex,eta,phi,
 		  //					    doubletR+1,doubletZ+1,doubletPhi+2,gasGap+1,1,1); 
+		  //std::cout << "strip width,length,pitch:eta:"<<rpc->StripWidth(0)<<","<<rpc->StripLength(0)<<","<<rpc->StripPitch(0)<<std::endl;
+		  //std::cout << "strip width,length,pitch:phi:"<<rpc->StripWidth(1)<<","<<rpc->StripLength(1)<<","<<rpc->StripPitch(1)<<std::endl;
 		  for (unsigned int il=0;il<layers->size();il++) {
 		    if ((*layers)[il]->layerType() != 0 && (*layers)[il]->isOnLayer(rpc->stripPos(etaId)) ) {
-		      //std::cout << "isOnLayer?:" << il << std::endl;
+		      unsigned int id = etaId;
+		      (*layers)[il]->setLayerType(id);
 		      HepPoint3D locPos = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(etaId));
-		      if (locPos[2]>0) {
-			unsigned int id = etaId;
-			(*layers)[il]->setLayerType(id);
-    		        HepPoint3D locPos1 = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(etaId1));
-                        //(*layers)[il]->setRef(locPos1[0]);
-			//std::cout << "identifying layer:" << il<<" as eta plane: " << (*layers)[il]->layerType() << std::endl;
-		      } else {
-			unsigned int id = phiId;
-			(*layers)[il]->setLayerType(id);
-    		        HepPoint3D locPos1 = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(phiId1));
-                        //(*layers)[il]->setRef(locPos1[0]);
-			//std::cout << "identifying layer:" << il<<" as phi plane: " << id << std::endl;
-		      } 
+		      HepPoint3D locPosEta1 = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(etaId1));
+		      //std::cout << "RPC layer:nEta,nPhi:"<<il<<","<<nstripEtaMax<<","<<nstripPhiMax<<std::endl;
+		      //std::cout << "eta positions:nEta,1,2:"<<locPos<<","<<locPosEta1<<","<<locPos2<<std::endl;
+		      locPos = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(phiId));
+		      HepPoint3D locPosPhi1 = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(phiId1));
+		      //std::cout << "phi positions:nPhi,1,2:"<<locPos<<","<<locPosPhi1<<","<<locPos2<<std::endl;
+                      // turn eta position into integer to truncate
+                      int etaRefi = 1000*locPosEta1[Trk::locY];                       
+		      (*layers)[il]->setRef( 10e4+locPosPhi1[Trk::locX] + 10e5*(etaRefi+10e6));
                       /*
-		      HepPoint3D locPos1 = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(etaId1));
-		      HepPoint3D locPos2 = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(etaId2));
-		      HepPoint3D phiPos1 = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(phiId1));
-		      HepPoint3D phiPos2 = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(phiId2));
-		      HepPoint3D locPos1d = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(etaId1d));
-		      HepPoint3D phiPos1d = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(phiId1d));
-		      std::cout << "local strip positionN:"<<locPos << std::endl;
-              	      std::cout << "local strip position1:"<<locPos1 << std::endl;
-		      std::cout << "local strip position2:"<<locPos2 << std::endl;
-		      std::cout << "local strip position1d:"<<locPos1d << std::endl;
-              	      std::cout << "local phi strip position1:"<<phiPos1 << std::endl;
-		      std::cout << "local phi strip position2:"<<phiPos2 << std::endl;
-		      std::cout << "local strip position1d:"<<phiPos1d << std::endl;
-		      std::cout << "strip pitch:eta,phi" <<rpc->StripPitch(0)<<"," << rpc->StripPitch(1) << std::endl;
-                      */
-		    }
+		        //std::cout <<"layer pos ref:"<< (*layers)[il]->getRef()<<std::endl;
+                        int etaRef =   (*layers)[il]->getRef()/10e5; 
+		        //std::cout << etaRef << "," << 0.001*etaRef <<","<< (*layers)[il]->getRef()-10e5*etaRef <<std::endl;
+                        double epos = 0.001*(etaRef-10e6 ); 
+                        double ppos = (*layers)[il]->getRef()- 10e5 * etaRef - 10e4; 
+		        //std::cout << "back conversion:"<< epos <<","<<ppos<<std::endl;
+		        //std::cout << "identifying layer:" << il<<" as eta plane: " << (*layers)[il]->layerType() << std::endl;
+		      */
+		    } 
 		  }
 		}
 	 }}}}}}                  

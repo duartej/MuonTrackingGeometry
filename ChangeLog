@@ -1,3 +1,7 @@
+2007-02-01 Sarka Todorova <sarka.todorova@cern.ch>
+        * fix slc4 compilation error
+	* tagged MuonTrackingGeometry-00-00-26 
+
 2007-01-31 Sarka Todorova <sarka.todorova@cern.ch>
 	* layer representation added for stations (without material at the moment)
 	* bugfix in MTGB 

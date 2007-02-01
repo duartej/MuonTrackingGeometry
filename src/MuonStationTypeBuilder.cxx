@@ -739,7 +739,7 @@ StatusCode Muon::MuonStationTypeBuilder::finalize()
     return StatusCode::SUCCESS;
 }
 //
-const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volume*& vol,const GeoVPhysVol*& gv, HepTransform3D*& transf) const
+const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volume*& vol,const GeoVPhysVol*& gv, HepTransform3D* transf) const
 {
   MsgStream log(msgSvc(), name());
 
@@ -882,7 +882,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
   return mdt;
 }
 //
-const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volume*& vol,const GeoVPhysVol*& gv, HepTransform3D*& transf) const
+const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volume*& vol,const GeoVPhysVol*& gv, HepTransform3D* transf) const
 {
   MsgStream log(msgSvc(), name());
    // std::cout << "processing MDT, number of children volumes:"<< gv->getNChildVols() <<std::endl; 

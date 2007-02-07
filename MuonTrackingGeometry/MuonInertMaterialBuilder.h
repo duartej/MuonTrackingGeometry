@@ -11,6 +11,7 @@
 #include "TrkGeometry/MaterialProperties.h"
 #include "TrkGeometry/DetachedTrackingVolume.h"
 #include "TrkGeometry/TrackingVolume.h"
+#include "TrkGeometry/TrackingVolumeManipulator.h"
 // Gaudi
 #include "GaudiKernel/AlgTool.h"
 #include "GeoModelKernel/GeoVPhysVol.h"
@@ -53,6 +54,7 @@ namespace Muon {
     */
     
   class MuonInertMaterialBuilder : public AlgTool,
+                                   public Trk::TrackingVolumeManipulator,
                              virtual public Trk::IDetachedTrackingVolumeBuilder {
   public:
       /** Constructor */
@@ -75,6 +77,9 @@ namespace Muon {
       const void printChildren(const GeoVPhysVol* pv) const;
       const void decodeShape(const GeoShape* sh) const;
       Trk::Volume* translateGeoShape(const GeoShape* sh, HepTransform3D* tr) const;
+      const Trk::TrackingVolume* simplifyShape(const Trk::TrackingVolume* tr) const;
+      const Trk::Volume* findEnvelope(const Trk::TrackingVolume* tr) const;
+      const Trk::TrackingVolume* findECTEnvelope(const std::vector<const Trk::TrackingVolume*>* vols) const;
 
       Trk::TrapezoidVolumeBounds* decodeColdSegment(const GeoShape* sh) const;
       Trk::VolumeBounds* decodeECTSegment(const GeoShape* sh) const;
@@ -82,6 +87,7 @@ namespace Muon {
 
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
+      bool                                m_simplify;              // switch geometry simplification on/off 
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
       Trk::IMagneticFieldTool*            m_magFieldTool;                //!< Tracking Interface to Magnetic Field

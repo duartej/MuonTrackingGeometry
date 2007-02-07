@@ -1,3 +1,7 @@
+2007-02-07 Sarka Todorova <sarka.todorova@cern.ch>
+        * inert objects enclosed in envelopes, treated as confined dense volumes
+	* tagged MuonTrackingGeometry-00-00-27 
+
 2007-02-01 Sarka Todorova <sarka.todorova@cern.ch>
         * fix slc4 compilation error
 	* tagged MuonTrackingGeometry-00-00-26 

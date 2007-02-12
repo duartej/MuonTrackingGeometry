@@ -97,6 +97,7 @@ namespace Muon {
       bool                                m_buildEndcap;
       bool                                m_buildCsc;
       bool                                m_buildTgc;  
+      bool                                m_identifyActive;
     };
 
 

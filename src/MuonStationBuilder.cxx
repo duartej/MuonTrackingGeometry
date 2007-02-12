@@ -78,7 +78,8 @@ Muon::MuonStationBuilder::MuonStationBuilder(const std::string& t, const std::st
   m_buildBarrel(true),
   m_buildEndcap(true),
   m_buildCsc(true),
-  m_buildTgc(true)
+  m_buildTgc(true),
+  m_identifyActive(false)
 {
   declareInterface<Trk::IDetachedTrackingVolumeBuilder>(this);
   declareProperty("MuonDetManagerLocation",           m_muonMgrLocation);
@@ -86,6 +87,7 @@ Muon::MuonStationBuilder::MuonStationBuilder(const std::string& t, const std::st
   declareProperty("BuildEndcapStations",              m_buildEndcap);
   declareProperty("BuildCSCStations",                 m_buildCsc);
   declareProperty("BuildTGCStations",                 m_buildTgc);
+  declareProperty("IdentifyActiveLayers",             m_identifyActive);
 }
 
 // destructor
@@ -199,7 +201,10 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	if ( !gmStation) {
           gmStation = m_muonMgr->getMuonStation(vname.substr(0,4),eta,phi);
         }
-        std::string stName = (clv->getName()).substr(0,4);
+        std::string stName = (clv->getName()).substr(0,vname.size()-8);
+        if (stName.substr(0,1)=="B" && eta < 0 ) {
+          stName = (clv->getName()).substr(0,vname.size()-8) + "-";
+        }
         if (stName.substr(0,1)=="T") {
           std::string tgc_name = cv->getChildVol(0)->getLogVol()->getName();
           stName = tgc_name;
@@ -223,8 +228,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
           // glue components
           glueComponents(newStat);
           // identify layers
-          identifyLayers(newStat,eta,phi);
-	  // std::cout << "new station built at:" << transf.getTranslation() << std::endl;  
+          if (m_identifyActive) identifyLayers(newStat,eta,phi);  
           mStations.push_back(newStat);  
         } else {
           log << MSG::INFO  << name() <<" this station has no prototype: " << vname << endreq;    
@@ -252,17 +256,16 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
             if (msTypeName.substr(0,1)=="C") {
 	      if (transf.getTranslation().z() < 0 ) eta = 0;
 	      double phic = transf.getTranslation().phi();  
-	      phi = phic<0 ? 4*phic/M_PI+8 : 4*phic/M_PI;
+	      phi = phic<0 ? int(4*phic/M_PI)+8 : int(4*phic/M_PI);
             } else {
               double phic = transf.getTranslation().phi();
-              phi = phic<0 ? 24*phic/M_PI+48 : 24*phic/M_PI;
+              phi = phic<0 ? int(24*phic/M_PI)+48 : int(24*phic/M_PI);
             }  
             const Trk::DetachedTrackingVolume* newStat = typeStat->clone(nameStat,transf);
             // glue components
             glueComponents(newStat);
             // identify layers
-            identifyLayers(newStat,eta,phi);
-	    // std::cout << "new station built at:" << transf.getTranslation() << std::endl;  
+            if (m_identifyActive) identifyLayers(newStat,eta,phi);  
             mStations.push_back(newStat);
         }}
       }
@@ -314,13 +317,16 @@ const std::vector<const Trk::TrackingVolume*>* Muon::MuonStationBuilder::buildDe
           }
           // if (!gmStation) std::cout <<" gmStation not found ?" << vname << std::endl; 
 
-          std::string name = (clv->getName()).substr(0,4);
+          std::string name = (clv->getName()).substr(0,vname.size()-8);
 	  // std::cout << clv->getName() << std::endl;
           // is this station known ?        
           // if TGC station, look for 1 component instead
           if (name.substr(0,1)=="T") {
             std::string tgc_name = cv->getChildVol(0)->getLogVol()->getName();
             name = tgc_name;
+          }
+          if (name.substr(0,1)=="B" && eta < 0 ) {
+            name = (clv->getName()).substr(0,vname.size()-8) + "-";
           }
           unsigned is=0; 
           for (unsigned in=0; in< stations.size(); in++) 
@@ -635,7 +641,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 		      HepPoint3D locPosPhi1 = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(phiId1));
 		      //std::cout << "phi positions:nPhi,1,2:"<<locPos<<","<<locPosPhi1<<","<<locPos2<<std::endl;
                       // turn eta position into integer to truncate
-                      int etaRefi = 1000*locPosEta1[Trk::locY];                       
+                      int etaRefi = int(1000*locPosEta1[Trk::locY]);                       
 		      (*layers)[il]->setRef( 10e4+locPosPhi1[Trk::locX] + 10e5*(etaRefi+10e6));
                       /*
 		        //std::cout <<"layer pos ref:"<< (*layers)[il]->getRef()<<std::endl;

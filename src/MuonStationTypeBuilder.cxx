@@ -243,7 +243,7 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
         }
 	// std::cout << "dimensions:"<<halfX1<<","<<halfX2<<","<<halfY1<<","<<halfY2<<","<<halfZ<<std::endl;
         if ( clv->getShape()->type()!="Trd" && clv->getShape()->type()!="Box" ) {
- 	  std::cout << "WARNING:component shape not Box nor Trapezoid, determining the x size from subcomponents" << std::endl; 
+ 	  //std::cout << "WARNING:component shape not Box nor Trapezoid, determining the x size from subcomponents" << std::endl; 
           double xSize = get_x_size(cv);
 	  //std::cout << "estimated x size:" << xSize << std::endl;
           //printChildren(cv);
@@ -252,7 +252,9 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
 	vol = new Trk::Volume(new HepTransform3D(transf),volBounds);
 	//std::cout <<"volume center:"<< vol->center() << ","<< ich << std::endl;
 	std::string cname = clv->getName();
-        if (cname.substr(0,4) == (mv->getLogVol()->getName()).substr(0,4)) cname = cname.substr(4,cname.size()-4);  
+	std::string vname = mv->getLogVol()->getName();
+        int nameSize = vname.size()-8;
+        if (cname.substr(0,nameSize) == vname.substr(0,nameSize)) cname = cname.substr(nameSize,cname.size()-nameSize);  
         // order in X
         if (compVol.size()==0 || vol->center()[0]>=compVol.back()->center()[0]){
           compVol.push_back(vol);
@@ -517,7 +519,8 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
         }
 	// std::cout << "dimensions:"<<halfX1<<","<<halfX2<<","<<halfY1<<","<<halfY2<<","<<halfZ<<std::endl;
         if ( clv->getShape()->type()!="Trd" && clv->getShape()->type()!="Box" ) {
- 	  std::cout << "WARNING:component shape not Box nor Trapezoid, determining the x size from subcomponents" << std::endl;                  double xSize = get_x_size(cv);
+ 	  //std::cout<<"WARNING:component shape not Box nor Trapezoid, determining the x size from subcomponents"<<std::endl; 
+	  double xSize = get_x_size(cv);
           // printChildren(cv);
           transf = transf*HepRotateY3D(90*deg)*HepRotateZ3D(90*deg);
           volBounds = new Trk::TrapezoidVolumeBounds(envelope->minHalflengthX(),envelope->maxHalflengthX(),envelope->halflengthY(),xSize);
@@ -525,7 +528,9 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
 	vol = new Trk::Volume(new HepTransform3D(transf),volBounds);
 	// std::cout <<"volume center:"<< vol->center() << ","<< ich << std::endl;
 	std::string cname = clv->getName();
-        if (cname.substr(0,4) == (mv->getLogVol()->getName()).substr(0,4)) cname = cname.substr(4,cname.size()-4);  
+	std::string vname = mv->getLogVol()->getName();
+        int nameSize = vname.size()-8;
+        if (cname.substr(0,nameSize) == vname.substr(0,nameSize)) cname = cname.substr(nameSize,cname.size()-nameSize);  
         // order in X
         if (compVol.size()==0 || vol->center()[0]>=compVol.back()->center()[0]){
           compVol.push_back(vol);

@@ -1,3 +1,7 @@
+2007-02-16 Sarka Todorova <sarka.todorova@cern.ch>
+	* layer identification upgrade
+	* tagged MuonTrackingGeometry-00-00-29
+
 2007-02-12 Sarka Todorova <sarka.todorova@cern.ch>
 	* bugfix (station name abbreviation)
 	* detailed layer identification optional

@@ -184,9 +184,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
       const GeoVPhysVol* cv = &(*(top->getChildVol(ichild))); 
       const GeoLogVol* clv = cv->getLogVol();
       std::string vname = clv->getName();
-      if (vname.size()>7 && vname.substr(vname.size()-7,7) =="Station" && 
-           ( (m_buildBarrel && vname.substr(0,1) =="B")
-           ||(m_buildEndcap && vname.substr(0,1) =="E") ) ) {
+      if (vname.size()>7 && vname.substr(vname.size()-7,7) =="Station" ) {
 
         int etaphi = top->getIdOfChildVol(ichild);        // retrive eta/phi indexes
         int sign =( etaphi < 0 ) ? -1 : 1 ;
@@ -196,41 +194,81 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
         int eta = etaphi/100;
         int phi = etaphi - eta*100;
         eta = eta*sign;
-	// std::cout << vname.substr(0,3) <<","<<is_mirr<<","<<eta<<","<<phi<<std::endl;
 	MuonGM::MuonStation* gmStation = m_muonMgr->getMuonStation(vname.substr(0,3),eta,phi);
 	if ( !gmStation) {
           gmStation = m_muonMgr->getMuonStation(vname.substr(0,4),eta,phi);
         }
+        if (!gmStation) log << MSG::ERROR << "muon station not found! "<<vname<<","<<eta<<","<<phi  <<std::endl; 
         std::string stName = (clv->getName()).substr(0,vname.size()-8);
         if (stName.substr(0,1)=="B" && eta < 0 ) {
           stName = (clv->getName()).substr(0,vname.size()-8) + "-";
         }
-        if (stName.substr(0,1)=="T") {
-          std::string tgc_name = cv->getChildVol(0)->getLogVol()->getName();
-          stName = tgc_name;
+        if (stName.substr(0,1)=="T" || stName.substr(0,1)=="C") {
+          //std::string tgc_name = cv->getChildVol(0)->getLogVol()->getName();
+          stName = vname.substr(0,4);
         }
         // loop over prototypes
         const Trk::TrackingVolume* msTV = 0;
         for (msTypeIter = msTypes->begin(); msTypeIter != msTypes->end(); ++msTypeIter) { 
           std::string msTypeName = (*msTypeIter)->volumeName();
-          if ( stName == msTypeName ) msTV = *msTypeIter;
-        }
-        if (msTV && gmStation) {
-          const Trk::Layer* layerRepresentation = m_muonStationTypeBuilder -> createLayerRepresentation(msTV);
-          const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(stName,msTV,layerRepresentation);
-          HepTransform3D transf = gmStation->getTransform(); 
-          const Trk::DetachedTrackingVolume* newStat = typeStat->clone(gmStation->getKey(),transf);
-          // glue components
-          glueComponents(newStat);
-          // identify layers
-          if (m_identifyActive) identifyLayers(newStat,eta,phi);  
-          mStations.push_back(newStat);  
-        } else {
-          log << MSG::INFO  << name() <<" this station has no prototype: " << vname << endreq;    
-        }
+          if ( stName == msTypeName.substr(0,stName.size()) ) {
+            msTV = *msTypeIter;
+	    if (msTV && gmStation) {
+	      const Trk::Layer* layerRepresentation = m_muonStationTypeBuilder -> createLayerRepresentation(msTV);
+	      const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(stName,msTV,layerRepresentation);
+	      HepTransform3D transf = gmStation->getTransform(); 
+	      //const Trk::DetachedTrackingVolume* newStat = typeStat->clone(gmStation->getKey(),transf);
+	      const Trk::DetachedTrackingVolume* newStat = typeStat->clone(vname,transf);
+	      // glue components
+	      glueComponents(newStat);
+              // eta,phi
+              if (msTypeName.substr(0,1)=="C") {
+                eta = 1;
+		if (transf.getTranslation().z() < 0 ) eta = 0;
+		double phic = transf.getTranslation().phi();  
+		phi = phic<0 ? int(4*phic/M_PI)+8 : int(4*phic/M_PI);
+              } 
+	      if (msTypeName.substr(0,1)=="T") {
+		bool az = true;
+		if (transf.getTranslation().z() < 0 ) az = false;
+		double phic = transf.getTranslation().phi();
+		if (msTypeName.substr(2,1)=="E" && msTypeName.substr(0,3)!="T4E")
+		  phi = phic<0 ? 24*phic/M_PI+48 : 24*phic/M_PI;
+		else
+		  phi = phic<0 ? 12*phic/M_PI+24 : 12*phic/M_PI;
+		if (msTypeName.substr(7,2)=="01") eta = az ? 5 : 4;
+		if (msTypeName.substr(7,2)=="02") eta = az ? 5 : 4;
+		if (msTypeName.substr(7,2)=="03") eta = az ? 6 : 3;
+		if (msTypeName.substr(7,2)=="04") eta = az ? 7 : 2;
+		if (msTypeName.substr(7,2)=="05") eta = az ? 8 : 1;
+		if (msTypeName.substr(7,2)=="06") eta = az ? 5 : 4;
+		if (msTypeName.substr(7,2)=="07") eta = az ? 5 : 4;
+		if (msTypeName.substr(7,2)=="08") eta = az ? 6 : 3;
+		if (msTypeName.substr(7,2)=="09") eta = az ? 7 : 2;
+		if (msTypeName.substr(7,2)=="10") eta = az ? 8 : 1;
+		if (msTypeName.substr(7,2)=="11") eta = az ? 9 : 0;
+		if (msTypeName.substr(7,2)=="12") eta = az ? 5 : 4;
+		if (msTypeName.substr(7,2)=="13") eta = az ? 5 : 4;
+		if (msTypeName.substr(7,2)=="14") eta = az ? 6 : 3;
+		if (msTypeName.substr(7,2)=="15") eta = az ? 7 : 2;
+		if (msTypeName.substr(7,2)=="16") eta = az ? 8 : 1;
+		if (msTypeName.substr(7,2)=="17") eta = az ? 9 : 0;
+		if (msTypeName.substr(7,2)=="18") eta = az ? 5 : 4;
+		if (msTypeName.substr(7,2)=="19") eta = az ? 5 : 4;
+		if (msTypeName.substr(7,2)=="20") eta = az ? 5 : 4;
+		if (msTypeName.substr(7,2)=="21") eta = az ? 5 : 4;
+	      }     
+	      // identify layers
+	      if (m_identifyActive) identifyLayers(newStat,eta,phi);  
+	      mStations.push_back(newStat);
+            }
+	  }
+	}  
+	if (!msTV)  log << MSG::INFO  << name() <<" this station has no prototype: " << vname << endreq;    
       }
     }
-          
+
+    /*          
     // position CSC and TGC via loop over prototypes; check !    
     for (msTypeIter = msTypes->begin(); msTypeIter != msTypes->end(); ++msTypeIter) { 
       std::string msTypeName = (*msTypeIter)->volumeName();
@@ -290,7 +328,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
       }
     }
     // end CSC/TGC
-
+    */
   }
   const std::vector<const Trk::DetachedTrackingVolume*>* muonStations=new std::vector<const Trk::DetachedTrackingVolume*>(mStations);
 
@@ -334,10 +372,8 @@ const std::vector<const Trk::TrackingVolume*>* Muon::MuonStationBuilder::buildDe
 	  if ( !gmStation) {
             gmStation = m_muonMgr->getMuonStation(vname.substr(0,4),eta,phi);
           }
-          // if (!gmStation) std::cout <<" gmStation not found ?" << vname << std::endl; 
 
           std::string name = (clv->getName()).substr(0,vname.size()-8);
-	  // std::cout << clv->getName() << std::endl;
           // is this station known ?        
           // if TGC station, look for 1 component instead
           if (name.substr(0,1)=="T") {
@@ -530,7 +566,8 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
   std::string stationName = station->trackingVolume()->volumeName();
   log << MSG::INFO  << " in station " << station->name() << endreq;    
 
-  if (stationName.substr(0,1)=="C") {
+  /*
+  if (stationName.substr(0,1)=="C") { 
     int st = stationName.substr(0,3)=="CSS" ? 0 : 1;
     const MuonGM::CscReadoutElement* cscRE = m_muonMgr->getCscReadoutElement(st,eta,phi,0);    
     if (cscRE) {
@@ -548,6 +585,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
       }
     } 
   }
+  */
 
   if (stationName.substr(0,1)=="T") {
     int st = 7;
@@ -574,6 +612,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 	const MuonGM::TgcReadoutElement* tgct = m_muonMgr->getTgcReadoutElement(st,eta,phit);
         if (tgct && station->trackingVolume()->inside(tgct->center(),0.)) {
           tgc = tgct;
+          phi = phit;
           break;
         }
 	phit++;  

@@ -36,6 +36,7 @@
 #include "TrkGeometry/TrackingGeometry.h"
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkGeometry/GlueVolumesDescriptor.h"
+#include "TrkGeometry/BendingCorrector.h"
 #include<fstream>
 
 // BField
@@ -206,6 +207,10 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 
    Trk::MagneticFieldProperties muonMagneticFieldProperties(m_magFieldTool, Trk::RealisticField);    
 
+// dummy substructures
+   const Trk::LayerArray* dummyLayers = 0;
+   const Trk::TrackingVolumeArray* dummyVolumes = 0;
+   Trk::BendingCorrector* bcorr = 0;
 
    Trk::VolumeBounds* globalBounds = new Trk::CylinderVolumeBounds(m_outerBarrelRadius,
                                                                    m_outerEndcapZ);
@@ -215,8 +220,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
                                                                 globalBounds,
                                                                 m_muonMaterial,
                                                                 m_muonMagneticField,
-                                                                0,0,
-                                                                "GlobalVolume");
+                                                                dummyLayers,dummyVolumes,
+                                                                "GlobalVolume",bcorr);
        m_standaloneTrackingVolume = topVolume;
        return new Trk::TrackingGeometry(topVolume);
    }     
@@ -344,12 +349,12 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    if (!tvol) {
       enclosedBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
                                                      m_barrelZ);
-      tvol = new Trk::TrackingVolume(0,
+      tvol = new Trk::TrackingVolume(new HepTransform3D(),
                                    enclosedBounds,
                                    m_muonMaterial,
                                    m_muonMagneticField,
-                                   0,0,
-                                   "Muon::Detectors::EnclosedCentralDetectors");
+                                   dummyLayers,dummyVolumes,
+                                   "MuonSpectrometerEntrance", bcorr);
    }
 // cavern   
    negCavernBounds = new Trk::CylinderVolumeBounds(m_outerEndcapRadius,
@@ -363,14 +368,14 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
                                       negCavernBounds,
                                       m_muonMaterial,
                                       m_muonMagneticField,
-				      0,0,
-                                      "Muon::Gaps::NegativeCavern");
+				      dummyLayers,dummyVolumes,
+                                      "Muon::Gaps::NegativeCavern", bcorr);
    posCavern = new Trk::TrackingVolume(new HepTransform3D(Trk::s_idRotation,posOuterEndcapPosition),
                                       posCavernBounds,
                                       m_muonMaterial,
                                       m_muonMagneticField,
-				       0,0,
-                                      "Muon::Gaps::PositiveCavern");
+				      dummyLayers,dummyVolumes,
+                                      "Muon::Gaps::PositiveCavern", bcorr);
 
     log << MSG::INFO  << name() <<" volumes defined " << endreq;    
 //

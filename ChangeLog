@@ -1,3 +1,7 @@
+2007-02-23 Sarka Todorova <sarka.todorova@cern.ch>
+	* bugfix (MSB)  
+	* tagged MuonTrackingGeometry-00-00-31
+
 2007-02-22 Sarka Todorova <sarka.todorova@cern.ch>
 	* update MTGB for change of interface ('empty' volumes)
 	* update MSB for changes in MuonGeoModel 

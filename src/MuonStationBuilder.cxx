@@ -211,7 +211,8 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
         const Trk::TrackingVolume* msTV = 0;
         for (msTypeIter = msTypes->begin(); msTypeIter != msTypes->end(); ++msTypeIter) { 
           std::string msTypeName = (*msTypeIter)->volumeName();
-          if ( stName == msTypeName.substr(0,stName.size()) ) {
+          if (  (stName.substr(0,1)=="T" && stName == msTypeName.substr(0,stName.size()) )
+              ||(stName.substr(0,1)!="T" && stName == msTypeName) ) {
             msTV = *msTypeIter;
 	    if (msTV && gmStation) {
 	      const Trk::Layer* layerRepresentation = m_muonStationTypeBuilder -> createLayerRepresentation(msTV);

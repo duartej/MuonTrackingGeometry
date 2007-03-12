@@ -386,19 +386,19 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    const Trk::TrackingVolume* barrel = m_trackingVolumeHelper->glueTrackingVolumeArrays(*tvol, Trk::cylinderCover,
                                                                                         *muonBarrel,Trk::tubeInnerCover, 
                                                                                         "All::Container::Barrel");
-   checkVolume(barrel);
+   //checkVolume(barrel);
 // cavern+outerEndcap
    log << MSG::INFO << name() << "glue cavern+outerEndcap" << endreq;
    const Trk::TrackingVolume* negOuterEndcap = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negativeMuonOuterEndcap, 
 												Trk::tubeOuterCover,
 												*negCavern, Trk::tubeInnerCover,
 										             "Muon::Container::NegativeOuterEndcap");
-   checkVolume(negOuterEndcap);
+   //checkVolume(negOuterEndcap);
    const Trk::TrackingVolume* posOuterEndcap = m_trackingVolumeHelper->glueTrackingVolumeArrays(*positiveMuonOuterEndcap,
 												Trk::tubeOuterCover,
 												*posCavern, Trk::tubeInnerCover,
 											     "Muon::Container::PositiveOuterEndcap");
-   checkVolume(posOuterEndcap);
+   //checkVolume(posOuterEndcap);
 // inner+outerEndcap
    log << MSG::INFO << name() << "glue inner+outerEndcap" << endreq;
    const Trk::TrackingVolume* negNavEndcap = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negOuterEndcap, Trk::positiveFaceXY,
@@ -409,8 +409,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 											      Trk::positiveFaceXY,
 											      *posOuterEndcap, Trk::negativeFaceXY,
 											      "Muon::Container::PositiveEndcap");  
-   checkVolume(negNavEndcap);
-   checkVolume(posNavEndcap);
+   //checkVolume(negNavEndcap);
+   //checkVolume(posNavEndcap);
 // beam pipe + endcaps
    log << MSG::INFO << name() << "glue beamPipe+endcaps" << endreq;
    const Trk::TrackingVolume* negEndcap = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negBeamPipe, Trk::cylinderCover,
@@ -419,8 +419,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    const Trk::TrackingVolume* posEndcap = m_trackingVolumeHelper->glueTrackingVolumeArrays(*posBeamPipe, Trk::cylinderCover,
 											   *posNavEndcap, Trk::tubeInnerCover,
 										           "All::Container::PositiveEndcap");  
-   checkVolume(negEndcap);
-   checkVolume(posEndcap);
+   //checkVolume(negEndcap);
+   //checkVolume(posEndcap);
 // barrel + endcaps
    log << MSG::INFO << name() << "glue barrel+endcaps" << endreq;
    const Trk::TrackingVolume* negDet = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negEndcap, Trk::positiveFaceXY,

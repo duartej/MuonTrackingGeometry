@@ -1,4 +1,9 @@
 2007-03-12 Sarka Todorova <sarka.todorova@cern.ch>
+	* collected material for station layer representation
+	* clean-up printout 
+	* tagged MuonTrackingGeometry-00-00-33
+
+2007-03-12 Sarka Todorova <sarka.todorova@cern.ch>
 	* remove error messages from BooleanConstructor
 	  ( originate from GeoShape.volume(), replaced by MSTB::getVolume() )
 	* tagged MuonTrackingGeometry-00-00-32

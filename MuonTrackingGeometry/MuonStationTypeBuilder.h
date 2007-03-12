@@ -89,7 +89,8 @@ namespace Muon {
       const double getVolume(const GeoShape*) const;
       Trk::MaterialProperties* getAveragedLayerMaterial(const GeoVPhysVol*,double,double) const;
       Trk::MaterialProperties collectMaterial(const GeoVPhysVol*,Trk::MaterialProperties ,double) const;
-      /** Private method to fill default material */
+      Trk::MaterialProperties collectStationMaterial(const Trk::TrackingVolume* trVol,double) const; 
+     /** Private method to fill default material */
       //void fillDefaultServiceMaterial();
 
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager

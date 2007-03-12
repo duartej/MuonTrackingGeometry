@@ -184,7 +184,11 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
       const GeoVPhysVol* cv = &(*(top->getChildVol(ichild))); 
       const GeoLogVol* clv = cv->getLogVol();
       std::string vname = clv->getName();
-      if (vname.size()>7 && vname.substr(vname.size()-7,7) =="Station" ) {
+      if (vname.size()>7 && vname.substr(vname.size()-7,7) =="Station" && 
+            ( (m_buildBarrel && vname.substr(0,1) =="B")
+            ||(m_buildEndcap && vname.substr(0,1) =="E")
+	    ||(m_buildCsc    && vname.substr(0,1) =="C")
+	    ||(m_buildTgc    && vname.substr(0,1) =="T") ) ) {
 
         int etaphi = top->getIdOfChildVol(ichild);        // retrive eta/phi indexes
         int sign =( etaphi < 0 ) ? -1 : 1 ;
@@ -198,7 +202,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	if ( !gmStation) {
           gmStation = m_muonMgr->getMuonStation(vname.substr(0,4),eta,phi);
         }
-        if (!gmStation) log << MSG::ERROR << "muon station not found! "<<vname<<","<<eta<<","<<phi  <<std::endl; 
+        if (!gmStation) log << MSG::ERROR << "Muon station not found! "<<vname<<","<<eta<<","<<phi  <<std::endl; 
         std::string stName = (clv->getName()).substr(0,vname.size()-8);
         if (stName.substr(0,1)=="B" && eta < 0 ) {
           stName = (clv->getName()).substr(0,vname.size()-8) + "-";
@@ -265,7 +269,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
             }
 	  }
 	}  
-	if (!msTV)  log << MSG::INFO  << name() <<" this station has no prototype: " << vname << endreq;    
+	if (!msTV)  log << MSG::DEBUG  << name() <<" this station has no prototype: " << vname << endreq;    
       }
     }
 
@@ -393,8 +397,8 @@ const std::vector<const Trk::TrackingVolume*>* Muon::MuonStationBuilder::buildDe
           // if (is==0 ) std::cout << "station shape type:"<< name<< ","<<clv->getShape()->type()<<std::endl; 
           if (is==0 )          
           {
-            log << MSG::INFO <<" new station type " << name << "," << clv->getShape()->type() << endreq;    
-            log << MSG::INFO <<" prototype built from eta, phi:" << eta << "," << phi << endreq;    
+            log << MSG::DEBUG <<" new station type " << name << "," << clv->getShape()->type() << endreq;    
+            log << MSG::DEBUG <<" prototype built from eta, phi:" << eta << "," << phi << endreq;    
              
             if (name.substr(0,2)=="CS" || name.substr(0,1)=="T") {
               if (m_muonStationTypeBuilder) {
@@ -427,14 +431,6 @@ const std::vector<const Trk::TrackingVolume*>* Muon::MuonStationBuilder::buildDe
 	      double halfZ=0.;   
 	      if (trd) {
 		//
-              /*
-	      std::cout << "dimensions:"<< trd->getXHalfLength1() <<","
-                                        << trd->getXHalfLength2() <<","  
-                                        << trd->getYHalfLength1() <<","  
-                                        << trd->getYHalfLength2() <<","  
-			                << trd->getZHalfLength() <<std::endl; 
-	      */
-	      //
 		halfX1 = trd->getXHalfLength1();
 		halfX2 = trd->getXHalfLength2();
 		halfY1 = trd->getYHalfLength1();
@@ -562,10 +558,10 @@ void Muon::MuonStationBuilder::glueComponents(const Trk::DetachedTrackingVolume*
 void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume* station, int eta, int phi ) const
 {
   MsgStream log(msgSvc(), name());
-  log << MSG::INFO  << name() <<" identifying layers " << endreq;    
+  log << MSG::DEBUG  << name() <<" identifying layers " << endreq;    
 
   std::string stationName = station->trackingVolume()->volumeName();
-  log << MSG::INFO  << " in station " << station->name() << endreq;    
+  log << MSG::DEBUG  << " in station " << station->name() << endreq;    
 
   /*
   if (stationName.substr(0,1)=="C") { 
@@ -625,7 +621,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
       Identifier wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,1,0,1);
       const HepPoint3D gp = tgc->channelPos(wireId);
       const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gp);
-      if (!assocVol) std::cout << "wrong tgcROE?" << stationName <<"," << eta <<"," << phi << std::endl;
+      if (!assocVol) log << MSG::DEBUG << "wrong tgcROE?" << stationName <<"," << eta <<"," << phi << endreq;
       if (assocVol && assocVol->confinedLayers()) {
 	const std::vector<const Trk::Layer*> layers = assocVol->confinedLayers()->arrayObjects();           
 	for (unsigned int il=0;il<layers.size();il++) {

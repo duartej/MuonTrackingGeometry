@@ -1,3 +1,8 @@
+2007-03-12 Sarka Todorova <sarka.todorova@cern.ch>
+	* remove error messages from BooleanConstructor
+	  ( originate from GeoShape.volume(), replaced by MSTB::getVolume() )
+	* tagged MuonTrackingGeometry-00-00-32
+
 2007-02-23 Sarka Todorova <sarka.todorova@cern.ch>
 	* bugfix (MSB)  
 	* tagged MuonTrackingGeometry-00-00-31

@@ -86,6 +86,7 @@ namespace Muon {
   private:
       const double get_x_size(const GeoVPhysVol*) const ;
       const double decodeX(const GeoShape*) const ;
+      const double getVolume(const GeoShape*) const;
       Trk::MaterialProperties* getAveragedLayerMaterial(const GeoVPhysVol*,double,double) const;
       Trk::MaterialProperties collectMaterial(const GeoVPhysVol*,Trk::MaterialProperties ,double) const;
       /** Private method to fill default material */

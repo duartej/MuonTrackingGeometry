@@ -1653,69 +1653,82 @@ Trk::MaterialProperties Muon::MuonStationTypeBuilder::collectMaterial(const GeoV
 {
   // sf is surface of the new layer used to calculate the average 'thickness' of components
   // number of child volumes
-     unsigned int nc = pv->getNChildVols();
-  // add current volume
-    const GeoLogVol* lv = pv->getLogVol();
-    //  std::cout << "component:"<<lv->getName()<<", made of"<<lv->getMaterial()->getName()<<","<<lv->getShape()->volume()<<std::endl;
+  unsigned int nc = pv->getNChildVols();
+  // add current volume 
+  const GeoLogVol* lv = pv->getLogVol(); 
+  //std::cout << "component:"<<lv->getName()<<", made of"<<lv->getMaterial()->getName()<<","<<lv->getShape()->type()<<std::endl;
      
-    if ( lv->getMaterial()->getName() != "Air" && (lv->getName()).substr(0,1)!="T") {
-            
-      //std::cout << "including this in material calculations"<<std::endl;
-      // get material properties from GeoModel
-      Trk::MaterialProperties newMP= m_materialConverter->convert( lv->getMaterial() );
-      // current volume
-      double vol = lv->getShape()->volume();
-      // protection against subtraction of large volumes 
-      const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction* > (lv->getShape());
-      if (sub) {
-        double volA = sub->getOpA()->volume();
-        double volB = sub->getOpB()->volume();
-        if (volA > volB){
-          vol = volA - volB;
-        } else {
-          vol = volA;
-        }
-	//std::cout << "subtraction" << volA << "," << volB << "," << vol << std::endl; 
-      }  
-      // subtract children volumes
-      for (unsigned int ic=0; ic<nc; ic++) {
-        const GeoVPhysVol* cv = &(*(pv->getChildVol(ic)));
-        if ( cv->getLogVol()->getShape()->volume() > vol ) {
-	  //std::cout << "WARNING:collect material : child volume bigger than mother volume" << std::endl; 
-        } else {
-	  vol = vol - cv->getLogVol()->getShape()->volume(); 
-        }
+  if ( lv->getMaterial()->getName() != "Air" && (lv->getName()).substr(0,1)!="T") {
+    // get material properties from GeoModel
+    Trk::MaterialProperties newMP= m_materialConverter->convert( lv->getMaterial() ); 
+    // current volume
+    double vol = getVolume(lv->getShape());
+    // subtract children volumes
+    for (unsigned int ic=0; ic<nc; ic++) {
+      const GeoVPhysVol* cv = &(*(pv->getChildVol(ic)));
+      if ( getVolume(cv->getLogVol()->getShape()) > vol ) {
+	//std::cout << "WARNING:collect material : child volume bigger than mother volume" << std::endl; 
+      } else {
+	vol = vol - getVolume(cv->getLogVol()->getShape()); 
       }
-      //std::cout << "volume after children subtraction:"<<nc <<","<< vol <<std::endl;
-      double d = vol / sf;
-      //std::cout << "corrected volume thickness:" << d << std::endl;
-
-      //std::cout << "old material properties:" << matProp.thickness() <<","<<matProp.x0()<<","
-      // <<matProp.zOverAtimesRho()<<","<< matProp.averageZ()<<","<<matProp.dEdX() << std::endl;
-      // std::cout << "new material properties:" << d <<","<<newMP.x0()<<","<<newMP.zOverAtimesRho()<<","<< 
-      //	newMP.averageZ()<<","<<newMP.dEdX() << std::endl;
-      // material properties with thickness
-      // that would be an easy way if TrkGeometry update
-      // new.setThickness(d);
-      // and this is as it works in the meantime
-      Trk::MaterialProperties newUpdate(d,newMP.x0(),newMP.zOverAtimesRho(),newMP.averageZ(),newMP.dEdX());  
-      // combine
-      matProp.addMaterial(newUpdate);     
-      //std::cout << "combined material properties:" << matProp.thickness() <<","<<matProp.x0()<<","
-      //<<matProp.zOverAtimesRho()<<","<<  matProp.averageZ()<<","<<matProp.dEdX() << std::endl;
-   } 
-
+    }
+    double d = vol / sf;
+    //std::cout << "corrected volume thickness:" << d << std::endl;
+    //std::cout << "old material properties:" << matProp.thickness() <<","<<matProp.x0()<<","
+    // <<matProp.zOverAtimesRho()<<","<< matProp.averageZ()<<","<<matProp.dEdX() << std::endl;
+    // std::cout << "new material properties:" << d <<","<<newMP.x0()<<","<<newMP.zOverAtimesRho()<<","<< 
+    //	newMP.averageZ()<<","<<newMP.dEdX() << std::endl;
+    // material properties with thickness
+    // that would be an easy way if TrkGeometry update
+    // new.setThickness(d);
+    // and this is as it works in the meantime
+    Trk::MaterialProperties newUpdate(d,newMP.x0(),newMP.zOverAtimesRho(),newMP.averageZ(),newMP.dEdX());  
+    // combine
+    matProp.addMaterial(newUpdate);     
+    //std::cout << "combined material properties:" << matProp.thickness() <<","<<matProp.x0()<<","
+    //<<matProp.zOverAtimesRho()<<","<<  matProp.averageZ()<<","<<matProp.dEdX() << std::endl;
+  } 
   // subcomponents
   // skip children volume if we deal with G10 ( not correctly described )
   //if ( lv->getName() != "G10" ) { 
-    for (unsigned int ic=0; ic<nc; ic++) {
-      const GeoVPhysVol* cv = &(*(pv->getChildVol(ic)));
-      matProp = collectMaterial( cv, matProp, sf);
-    }
-    //}  
-    //std::cout << " current layer thickness:" << matProp.thickness() << std::endl;    
+  for (unsigned int ic=0; ic<nc; ic++) {
+    std::cout << "loop over children:" << ic <<"," << nc << std::endl;
+    const GeoVPhysVol* cv = &(*(pv->getChildVol(ic)));
+    std::cout << "collect child material:" << std::endl;
+    matProp = collectMaterial( cv, matProp, sf);
+  }
+  //}  
+  //std::cout << " current layer thickness:" << matProp.thickness() << std::endl;    
   return matProp;
 }
+
+const double Muon::MuonStationTypeBuilder::getVolume( const GeoShape* shape) const {
+  //
+  double volume = 0.;
+  
+  if (shape->type()=="Shift" ) {
+    const GeoShapeShift* shift = dynamic_cast<const GeoShapeShift*> (shape);
+    volume = getVolume(shift->getOp());
+  } else if (shape->type()=="Subtraction" ) {
+    const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction* > (shape);
+    double volA = getVolume(sub->getOpA());
+    double volB = getVolume(sub->getOpB());
+    // protection against subtraction of large volumes 
+    if (volA > volB){
+      volume = volA - volB;
+    } else {
+      volume = volA;
+    }
+  } else if (shape->type()=="Union") {  
+    const GeoShapeUnion* uni = dynamic_cast<const GeoShapeUnion* > (shape);
+    double volA = getVolume(uni->getOpA());
+    double volB = getVolume(uni->getOpB());
+    volume = volA+volB; 
+  } else {
+    volume = shape->volume();
+  }
+  return volume;
+} 
 
 const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(const GeoVPhysVol*& pv, Trk::TrapezoidVolumeBounds*& compBounds, HepTransform3D*& transf) const {
 

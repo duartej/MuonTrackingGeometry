@@ -231,7 +231,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
                 eta = 1;
 		if (transf.getTranslation().z() < 0 ) eta = 0;
 		double phic = transf.getTranslation().phi();  
-		phi = phic<0 ? int(4*phic/M_PI)+8 : int(4*phic/M_PI);
+		phi = phic<0 ? 4*phic/M_PI+8 : 4*phic/M_PI;
               } 
 	      if (msTypeName.substr(0,1)=="T") {
 		bool az = true;
@@ -563,7 +563,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
   std::string stationName = station->trackingVolume()->volumeName();
   log << MSG::DEBUG  << " in station " << station->name() << endreq;    
 
-  /*
+  
   if (stationName.substr(0,1)=="C") { 
     int st = stationName.substr(0,3)=="CSS" ? 0 : 1;
     const MuonGM::CscReadoutElement* cscRE = m_muonMgr->getCscReadoutElement(st,eta,phi,0);    
@@ -580,9 +580,11 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
         unsigned int iD = idi;
         if (assocVol && assocLay) assocLay->setLayerType(iD); 
       }
-    } 
+    } else {
+      log<< MSG::DEBUG << "cscRE not found:"<<st<<","<<eta<<","<<phi<<std::endl;
+    }
   }
-  */
+  
 
   if (stationName.substr(0,1)=="T") {
     int st = 7;
@@ -721,7 +723,6 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
     
   } 
 
-  /*
   // by now, all the layers should be identified - verify
   if (station->trackingVolume()->confinedVolumes()) {
     const std::vector<const Trk::TrackingVolume*> cVols = station->trackingVolume()->confinedVolumes()->arrayObjects();
@@ -750,5 +751,5 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
     }
   }
   // end identification check
-  */
+
 }

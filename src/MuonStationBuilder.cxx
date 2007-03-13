@@ -199,9 +199,17 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
         int phi = etaphi - eta*100;
         eta = eta*sign;
 	MuonGM::MuonStation* gmStation = m_muonMgr->getMuonStation(vname.substr(0,3),eta,phi);
+        // try to retrieve 
 	if ( !gmStation) {
           gmStation = m_muonMgr->getMuonStation(vname.substr(0,4),eta,phi);
         }
+        Identifier stId = m_mdtIdHelper->elementID(vname.substr(0,3),eta,phi);
+	//int stationIndex = m_mdtIdHelper->stationName(stId);
+        //std::string stationName = m_mdtIdHelper->stationNameString( stationIndex );
+        //int etaIndex = m_mdtIdHelper->stationEta(stId);
+        //int phiIndex = m_mdtIdHelper->stationPhi(stId);
+        //if (stId>0) std::cout << "check station retrieval:"<<vname<<"," << gmStation << "," << 
+	//	      m_muonMgr->getMuonStation(stationName,etaIndex,phiIndex)<< std::endl;
         if (!gmStation) log << MSG::ERROR << "Muon station not found! "<<vname<<","<<eta<<","<<phi  <<std::endl; 
         std::string stName = (clv->getName()).substr(0,vname.size()-8);
         if (stName.substr(0,1)=="B" && eta < 0 ) {
@@ -220,6 +228,8 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
             msTV = *msTypeIter;
 	    if (msTV && gmStation) {
 	      const Trk::Layer* layerRepresentation = m_muonStationTypeBuilder -> createLayerRepresentation(msTV);
+              unsigned int iD = stId;
+              layerRepresentation->setLayerType(iD);
 	      const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(stName,msTV,layerRepresentation);
 	      HepTransform3D transf = gmStation->getTransform(); 
 	      //const Trk::DetachedTrackingVolume* newStat = typeStat->clone(gmStation->getKey(),transf);

@@ -1,3 +1,7 @@
+2007-03-14 Sarka Todorova <sarka.todorova@cern.ch>
+	* temporary(?) fix of retrieval of BOG stations with cutouts (MGM tree id link broken)
+	* tagged MuonTrackingGeometry-00-00-36
+
 2007-03-13 Sarka Todorova <sarka.todorova@cern.ch>
 	* station layer representation identified
 	* tagged MuonTrackingGeometry-00-00-35

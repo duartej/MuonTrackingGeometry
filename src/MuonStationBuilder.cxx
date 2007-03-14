@@ -210,6 +210,17 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
         //int phiIndex = m_mdtIdHelper->stationPhi(stId);
         //if (stId>0) std::cout << "check station retrieval:"<<vname<<"," << gmStation << "," << 
 	//	      m_muonMgr->getMuonStation(stationName,etaIndex,phiIndex)<< std::endl;
+        
+        if (!gmStation  && vname.substr(0,3)=="BOG" ) {
+          // temporary(?) hack to retrieve BOG stations with cutouts
+          eta = fabs( top->getXToChildVol(ichild).getTranslation()[2])/3000.;
+          if ( top->getXToChildVol(ichild).getTranslation()[2] < 0.) eta *= -1;
+          phi = top->getXToChildVol(ichild).getTranslation().phi()/M_PI*4+9;
+	  MuonGM::MuonStation* station = m_muonMgr->getMuonStation(vname.substr(0,3),eta,phi);     
+	  if (station && (station->getTransform().getTranslation()-top->getXToChildVol(ichild).getTranslation()).mag()<0.1 ){
+	    gmStation = station;
+	  }
+        }
         if (!gmStation) log << MSG::ERROR << "Muon station not found! "<<vname<<","<<eta<<","<<phi  <<std::endl; 
         std::string stName = (clv->getName()).substr(0,vname.size()-8);
         if (stName.substr(0,1)=="B" && eta < 0 ) {

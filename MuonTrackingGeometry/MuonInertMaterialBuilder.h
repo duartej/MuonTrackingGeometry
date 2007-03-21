@@ -14,6 +14,8 @@
 #include "TrkGeometry/TrackingVolumeManipulator.h"
 // Gaudi
 #include "GaudiKernel/AlgTool.h"
+#include "GaudiKernel/ToolHandle.h"
+
 #include "GeoModelKernel/GeoVPhysVol.h"
 //mw
 #include "TrkDetDescrGeoModelCnv/GeoMaterialConverter.h"
@@ -89,10 +91,9 @@ namespace Muon {
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
       bool                                m_simplify;              // switch geometry simplification on/off 
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
-      mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
-      Trk::IMagneticFieldTool*            m_magFieldTool;                //!< Tracking Interface to Magnetic Field
-      std::string                         m_magFieldToolName;            //!< Name of the Tracking Magnetic Field Svc
-      std::string                         m_magFieldToolInstanceName;    //!< Instance Name of Tracking Magnetic Field Svc
+      mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system
+ 
+      ToolHandle<Trk::IMagneticFieldTool> m_magFieldTool;                //!< Tracking Interface to Magnetic Field
       Trk::MagneticFieldProperties        m_muonMagneticField;          //!< the magnetic Field
 
 //mw

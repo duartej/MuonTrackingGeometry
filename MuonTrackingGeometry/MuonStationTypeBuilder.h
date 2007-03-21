@@ -13,6 +13,8 @@
 #include "TrkDetDescrGeoModelCnv/GeoMaterialConverter.h"
 // Gaudi
 #include "GaudiKernel/AlgTool.h"
+#include "GaudiKernel/ToolHandle.h"
+
 #include "GeoModelKernel/GeoVPhysVol.h"
 #include "GeoModelKernel/GeoMaterial.h"
 // CLHEP
@@ -26,10 +28,7 @@ namespace Trk {
  class LayerMaterialProperties;
  class Volume;
  class Layer;
- class ITrackingVolumeBuilder;
  class ITrackingVolumeArrayCreator;
- class ILayerBuilder;
- class ILayerArrayCreator;
  class IMagneticFieldTool;
  class CuboidVolumeBounds;
  class TrapezoidVolumeBounds;
@@ -95,12 +94,10 @@ namespace Muon {
 
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
-      Trk::ITrackingVolumeArrayCreator*   m_trackingVolumeArrayCreator;             //!< Helper Tool to create TrackingVolume Arrays
-      std::string                         m_trackingVolumeArrayCreatorName;         //!< Name of the helper tool
-      std::string                         m_trackingVolumeArrayCreatorInstanceName; //!< Instance of the helper tool
-      Trk::IMagneticFieldTool*            m_magFieldTool;                //!< Tracking Interface to Magnetic Field
-      std::string                         m_magFieldToolName;            //!< Name of the Tracking Magnetic Field Svc
-      std::string                         m_magFieldToolInstanceName;    //!< Instance Name of Tracking Magnetic Field Svc
+
+      ToolHandle<Trk::ITrackingVolumeArrayCreator>   m_trackingVolumeArrayCreator;  //!< Helper Tool to create TrackingVolume Arrays
+      ToolHandle<Trk::IMagneticFieldTool>            m_magFieldTool;                //!< Tracking Interface to Magnetic Field
+
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
       Trk::MagneticFieldProperties        m_muonMagneticField;          //!< the magnetic Field
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 

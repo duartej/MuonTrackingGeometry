@@ -13,6 +13,8 @@
 #include "TrkGeometry/TrackingVolume.h"
 // Gaudi
 #include "GaudiKernel/AlgTool.h"
+#include "GaudiKernel/ToolHandle.h"
+
 #include "GeoModelKernel/GeoVPhysVol.h"
 
 class MdtIdHelper;
@@ -78,17 +80,11 @@ namespace Muon {
       const TgcIdHelper*            m_tgcIdHelper;           //!< 
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
 
-      Trk::IMagneticFieldTool*            m_magFieldTool;                //!< Tracking Interface to Magnetic Field
-      std::string                         m_magFieldToolName;            //!< Name of the Tracking Magnetic Field Svc
-      std::string                         m_magFieldToolInstanceName;    //!< Instance Name of Tracking Magnetic Field Svc
+      ToolHandle<Trk::IMagneticFieldTool>       m_magFieldTool;           //!< Tracking Interface to Magnetic Field
 
-      Muon::MuonStationTypeBuilder*       m_muonStationTypeBuilder;             //!< Helper Tool to create TrackingVolume Arrays
-      std::string                         m_muonStationTypeBuilderName;         //!< Name of the helper tool
-      std::string                         m_muonStationTypeBuilderInstanceName; //!< Instance of the helper tool
+      ToolHandle<Muon::MuonStationTypeBuilder>  m_muonStationTypeBuilder; //!< Helper Tool to create TrackingVolume Arrays
 
-      Trk::ITrackingVolumeHelper*         m_trackingVolumeHelper;             //!< Helper Tool to create TrackingVolumes
-      std::string                         m_trackingVolumeHelperName;         //!< Name of the helper tool
-      std::string                         m_trackingVolumeHelperInstanceName; //!< Instance of the helper tool
+      ToolHandle<Trk::ITrackingVolumeHelper>    m_trackingVolumeHelper;   //!< Helper Tool to create TrackingVolumes
 
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 

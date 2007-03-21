@@ -11,6 +11,7 @@
 #include "TrkGeometry/MaterialProperties.h"
 // Gaudi
 #include "GaudiKernel/AlgTool.h"
+#include "GaudiKernel/ToolHandle.h"
 #include "MuonTrackingGeometry/MuonStationBuilder.h"
 #include "MuonTrackingGeometry/MuonInertMaterialBuilder.h"
 
@@ -64,28 +65,18 @@ namespace Muon {
       /** Private method to find detached volumes */
       std::vector<const Trk::DetachedTrackingVolume*>* getDetachedObjects(const Trk::Volume*) const;
            
-      Trk::IMagneticFieldTool*            m_magFieldTool;                //!< Tracking Interface to Magnetic Field
-      std::string                         m_magFieldToolName;            //!< Name of the Tracking Magnetic Field Svc
-      std::string                         m_magFieldToolInstanceName;    //!< Instance Name of Tracking Magnetic Field Svc
+      ToolHandle<Trk::IMagneticFieldTool>                  m_magFieldTool;                  //!< Tracking Interface to Magnetic Field
 
-      Trk::IDetachedTrackingVolumeBuilder*      m_stationBuilder;            //!< A Tool for station type creation
-      std::string                         m_stationBuilderName;        //!< Name of the station type implementation
-      std::string                         m_stationBuilderInstanceName;//!< Instance Name of the station type builder
-      Trk::IDetachedTrackingVolumeBuilder*      m_inertBuilder;            //!< A Tool for inert object  creation
-      std::string                         m_inertBuilderName;        //!< Name of the inert object  implementation
-      std::string                         m_inertBuilderInstanceName;//!< Instance Name of the inert object type builder
+      ToolHandle<Trk::IDetachedTrackingVolumeBuilder>      m_stationBuilder;                //!< A Tool for station type creation
+
+      ToolHandle<Trk::IDetachedTrackingVolumeBuilder>      m_inertBuilder;                  //!< A Tool for inert object  creation
       
-      Trk::ITrackingVolumeArrayCreator*   m_trackingVolumeArrayCreator;             //!< Helper Tool to create TrackingVolume Arrays
-      std::string                         m_trackingVolumeArrayCreatorName;         //!< Name of the helper tool
-      std::string                         m_trackingVolumeArrayCreatorInstanceName; //!< Instance of the helper tool
+      ToolHandle<Trk::ITrackingVolumeArrayCreator>         m_trackingVolumeArrayCreator;    //!< Helper Tool to create TrackingVolume Arrays
 
-      Trk::ITrackingVolumeHelper*         m_trackingVolumeHelper;             //!< Helper Tool to create TrackingVolumes
-      std::string                         m_trackingVolumeHelperName;         //!< Name of the helper tool
-      std::string                         m_trackingVolumeHelperInstanceName; //!< Instance of the helper tool
+      ToolHandle<Trk::ITrackingVolumeHelper>               m_trackingVolumeHelper;          //!< Helper Tool to create TrackingVolumes
 
-      Trk::ITrackingVolumeDisplayer*      m_trackingVolumeDisplayer;             //!< Displayer Tool to create TrackingVolumes
-      std::string                         m_trackingVolumeDisplayerName;         //!< Name of the helper tool
-      std::string                         m_trackingVolumeDisplayerInstanceName; //!< Instance of the helper tool
+      ToolHandle<Trk::ITrackingVolumeDisplayer>            m_trackingVolumeDisplayer;       //!< Displayer Tool to create TrackingVolumes
+
    
       bool                                m_muonSimple;
       bool                                m_muonActive;

@@ -82,12 +82,8 @@ const InterfaceID& Muon::MuonStationTypeBuilder::interfaceID()
 Muon::MuonStationTypeBuilder::MuonStationTypeBuilder(const std::string& t, const std::string& n, const IInterface* p) :
   AlgTool(t,n,p),
   m_muonMgrLocation("MuonMgr"),
-  m_trackingVolumeArrayCreator(0),
-  m_trackingVolumeArrayCreatorName("Trk::TrackingVolumeArrayCreator"),
-  m_trackingVolumeArrayCreatorInstanceName("TrackingVolumeArrayCreator"),
-  m_magFieldTool(0),
-  m_magFieldToolName("Trk::MagneticFieldTool"),
-  m_magFieldToolInstanceName("ATLAS_TrackingMagFieldTool"),
+  m_trackingVolumeArrayCreator("Trk::TrackingVolumeArrayCreator/TrackingVolumeArrayCreator"),
+  m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
   m_mdtTubeMat(0),
   m_mdtFoamMat(0),
   m_rpc46(0),
@@ -138,12 +134,14 @@ StatusCode Muon::MuonStationTypeBuilder::initialize()
 
     log << MSG::DEBUG << m_muonMgr->geometryVersion() << endreq; 
     
-    s = toolSvc()->retrieveTool(m_magFieldToolName, m_magFieldToolInstanceName, m_magFieldTool);
-    if (s.isFailure())
+    // Retrieve the magnetic field tool   ----------------------------------------------------    
+    if (m_magFieldTool.retrieve().isFailure())
     {
-      log << MSG::ERROR << "Could not retrieve " << m_magFieldToolName << " from ToolSvc. MagneticField will be 0. " << endreq;
-    }
- 
+      log << MSG::FATAL << "Failed to retrieve tool " << m_magFieldTool << endreq;
+      return StatusCode::FAILURE;
+    } else
+      log << MSG::INFO << "Retrieved tool " << m_magFieldTool << endreq;
+
 
     /*
     s = toolSvc()->retrieveTool(m_layerArrayCreatorName, m_layerArrayCreatorInstanceName, m_layerArrayCreator);
@@ -154,12 +152,15 @@ StatusCode Muon::MuonStationTypeBuilder::initialize()
     }
     */
 
-    s = toolSvc()->retrieveTool(m_trackingVolumeArrayCreatorName, m_trackingVolumeArrayCreatorInstanceName, m_trackingVolumeArrayCreator);
-    if (s.isFailure())
+    // Retrieve the tracking volume array creator   -------------------------------------------    
+    if (m_trackingVolumeArrayCreator.retrieve().isFailure())
     {
-      log << MSG::ERROR << "Could not retrieve " << m_trackingVolumeArrayCreatorName << " from ToolSvc. ";
-      log <<" Creation of LayerArrays might fail." << endreq;
-    }   
+      log << MSG::FATAL << "Failed to retrieve tool " << m_trackingVolumeArrayCreator << endreq;
+      return StatusCode::FAILURE;
+    } else
+      log << MSG::INFO << "Retrieved tool " << m_trackingVolumeArrayCreator << endreq;
+
+    
 
   // if no muon materials are declared, take default ones
   if (m_muonMaterialProperties.size() < 3){
@@ -174,7 +175,7 @@ StatusCode Muon::MuonStationTypeBuilder::initialize()
                                             m_muonMaterialProperties[1],
                                             m_muonMaterialProperties[2]);
 
-   Trk::MagneticFieldProperties muonMagneticFieldProperties(m_magFieldTool, Trk::RealisticField);    
+   Trk::MagneticFieldProperties muonMagneticFieldProperties(&(*m_magFieldTool), Trk::RealisticField);    
    m_muonMagneticField = muonMagneticFieldProperties;
 
    m_materialConverter= new Trk::GeoMaterialConverter();

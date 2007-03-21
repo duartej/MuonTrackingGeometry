@@ -55,24 +55,12 @@
 // constructor
 Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string& t, const std::string& n, const IInterface* p) :
   AlgTool(t,n,p),
-  m_magFieldTool(0),
-  m_magFieldToolName("Trk::MagneticFieldTool"),
-  m_magFieldToolInstanceName("ATLAS_TrackingMagFieldTool"),
-  m_stationBuilder(0),
-  m_stationBuilderName("Muon::MuonStationBuilder"),
-  m_stationBuilderInstanceName("MuonStationBuilder"),
-  m_inertBuilder(0),
-  m_inertBuilderName("Muon::MuonInertMaterialBuilder"),
-  m_inertBuilderInstanceName("MuonInertMaterialBuilder"),
-  m_trackingVolumeArrayCreator(0),
-  m_trackingVolumeArrayCreatorName("Trk::TrackingVolumeArrayCreator"),
-  m_trackingVolumeArrayCreatorInstanceName("TrackingVolumeArrayCreator"),
-  m_trackingVolumeHelper(0),
-  m_trackingVolumeHelperName("Trk::TrackingVolumeHelper"),
-  m_trackingVolumeHelperInstanceName("TrackingVolumeHelper"),
-  m_trackingVolumeDisplayer(0),
-  m_trackingVolumeDisplayerName("Trk::TrackingVolumeDisplayer"),
-  m_trackingVolumeDisplayerInstanceName("TrackingVolumeDisplayer"),
+  m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
+  m_stationBuilder("Muon::MuonStationBuilder/MuonStationBuilder"),
+  m_inertBuilder("Muon::MuonInertMaterialBuilder/MuonInertMaterialBuilder"),
+  m_trackingVolumeArrayCreator("Trk::TrackingVolumeArrayCreator/TrackingVolumeArrayCreator"),
+  m_trackingVolumeHelper("Trk::TrackingVolumeHelper/TrackingVolumeHelper"),
+  m_trackingVolumeDisplayer("Trk::TrackingVolumeDisplayer/TrackingVolumeDisplayer"),
   m_muonSimple(false),
   m_muonActive(false),
   m_muonInert(false),
@@ -94,9 +82,7 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   declareProperty("SimpleMuonGeometry",               m_muonSimple);  
   declareProperty("BuildActiveMaterial",              m_muonActive);  
   declareProperty("BuildInertMaterial",               m_muonInert);
-  declareProperty("MagneticFieldTool",                m_magFieldToolName);  
-  declareProperty("MagneticFieldTool",                m_magFieldToolName);  
-  declareProperty("MagneticFieldToolInstance",        m_magFieldToolInstanceName);
+  declareProperty("MagneticFieldTool",                m_magFieldTool);  
   // the overall dimensions
   declareProperty("InnerBarrelRadius",              m_innerBarrelRadius);
   declareProperty("OuterBarrelRadius",              m_outerBarrelRadius);
@@ -121,50 +107,56 @@ StatusCode Muon::MuonTrackingGeometryBuilder::initialize()
     MsgStream log(msgSvc(), name());
 
     StatusCode s = AlgTool::initialize();
+
+
+
+    // Retrieve the magnetic field tool   ----------------------------------------------------    
+    if (m_magFieldTool.retrieve().isFailure())
+    {
+      log << MSG::FATAL << "Failed to retrieve tool " << m_magFieldTool << endreq;
+      return StatusCode::FAILURE;
+    } else
+      log << MSG::INFO << "Retrieved tool " << m_magFieldTool << endreq;
+
+
+    // Retrieve the tracking volume helper   -------------------------------------------------    
+    if (m_trackingVolumeHelper.retrieve().isFailure())
+    {
+      log << MSG::FATAL << "Failed to retrieve tool " << m_trackingVolumeHelper << endreq;
+      return StatusCode::FAILURE;
+    } else
+      log << MSG::INFO << "Retrieved tool " << m_trackingVolumeHelper << endreq;
+
+    // Retrieve the tracking volume array creator   -------------------------------------------    
+    if (m_trackingVolumeArrayCreator.retrieve().isFailure())
+    {
+      log << MSG::FATAL << "Failed to retrieve tool " << m_trackingVolumeArrayCreator << endreq;
+      return StatusCode::FAILURE;
+    } else
+      log << MSG::INFO << "Retrieved tool " << m_trackingVolumeArrayCreator << endreq;
+
     
-    s = toolSvc()->retrieveTool(m_magFieldToolName, m_magFieldToolInstanceName, m_magFieldTool);
-    if (s.isFailure())
-    {
-      log << MSG::ERROR << "Could not retrieve " << m_magFieldToolName << " from ToolSvc. MagneticField will be 0. " << endreq;
-    }
-    // Retrieve the tracking volume helper tool
-    s = toolSvc()->retrieveTool(m_trackingVolumeHelperName, m_trackingVolumeHelperInstanceName, m_trackingVolumeHelper);
-    if (s.isFailure())
-    {
-      log << MSG::ERROR << "Could not retrieve " << m_trackingVolumeHelperName << " from ToolSvc. ";
-      log <<" Creation of Gap Volumes will fail." << endreq;
-    }
-    // Retrieve the tracking volume helper tool
-    s = toolSvc()->retrieveTool(m_trackingVolumeDisplayerName, m_trackingVolumeDisplayerInstanceName, m_trackingVolumeDisplayer);
-    if (s.isFailure())
-    {
-      log << MSG::ERROR << "Could not retrieve " << m_trackingVolumeDisplayerName << " from ToolSvc. ";
-      log <<" Creation of Gap Volumes will fail." << endreq;
+    // Retrieve the station builder (if configured) -------------------------------------------    
+    if (m_muonActive) { 
+
+      if (m_stationBuilder.retrieve().isFailure())
+      {
+          log << MSG::ERROR << "Failed to retrieve tool " << m_stationBuilder << endreq;
+          log <<" Creation of stations might fail." << endreq;
+      } else
+          log << MSG::INFO << "Retrieved tool " << m_trackingVolumeArrayCreator << endreq;
     }
 
-    if (m_muonActive) { 
-      s = toolSvc()->retrieveTool(m_stationBuilderName, m_stationBuilderInstanceName, m_stationBuilder);
-      if (s.isFailure())
-      {
-        log << MSG::ERROR << "Could not retrieve " << m_stationBuilderName << " from ToolSvc. ";
-        log <<" Creation of stations might fail." << endreq;
-      }
-    }
+    // Retrieve the inert material builder builder (if configured) -------------------------------------------    
 
     if (m_muonInert) {
-      s = toolSvc()->retrieveTool(m_inertBuilderName, m_inertBuilderInstanceName, m_inertBuilder);
-      if (s.isFailure())
-      {
-        log << MSG::ERROR << "Could not retrieve " << m_inertBuilderName << " from ToolSvc. ";
-        log <<" Creation of inert material objects might fail." << endreq;
-      }
-    }
 
-    s = toolSvc()->retrieveTool(m_trackingVolumeArrayCreatorName, m_trackingVolumeArrayCreatorInstanceName, m_trackingVolumeArrayCreator);
-    if (s.isFailure())
-    {
-      log << MSG::ERROR << "Could not retrieve " << m_trackingVolumeArrayCreatorName << " from ToolSvc. ";
-      log <<" Creation of LayerArrays might fail." << endreq;
+      if (m_inertBuilder.retrieve().isFailure())
+      {
+          log << MSG::ERROR << "Failed to retrieve tool " << m_inertBuilder << endreq;
+          log <<"Creation of inert material objects might fail." << endreq;
+      } else
+          log << MSG::INFO << "Retrieved tool " << m_trackingVolumeArrayCreator << endreq;
     }
         
     log << MSG::INFO  << name() <<" initialize() successful" << endreq;    
@@ -205,7 +197,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
                                             m_muonMaterialProperties[1],
                                             m_muonMaterialProperties[2]);
 
-   Trk::MagneticFieldProperties muonMagneticFieldProperties(m_magFieldTool, Trk::RealisticField);    
+   Trk::MagneticFieldProperties muonMagneticFieldProperties(&(*m_magFieldTool), Trk::RealisticField);    
 
 // dummy substructures
    const Trk::LayerArray* dummyLayers = 0;

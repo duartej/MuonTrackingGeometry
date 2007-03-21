@@ -66,15 +66,9 @@
 Muon::MuonStationBuilder::MuonStationBuilder(const std::string& t, const std::string& n, const IInterface* p) :
   AlgTool(t,n,p),
   m_muonMgrLocation("MuonMgr"),
-  m_magFieldTool(0),
-  m_magFieldToolName("Trk::MagneticFieldTool"),
-  m_magFieldToolInstanceName("ATLAS_TrackingMagFieldTool"),
-  m_muonStationTypeBuilder(0),
-  m_muonStationTypeBuilderName("Muon::MuonStationTypeBuilder"),
-  m_muonStationTypeBuilderInstanceName("MuonStationTypeBuilder"),
-  m_trackingVolumeHelper(0),
-  m_trackingVolumeHelperName("Trk::TrackingVolumeHelper"),
-  m_trackingVolumeHelperInstanceName("TrackingVolumeHelper"),
+  m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
+  m_muonStationTypeBuilder("Muon::MuonStationTypeBuilder/MuonStationTypeBuilder"),
+  m_trackingVolumeHelper("Trk::TrackingVolumeHelper/TrackingVolumeHelper"),
   m_buildBarrel(true),
   m_buildEndcap(true),
   m_buildCsc(true),
@@ -123,26 +117,31 @@ StatusCode Muon::MuonStationBuilder::initialize()
 
     log << MSG::INFO << m_muonMgr->geometryVersion() << endreq; 
     
-    s = toolSvc()->retrieveTool(m_magFieldToolName, m_magFieldToolInstanceName, m_magFieldTool);
-    if (s.isFailure())
+    // Retrieve the magnetic field tool   ----------------------------------------------------    
+    if (m_magFieldTool.retrieve().isFailure())
     {
-      log << MSG::ERROR << "Could not retrieve " << m_magFieldToolName << " from ToolSvc. MagneticField will be 0. " << endreq;
-    }
+      log << MSG::FATAL << "Failed to retrieve tool " << m_magFieldTool << endreq;
+      return StatusCode::FAILURE;
+    } else
+      log << MSG::INFO << "Retrieved tool " << m_magFieldTool << endreq;
 
-    s = toolSvc()->retrieveTool(m_muonStationTypeBuilderName, m_muonStationTypeBuilderInstanceName, m_muonStationTypeBuilder);
-    if (s.isFailure())
+
+    // Retrieve the tracking volume helper   -------------------------------------------------    
+    if (m_trackingVolumeHelper.retrieve().isFailure())
     {
-      log << MSG::ERROR << "Could not retrieve " << m_muonStationTypeBuilderName << " from ToolSvc. ";
-      log <<" Creation of stations might fail." << endreq;
-    }
-    // Retrieve the tracking volume helper tool
-    s = toolSvc()->retrieveTool(m_trackingVolumeHelperName, m_trackingVolumeHelperInstanceName, m_trackingVolumeHelper);
-    if (s.isFailure())
+      log << MSG::FATAL << "Failed to retrieve tool " << m_trackingVolumeHelper << endreq;
+      return StatusCode::FAILURE;
+    } else
+      log << MSG::INFO << "Retrieved tool " << m_trackingVolumeHelper << endreq;
+
+    // Retrieve muon station builder tool   -------------------------------------------------    
+   if (m_muonStationTypeBuilder.retrieve().isFailure())
     {
-      log << MSG::ERROR << "Could not retrieve " << m_trackingVolumeHelperName << " from ToolSvc. ";
-      log <<" Creation of Gap Volumes will fail." << endreq;
-    }
- 
+      log << MSG::FATAL << "Failed to retrieve tool " << m_muonStationTypeBuilder << endreq;
+      return StatusCode::FAILURE;
+    } else
+      log << MSG::INFO << "Retrieved tool " << m_muonStationTypeBuilder << endreq;
+
     // if no muon materials are declared, take default ones
     if (m_muonMaterialProperties.size() < 3){
       // set 0. / 0. / 0. / 0.
@@ -156,7 +155,7 @@ StatusCode Muon::MuonStationBuilder::initialize()
                                              m_muonMaterialProperties[1],
                                              m_muonMaterialProperties[2]);
 
-    Trk::MagneticFieldProperties muonMagneticFieldProperties(m_magFieldTool, Trk::RealisticField);    
+    Trk::MagneticFieldProperties muonMagneticFieldProperties(&(*m_magFieldTool), Trk::RealisticField);    
     m_muonMagneticField = muonMagneticFieldProperties;
 
     log << MSG::INFO  << name() <<" initialize() successful" << endreq;    

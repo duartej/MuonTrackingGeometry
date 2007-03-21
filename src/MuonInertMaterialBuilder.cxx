@@ -77,9 +77,7 @@ Muon::MuonInertMaterialBuilder::MuonInertMaterialBuilder(const std::string& t, c
   Trk::TrackingVolumeManipulator(),
   m_muonMgrLocation("MuonMgr"),
   m_simplify(1),
-  m_magFieldTool(0),
-  m_magFieldToolName("Trk::MagneticFieldTool"),
-  m_magFieldToolInstanceName("ATLAS_TrackingMagFieldTool")
+  m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool")
 {
   declareInterface<Trk::IDetachedTrackingVolumeBuilder>(this);
   declareProperty("MuonDetManagerLocation",           m_muonMgrLocation);
@@ -129,13 +127,18 @@ StatusCode Muon::MuonInertMaterialBuilder::initialize()
                                              m_muonMaterialProperties[1],
                                              m_muonMaterialProperties[2]);
 
-    s = toolSvc()->retrieveTool(m_magFieldToolName, m_magFieldToolInstanceName, m_magFieldTool);
-    if (s.isFailure())
-    {
-      log << MSG::ERROR << "Could not retrieve " << m_magFieldToolName << " from ToolSvc. MagneticField will be 0. " << endreq;
-    }
 
-    Trk::MagneticFieldProperties muonMagneticFieldProperties(m_magFieldTool, Trk::RealisticField);
+    // Retrieve the magnetic field tool   ----------------------------------------------------    
+    if (m_magFieldTool.retrieve().isFailure())
+    {
+      log << MSG::FATAL << "Failed to retrieve tool " << m_magFieldTool << endreq;
+      return StatusCode::FAILURE;
+    } else
+      log << MSG::INFO << "Retrieved tool " << m_magFieldTool << endreq;
+
+
+
+    Trk::MagneticFieldProperties muonMagneticFieldProperties(&(*m_magFieldTool), Trk::RealisticField);
     m_muonMagneticField = muonMagneticFieldProperties;
 
 // mw

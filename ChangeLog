@@ -1,3 +1,7 @@
+2007-03-22 Andi Salzburger <Anreas.Salzburger@cern.ch>
+        * remove redundant files
+        * tagged as MuonTrackingGeometry-00-00-38
+
 2007-03-20 Andi Salzburger <Anreas.Salzburger@cern.ch>
         * first configurable version
         * tagged as MuonTrackingGeometry-00-00-37

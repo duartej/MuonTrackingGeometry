@@ -202,7 +202,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	if ( !gmStation) {
           gmStation = m_muonMgr->getMuonStation(vname.substr(0,4),eta,phi);
         }
-        Identifier stId = m_mdtIdHelper->elementID(vname.substr(0,3),eta,phi);
+        //Identifier stId = m_mdtIdHelper->elementID(vname.substr(0,3),eta,phi);
 	//int stationIndex = m_mdtIdHelper->stationName(stId);
         //std::string stationName = m_mdtIdHelper->stationNameString( stationIndex );
         //int etaIndex = m_mdtIdHelper->stationEta(stId);
@@ -237,16 +237,12 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
               ||(stName.substr(0,1)!="T" && stName == msTypeName) ) {
             msTV = *msTypeIter;
 	    if (msTV && gmStation) {
-	      const Trk::Layer* layerRepresentation = m_muonStationTypeBuilder -> createLayerRepresentation(msTV);
-              unsigned int iD = stId;
-              layerRepresentation->setLayerType(iD);
-	      const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(stName,msTV,layerRepresentation);
 	      HepTransform3D transf = gmStation->getTransform(); 
-	      //const Trk::DetachedTrackingVolume* newStat = typeStat->clone(gmStation->getKey(),transf);
-	      const Trk::DetachedTrackingVolume* newStat = typeStat->clone(vname,transf);
-	      // glue components
-	      glueComponents(newStat);
-              // eta,phi
+              Identifier stId(0);
+              if (stName.substr(0,1)=="C") {
+		stId = m_cscIdHelper->elementID(vname.substr(0,3),eta,phi);
+              }
+              // adjust eta,phi
               if (msTypeName.substr(0,1)=="C") {
                 eta = 1;
 		if (transf.getTranslation().z() < 0 ) eta = 0;
@@ -256,11 +252,6 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	      if (msTypeName.substr(0,1)=="T") {
 		bool az = true;
 		if (transf.getTranslation().z() < 0 ) az = false;
-		double phic = transf.getTranslation().phi();
-		if (msTypeName.substr(2,1)=="E" && msTypeName.substr(0,3)!="T4E")
-		  phi = phic<0 ? 24*phic/M_PI+48 : 24*phic/M_PI;
-		else
-		  phi = phic<0 ? 12*phic/M_PI+24 : 12*phic/M_PI;
 		if (msTypeName.substr(7,2)=="01") eta = az ? 5 : 4;
 		if (msTypeName.substr(7,2)=="02") eta = az ? 5 : 4;
 		if (msTypeName.substr(7,2)=="03") eta = az ? 6 : 3;
@@ -283,7 +274,33 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		if (msTypeName.substr(7,2)=="20") eta = az ? 5 : 4;
 		if (msTypeName.substr(7,2)=="21") eta = az ? 5 : 4;
 	      }     
+	      const Trk::Layer* layerRepresentation = m_muonStationTypeBuilder -> createLayerRepresentation(msTV);
+              if (stName.substr(0,1)=="T") {
+		int etaSt = eta - 4;
+		if (eta < 5) etaSt = eta - 5; 
+                stId = m_tgcIdHelper->elementID(vname.substr(0,3),etaSt,phi);
+              } else if (stName.substr(0,3)=="BML") {
+		stId = m_rpcIdHelper->elementID(vname.substr(0,3),eta,phi,1);
+              } else if (stName.substr(0,1)!="C" ) {
+		stId = m_mdtIdHelper->elementID(vname.substr(0,3),eta,phi);
+              }
+              if (!stId) log << MSG::ERROR << "identifier of the station not found:"<<vname <<","<<eta<<","<<phi<<endreq;
+              unsigned int iD = stId;
+              layerRepresentation->setLayerType(iD);
+	      const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(stName,msTV,layerRepresentation);
+	      //const Trk::DetachedTrackingVolume* newStat = typeStat->clone(gmStation->getKey(),transf);
+	      const Trk::DetachedTrackingVolume* newStat = typeStat->clone(vname,transf);
+	      // glue components
+	      glueComponents(newStat);
 	      // identify layers
+	      if (msTypeName.substr(0,1)=="T") {
+		double phic = transf.getTranslation().phi();
+		if (msTypeName.substr(2,1)=="E" && msTypeName.substr(0,3)!="T4E")
+		  phi = phic<0 ? 24*phic/M_PI+48 : 24*phic/M_PI;
+		else
+		  phi = phic<0 ? 12*phic/M_PI+24 : 12*phic/M_PI;
+                if ( phi==0 ) phi=1;
+              }
 	      if (m_identifyActive) identifyLayers(newStat,eta,phi);  
 	      mStations.push_back(newStat);
             }
@@ -591,7 +608,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
       for (int gasgap = 0; gasgap < cscRE->Ngasgaps(); gasgap++) {
         int etaId = eta;
         if (etaId < 1 ) etaId = -1;
-	Identifier idi = m_cscIdHelper->channelID(st-50,etaId,phi+1,1,gasgap+1,0,cscRE->NetaStrips(gasgap));          
+	Identifier idi = m_cscIdHelper->channelID(stationName.substr(0,3),etaId,phi+1,1,gasgap+1,0,cscRE->NetaStrips(gasgap));          
         const HepPoint3D gpi = cscRE->stripPos(idi);
         //const HepPoint3D gp = cscRE->stripPos(eta,0,gasgap+1,0,cscRE->NetaStrips(gasgap));
         const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gpi);

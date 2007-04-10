@@ -1,3 +1,9 @@
+2007-04-10 Sarka Todorova <sarka.todorova@cern.ch>
+        * fix crashes in dbg (from MuonIdHelpers when identifing MTG active surfaces)
+	* known problems, to be fixed : unidentified RPC layers in BMS stations
+	* slow initialization (mainly MDT identification) 
+        * tagged as MuonTrackingGeometry-00-00-39
+
 2007-03-22 Andi Salzburger <Anreas.Salzburger@cern.ch>
         * remove redundant files
         * tagged as MuonTrackingGeometry-00-00-38

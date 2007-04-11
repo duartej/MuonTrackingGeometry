@@ -72,6 +72,7 @@ namespace Muon {
       void glueComponents(const Trk::DetachedTrackingVolume* ) const;    
       void encloseLayers( const Trk::DetachedTrackingVolume* ) const; 
       void identifyLayers(const Trk::DetachedTrackingVolume*, int, int ) const;
+      void identifyPrototype(const Trk::TrackingVolume*, int, int, HepTransform3D ) const;
  
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       const MdtIdHelper*            m_mdtIdHelper;           //!< 

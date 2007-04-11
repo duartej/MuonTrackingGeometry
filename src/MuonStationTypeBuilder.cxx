@@ -403,11 +403,18 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
           }
 	  //std::cout << "new Mdt volume:position:" << (mdtVol->transform()).getTranslation() << std::endl; 
 	  //std::cout << "new Mdt volume:dimensions:" <<compBounds->halflengthX()<<","<<envY<<","<<envZ << std::endl; 
-          const Trk::TrackingVolume* mdtTrkVol = processMdtBox(mdtVol,compGeo[i],new HepTransform3D(HepTranslateZ3D(-zShift)*(*compTransf[i])));
+          double shiftSign = 1.; 
+          if (fabs(zShift) > 0.) {
+	    std::string stName = mv->getLogVol()->getName();
+	    if ( stName.substr(0,4)=="BIR3" || stName.substr(0,4)=="BIR5" || stName.substr(0,4)=="BIR7" || stName.substr(0,5)=="BIR10" ) shiftSign = -1.;
+          }
+          const Trk::TrackingVolume* mdtTrkVol = processMdtBox(mdtVol,compGeo[i],new HepTransform3D(HepTranslateZ3D(-zShift)*(*compTransf[i])),
+							       shiftSign*fabs(zShift));
           trkVols.push_back(mdtTrkVol); 
           volSteps->push_back(2.*mdtBounds->halflengthX()); 
           currX += 2.*mdtBounds->halflengthX();
           comp_processed = true;
+          zShift = 0.;
         }
         if ( !comp_processed ) std::cout << "unknown technology:" <<compName[i]<<std::endl;
       } // end loop over station children
@@ -741,12 +748,13 @@ StatusCode Muon::MuonStationTypeBuilder::finalize()
     return StatusCode::SUCCESS;
 }
 //
-const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volume*& vol,const GeoVPhysVol*& gv, HepTransform3D* transf) const
+const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volume*& vol,const GeoVPhysVol*& gv, HepTransform3D* transf, double zShift) const
 {
   MsgStream log(msgSvc(), name());
 
   std::vector<const Trk::PlaneLayer*> layers;
   std::vector<double> x_array;
+  std::vector<double> x_ref;
   std::vector<Trk::MaterialProperties*> x_mat;
   std::vector<double> x_thickness;
   double currX = -100000; 
@@ -801,15 +809,18 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
            x_mat.push_back(mdtMat);
            x_thickness.push_back( 2*xv );
            currX = transfc.getTranslation()[0];
+           x_ref.push_back( transfc.getTranslation()[2] ) ;
 	   // std::cout << "layer info included:" << clv->getName()<<"," << 2*xv <<","<< currX<< std::endl; 
          } else {
 	  std::vector<double>::iterator xIter=x_array.begin();
 	  std::vector<Trk::MaterialProperties*>::iterator mIter=x_mat.begin();
 	  std::vector<double>::iterator tIter=x_thickness.begin();
-          while ( transfc.getTranslation()[0] > *xIter ) {xIter++;mIter++;}
+	  std::vector<double>::iterator rIter=x_ref.begin();
+          while ( transfc.getTranslation()[0] > *xIter ) {xIter++;mIter++;rIter++;}
           x_array.insert(xIter,transfc.getTranslation()[0]);
           x_mat.insert(mIter,mdtMat);
           x_thickness.insert(tIter,2*xv);
+          x_ref.insert(rIter,transfc.getTranslation()[2] ) ;
           currX = transfc.getTranslation()[0];
         }
        }     
@@ -839,6 +850,9 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
                                   mdtMaterial,
                                   thickness,
                                   od );
+      layer->setRef(x_ref[iloop]-zShift);
+      //std::cout << " reference value set for layer:"<<iloop<<","<<layer->getRef()<<std::endl;
+      //std::cout << transf->getTranslation() << std::endl;
       layers.push_back(layer);
 
       // make preliminary identification of active layers
@@ -892,6 +906,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
   std::vector<double> x_array;
   std::vector<Trk::MaterialProperties*> x_mat;
   std::vector<double> x_thickness;
+  std::vector<double> x_ref;
   double currX = -100000; 
   for (unsigned int ich =0; ich< gv->getNChildVols(); ++ich) {
      const GeoVPhysVol* cv = &(*(gv->getChildVol(ich))); 
@@ -949,15 +964,18 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
            x_array.push_back(  transfc.getTranslation()[0] );
            x_mat.push_back( mdtMat );
            x_thickness.push_back( 2*xv );
+           x_ref.push_back(  transfc.getTranslation()[2] );
            currX = transfc.getTranslation()[0];
          } else {
 	  std::vector<double>::iterator xIter=x_array.begin();
 	  std::vector<Trk::MaterialProperties*>::iterator mIter=x_mat.begin();
 	  std::vector<double>::iterator tIter=x_thickness.begin();
-          while ( transfc.getTranslation()[0] > *xIter ) {xIter++;mIter++;}
+	  std::vector<double>::iterator rIter=x_ref.begin();
+          while ( transfc.getTranslation()[0] > *xIter ) {xIter++;mIter++;rIter++;}
           x_array.insert(xIter,transfc.getTranslation()[0]);
           x_mat.insert(mIter,mdtMat);
           x_thickness.insert(tIter,2*xv);
+          x_ref.insert(rIter,transfc.getTranslation()[2] );
           currX = transfc.getTranslation()[0];
         }
        }     
@@ -989,6 +1007,8 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
                                   mdtMaterial,
                                   thickness,
                                   od );
+      layer->setRef(x_ref[iloop]);
+      //std::cout << " reference value set for layer:"<<iloop<<","<<layer->getRef()<<std::endl;
       layers.push_back(layer);
       // make preliminary identification of active layers
       if (x_mat[iloop] == m_mdtTubeMat) {

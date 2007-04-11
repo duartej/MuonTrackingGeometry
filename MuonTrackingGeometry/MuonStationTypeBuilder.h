@@ -71,7 +71,7 @@ namespace Muon {
       const Trk::TrackingVolume* processCscStation(const GeoVPhysVol* cv, std::string name) const; 
       std::vector<const Trk::TrackingVolume*> processTgcStation(const GeoVPhysVol* cv) const; 
       /** components */
-      const Trk::TrackingVolume* processMdtBox(Trk::Volume*&,const GeoVPhysVol*&, HepTransform3D*) const;
+      const Trk::TrackingVolume* processMdtBox(Trk::Volume*&,const GeoVPhysVol*&, HepTransform3D*, double ) const;
       const Trk::TrackingVolume* processMdtTrd(Trk::Volume*&,const GeoVPhysVol*&, HepTransform3D*) const;
       const Trk::TrackingVolume* processRpc(Trk::Volume*&,std::vector<const GeoVPhysVol*>,std::vector<HepTransform3D*>) const;
       const Trk::TrackingVolume* processSpacer(Trk::Volume*&,std::vector<const GeoVPhysVol*>,std::vector<HepTransform3D*>) const;

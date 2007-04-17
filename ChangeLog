@@ -1,3 +1,10 @@
+2007-04-12 Sarka Todorova <sarka.todorova@cern.ch>
+        * further improvement in initialization time (change iteration over GeoModel tree and remove RpcIdHelper::valid())
+	* fixed identification of assembled stations (BOG,..)
+	* name of inert volume envelope changed to differ from volume itself 
+	* persistent problem: unidentified RPC layers in BMS stations 
+        * tagged as MuonTrackingGeometry-00-00-41
+
 2007-04-11 Sarka Todorova <sarka.todorova@cern.ch>
         * faster initialization (identify prototypes and recalculate) 
 	* persistent problem: unidentified RPC layers in BMS stations 

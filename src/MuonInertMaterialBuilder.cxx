@@ -709,7 +709,8 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
   if (envelope) {
     std::vector<const Trk::TrackingVolume*>* confinedVols = new std::vector<const Trk::TrackingVolume*>;
     confinedVols->push_back(trVol);
-    newVol = new Trk::TrackingVolume( *envelope, m_muonMaterial,m_muonMagneticField,confinedVols,trVol->volumeName());
+    std::string envName=trVol->volumeName()+"_envelope";
+    newVol = new Trk::TrackingVolume( *envelope, m_muonMaterial,m_muonMagneticField,confinedVols,envName);
     // glue confined volumes
     for (unsigned int iv = 0; iv < confinedVols->size(); iv++)
       Trk::TrackingVolumeManipulator::confineVolume(*((*confinedVols)[iv]),newVol);
@@ -748,10 +749,10 @@ const Trk::Volume* Muon::MuonInertMaterialBuilder::findEnvelope(const Trk::Track
     if (!subtractions->size()) {
     } else {
       envelope = new Trk::Volume(*(constituents->front()));
-      std::cout<<"volume bounds?"<< &(envelope->volumeBounds())<<std::endl;
-      const Trk::CylinderVolumeBounds*  cyl = dynamic_cast<const Trk::CylinderVolumeBounds*> (&(envelope->volumeBounds()));
-      const Trk::CuboidVolumeBounds*    box = dynamic_cast<const Trk::CuboidVolumeBounds*> (&(envelope->volumeBounds()));
-      const Trk::TrapezoidVolumeBounds* trd = dynamic_cast<const Trk::TrapezoidVolumeBounds*> (&(envelope->volumeBounds()));
+      //std::cout<<"volume bounds?"<< &(envelope->volumeBounds())<<std::endl;
+      //const Trk::CylinderVolumeBounds*  cyl = dynamic_cast<const Trk::CylinderVolumeBounds*> (&(envelope->volumeBounds()));
+      //const Trk::CuboidVolumeBounds*    box = dynamic_cast<const Trk::CuboidVolumeBounds*> (&(envelope->volumeBounds()));
+      //const Trk::TrapezoidVolumeBounds* trd = dynamic_cast<const Trk::TrapezoidVolumeBounds*> (&(envelope->volumeBounds()));
     }
   } else {
     std::vector<const Trk::GlobalPosition*> edges;

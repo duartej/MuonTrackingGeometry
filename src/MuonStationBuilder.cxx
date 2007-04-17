@@ -61,6 +61,7 @@
 #include "GeoModelKernel/GeoShapeSubtraction.h"
 #include "GeoModelKernel/GeoBox.h"
 #include "GeoModelKernel/GeoTrd.h"
+#include "GeoModelKernel/GeoVolumeCursor.h"
 
 // constructor
 Muon::MuonStationBuilder::MuonStationBuilder(const std::string& t, const std::string& n, const IInterface* p) :
@@ -178,9 +179,10 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
     // position MDT chambers by repeating loop over muon tree
     // link to top tree
     const GeoVPhysVol* top = &(*(m_muonMgr->getTreeTop(0)));
-    for (unsigned int ichild =0; ichild< top->getNChildVols(); ichild++) 
+    GeoVolumeCursor vol(top);
+    while (!vol.atEnd())
     {
-      const GeoVPhysVol* cv = &(*(top->getChildVol(ichild))); 
+      const GeoVPhysVol* cv = &(*(vol.getVolume()));
       const GeoLogVol* clv = cv->getLogVol();
       std::string vname = clv->getName();
       if (vname.size()>7 && vname.substr(vname.size()-7,7) =="Station" && 
@@ -189,7 +191,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	    ||(m_buildCsc    && vname.substr(0,1) =="C")
 	    ||(m_buildTgc    && vname.substr(0,1) =="T") ) ) {
 
-        int etaphi = top->getIdOfChildVol(ichild);        // retrive eta/phi indexes
+        int etaphi = vol.getId();        // retrive eta/phi indexes
         int sign =( etaphi < 0 ) ? -1 : 1 ;
         etaphi = sign*etaphi;
         int is_mirr = etaphi/1000;
@@ -202,24 +204,20 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	if ( !gmStation) {
           gmStation = m_muonMgr->getMuonStation(vname.substr(0,4),eta,phi);
         }
-        //Identifier stId = m_mdtIdHelper->elementID(vname.substr(0,3),eta,phi);
-	//int stationIndex = m_mdtIdHelper->stationName(stId);
-        //std::string stationName = m_mdtIdHelper->stationNameString( stationIndex );
-        //int etaIndex = m_mdtIdHelper->stationEta(stId);
-        //int phiIndex = m_mdtIdHelper->stationPhi(stId);
-        //if (stId>0) std::cout << "check station retrieval:"<<vname<<"," << gmStation << "," << 
-	//	      m_muonMgr->getMuonStation(stationName,etaIndex,phiIndex)<< std::endl;
-        
-        if (!gmStation  && vname.substr(0,3)=="BOG" ) {
-          // temporary(?) hack to retrieve BOG stations with cutouts
-          eta = fabs( top->getXToChildVol(ichild).getTranslation()[2])/3000.;
-          if ( top->getXToChildVol(ichild).getTranslation()[2] < 0.) eta *= -1;
-          phi = top->getXToChildVol(ichild).getTranslation().phi()/M_PI*4+9;
-	  MuonGM::MuonStation* station = m_muonMgr->getMuonStation(vname.substr(0,3),eta,phi);     
-	  if (station && (station->getTransform().getTranslation()-top->getXToChildVol(ichild).getTranslation()).mag()<0.1 ){
-	    gmStation = station;
-	  }
+        // assembly ?
+	if ( !gmStation) {
+	  int etaphi = vol.getId();        // retrieve eta/phi indexes
+          int a_etaphi = static_cast<int> (etaphi/100000);
+          int sideC = static_cast<int> (a_etaphi/10000);
+          a_etaphi -= sideC*10000; 
+          is_mirr = static_cast<int> (a_etaphi/1000);
+          a_etaphi -= is_mirr*1000; 
+          eta = static_cast<int> (a_etaphi/100);
+          phi = a_etaphi - eta*100;
+          if (sideC) eta *=-1;
+          gmStation = m_muonMgr->getMuonStation(vname.substr(0,3),eta,phi);
         }
+        //
         if (!gmStation) log << MSG::ERROR << "Muon station not found! "<<vname<<","<<eta<<","<<phi  <<std::endl; 
         std::string stName = (clv->getName()).substr(0,vname.size()-8);
         if (stName.substr(0,1)=="B" && eta < 0 ) {
@@ -247,7 +245,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
                 eta = 1;
 		if (transf.getTranslation().z() < 0 ) eta = 0;
 		double phic = transf.getTranslation().phi();  
-		phi = phic<0 ? 4*phic/M_PI+8 : 4*phic/M_PI;
+                phi = static_cast<int> (phic<0 ? 4*phic/M_PI+8 : 4*phic/M_PI);
               } 
 	      if (msTypeName.substr(0,1)=="T") {
 		bool az = true;
@@ -296,9 +294,9 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	      if (msTypeName.substr(0,1)=="T") {
 		double phic = transf.getTranslation().phi();
 		if (msTypeName.substr(2,1)=="E" && msTypeName.substr(0,3)!="T4E")
-		  phi = phic<0 ? 24*phic/M_PI+48 : 24*phic/M_PI;
+		  phi = static_cast<int> (phic<0 ? 24*phic/M_PI+48 : 24*phic/M_PI);
 		else
-		  phi = phic<0 ? 12*phic/M_PI+24 : 12*phic/M_PI;
+                  phi = static_cast<int> (phic<0 ? 12*phic/M_PI+24 : 12*phic/M_PI);
                 if ( phi==0 ) phi=1;
               }
 	      if (m_identifyActive) identifyLayers(newStat,eta,phi);  
@@ -308,6 +306,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	}  
 	if (!msTV)  log << MSG::DEBUG  << name() <<" this station has no prototype: " << vname << endreq;    
       }
+      vol.next();      
     }
 
     /*          
@@ -390,9 +389,10 @@ const std::vector<const Trk::TrackingVolume*>* Muon::MuonStationBuilder::buildDe
 
       // link to top tree
       const GeoVPhysVol* top = &(*(m_muonMgr->getTreeTop(0)));
-      for (unsigned int ichild =0; ichild< top->getNChildVols(); ichild++) 
+      GeoVolumeCursor vol (top);
+      while (!vol.atEnd())
       {
-        const GeoVPhysVol* cv = &(*(top->getChildVol(ichild))); 
+        const GeoVPhysVol* cv = &(*(vol.getVolume()));
         const GeoLogVol* clv = cv->getLogVol();
         std::string vname = clv->getName();
 	if (vname.size()>7 && vname.substr(vname.size()-7,7) =="Station" && 
@@ -401,7 +401,7 @@ const std::vector<const Trk::TrackingVolume*>* Muon::MuonStationBuilder::buildDe
             ||(m_buildCsc && vname.substr(0,1) =="C")
 	    ||(m_buildTgc && vname.substr(0,1) =="T") ) )
 	{
-          int etaphi = top->getIdOfChildVol(ichild);        // retrive eta/phi indexes
+          int etaphi = vol.getId();        // retrieve eta/phi indexes
           int sign  = ( etaphi < 0 ) ? -1 : 1;
           etaphi = sign*etaphi;
           int is_mirr = etaphi/1000;
@@ -414,17 +414,20 @@ const std::vector<const Trk::TrackingVolume*>* Muon::MuonStationBuilder::buildDe
 	  if ( !gmStation) {
             gmStation = m_muonMgr->getMuonStation(vname.substr(0,4),eta,phi);
           }
-	  if (!gmStation  && vname.substr(0,3)=="BOG" ) {
-	    // temporary(?) hack to retrieve BOG stations with cutouts
-	    eta = fabs( top->getXToChildVol(ichild).getTranslation()[2])/3000.;
-	    if ( top->getXToChildVol(ichild).getTranslation()[2] < 0.) eta *= -1;
-	    phi = top->getXToChildVol(ichild).getTranslation().phi()/M_PI*4+9;
-	    MuonGM::MuonStation* station = m_muonMgr->getMuonStation(vname.substr(0,3),eta,phi);     
-	    if (station && (station->getTransform().getTranslation()-top->getXToChildVol(ichild).getTranslation()).mag()<0.1 ){
-	      gmStation = station;
-	    }
+	  // assembly ?
+	  if ( !gmStation) {
+	    int etaphi = vol.getId();        // retrieve eta/phi indexes
+	    int a_etaphi = static_cast<int> (etaphi/100000);
+	    int sideC = static_cast<int> (a_etaphi/10000);
+	    a_etaphi -= sideC*10000; 
+	    is_mirr = static_cast<int> (a_etaphi/1000);
+	    a_etaphi -= is_mirr*1000; 
+	    eta = static_cast<int> (a_etaphi/100);
+	    phi = a_etaphi - eta*100;
+	    if (sideC) eta *=-1;
+	    gmStation = m_muonMgr->getMuonStation(vname.substr(0,3),eta,phi);
 	  }
-
+          //
           std::string name = (clv->getName()).substr(0,vname.size()-8);
           // is this station known ?        
           // if TGC station, look for 1 component instead
@@ -538,6 +541,7 @@ const std::vector<const Trk::TrackingVolume*>* Muon::MuonStationBuilder::buildDe
 	    }
 	  } // end new station type 
 	} // end if "Shift" (station)
+	vol.next();      
       }      
       log << MSG::INFO  << name() << stations.size() <<" station prototypes built " << endreq;    
    }
@@ -922,9 +926,9 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
 	      for (int gasGap=0; gasGap<2; gasGap++) {
 		Identifier etaId = m_rpcIdHelper->channelID(nameIndex,eta,phi,
 							    doubletR+1,doubletZ+1,doubletPhi+1,gasGap+1,0,1); 
-		Identifier phiId = m_rpcIdHelper->channelID(nameIndex,eta,phi,
-							    doubletR+1,doubletZ+1,doubletPhi+1,gasGap+1,1,1); 
-		if (m_rpcIdHelper->valid(etaId)){
+		//Identifier phiId = m_rpcIdHelper->channelID(nameIndex,eta,phi,
+		//					    doubletR+1,doubletZ+1,doubletPhi+1,gasGap+1,1,1); 
+		if (1/*m_rpcIdHelper->valid(etaId)*/){
 		  for (unsigned int il=0;il<layers->size();il++) {
 		    if ((*layers)[il]->layerType() != 0 && (*layers)[il]->isOnLayer(transf.inverse()*rpc->stripPos(etaId)) ) {
 		      unsigned int id = etaId;

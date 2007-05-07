@@ -1,3 +1,9 @@
+2007-05-07 Sarka Todorova <sarka.todorova@cern.ch>
+        * memory leaks - major clean-up (thanks to Scott Snyder)
+	* use of GeoVolumeCursor extended to MuonInertMaterialBuilder
+	* persistent problem: unidentified RPC layers in BMS stations 
+        * tagged as MuonTrackingGeometry-00-00-42
+
 2007-04-12 Sarka Todorova <sarka.todorova@cern.ch>
         * further improvement in initialization time (change iteration over GeoModel tree and remove RpcIdHelper::valid())
 	* fixed identification of assembled stations (BOG,..)

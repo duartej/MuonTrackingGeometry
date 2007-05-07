@@ -68,6 +68,7 @@
 #include "GeoModelKernel/GeoTrap.h"
 #include "GeoModelKernel/GeoPgon.h"
 #include "GeoModelKernel/GeoPara.h"
+#include "GeoModelKernel/GeoVolumeCursor.h"
 
 #include "TrkSurfaces/EllipseBounds.h"
 
@@ -160,27 +161,27 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
 
   if (m_muonMgr) {
     // retrieve muon station prototypes from GeoModel
-    const std::vector<const Trk::TrackingVolume*>* msTypes = buildDetachedTrackingVolumeTypes();
+    const std::vector<const Trk::DetachedTrackingVolume*>* msTypes = buildDetachedTrackingVolumeTypes();
     std::cout << " obtained " << msTypes->size() << " prototypes" << std::endl;
 
     // retrieve muon objects from GeoModel
 
     if (msTypes->size() ) {
       const GeoVPhysVol* top = &(*(m_muonMgr->getTreeTop(0)));
-      for (unsigned int ichild =0; ichild< top->getNChildVols(); ichild++)
+      GeoVolumeCursor vol (top);
+      while (!vol.atEnd())
       {
-        const GeoVPhysVol* cv = &(*(top->getChildVol(ichild)));
+        const GeoVPhysVol* cv = &(*(vol.getVolume()));
         const GeoLogVol* clv = cv->getLogVol();
         std::string vname = clv->getName();
-	HepTransform3D* transf = new HepTransform3D( top->getXToChildVol(ichild) );
-	std::vector<const Trk::TrackingVolume*>::const_iterator msTypeIter = msTypes->begin();
+	HepTransform3D* transf = new HepTransform3D( vol.getTransform() );
+	std::vector<const Trk::DetachedTrackingVolume*>::const_iterator msTypeIter = msTypes->begin();
 	
 	for (; msTypeIter != msTypes->end(); ++msTypeIter) {
-	  std::string msTypeName = (*msTypeIter)->volumeName();
+	  std::string msTypeName = (*msTypeIter)->name();
 	  if (msTypeName == vname) {
-	    const Trk::TrackingVolume* msTV = *msTypeIter;
-	    const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(msTypeName,msTV);
-            const Trk::DetachedTrackingVolume* newStat = typeStat->clone(vname,*transf);
+	    const Trk::DetachedTrackingVolume* msTV = *msTypeIter;
+            const Trk::DetachedTrackingVolume* newStat = msTV->clone(vname,*transf);
             if ( vname.substr(0,3)!="ECT" || vname=="ECTTower" || vname=="ECTBottomTower" ||
 		 vname == "ECTServiceTurretTower" ) {
 	      mInert.push_back(newStat);
@@ -193,8 +194,12 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
             } 
 	  }
 	} // msType
+	vol.next();      
       }
     } 
+    // clean up prototypes
+    for (unsigned int it = 0; it < msTypes->size(); it++) delete (*msTypes)[it];
+    delete msTypes;   
   } 
   // create envelope for ECT objects
   const Trk::TrackingVolume* ectPositive = findECTEnvelope(new std::vector<const Trk::TrackingVolume*>(ectPos));
@@ -213,12 +218,12 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
 
 }
 
-const std::vector<const Trk::TrackingVolume*>* Muon::MuonInertMaterialBuilder::buildDetachedTrackingVolumeTypes() const
+const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBuilder::buildDetachedTrackingVolumeTypes() const
 {
     MsgStream log( msgSvc(), name() );
 
     log << MSG::INFO  << name() <<" building muon object types" << endreq;
-    std::vector<const Trk::TrackingVolume*> objs;
+    std::vector<const Trk::DetachedTrackingVolume*> objs;
 
     std::vector<std::string> objName;
     std::vector<unsigned int> objCount;
@@ -228,11 +233,10 @@ const std::vector<const Trk::TrackingVolume*>* Muon::MuonInertMaterialBuilder::b
       // link to top tree
 //      std::cout << "number of top tree:" << m_muonMgr->getNumTreeTops() << std::endl;
       const GeoVPhysVol* top = &(*(m_muonMgr->getTreeTop(0)));
-
-
-      for (unsigned int ichild =0; ichild< top->getNChildVols(); ichild++)
+      GeoVolumeCursor vol (top);
+      while (!vol.atEnd())
       {
-        const GeoVPhysVol* cv = &(*(top->getChildVol(ichild)));
+        const GeoVPhysVol* cv = &(*(vol.getVolume()));
         const GeoLogVol* clv = cv->getLogVol();
         std::string vname = clv->getName();
         
@@ -261,23 +265,23 @@ const std::vector<const Trk::TrackingVolume*>* Muon::MuonInertMaterialBuilder::b
               if (m_simplify && (vname.substr(0,3)!="ECT" || vname=="ECTTower" || vname=="ECTBottomTower" ||
 		 vname == "ECTServiceTurretTower" ) ){
                 const Trk::TrackingVolume* simType = simplifyShape(newType);
-	        objs.push_back(simType);
+         	const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(vname,simType);
+	        objs.push_back(typeStat);
 	      } else {  
-	        objs.push_back(newType);
+         	const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(vname,newType);
+	        objs.push_back(typeStat);
               }
 	    }             
-
 	  } // end new object
-
 	}
-
+	vol.next();      	
       }
-   }
+    }
 
     // print statistics
     //for (unsigned int i=0;i<objName.size();i++) std::cout << "statistics:" << objName[i] << "," << objCount[i] << std::endl; 
 
-   const std::vector<const Trk::TrackingVolume*>* mObjects = new std::vector<const Trk::TrackingVolume*>(objs);
+   const std::vector<const Trk::DetachedTrackingVolume*>* mObjects = new std::vector<const Trk::DetachedTrackingVolume*>(objs);
    return mObjects;
 }
 

@@ -69,7 +69,7 @@ namespace Muon {
       StatusCode finalize();
 
       const std::vector<const Trk::DetachedTrackingVolume*>* buildDetachedTrackingVolumes() const; 
-      const std::vector<const Trk::TrackingVolume*>* buildDetachedTrackingVolumeTypes() const; 
+      const std::vector<const Trk::DetachedTrackingVolume*>* buildDetachedTrackingVolumeTypes() const; 
 
     private:
 

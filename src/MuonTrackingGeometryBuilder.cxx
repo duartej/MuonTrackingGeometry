@@ -77,6 +77,9 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_outerEndcapEtaPartition(1),
   m_phiPartition(1)
 {
+  m_stationSpan = 0;
+  m_inertSpan = 0;
+
   declareInterface<Trk::IGeometryBuilder>(this);
 
   declareProperty("SimpleMuonGeometry",               m_muonSimple);  
@@ -204,18 +207,17 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    const Trk::TrackingVolumeArray* dummyVolumes = 0;
    Trk::BendingCorrector* bcorr = 0;
 
-   Trk::VolumeBounds* globalBounds = new Trk::CylinderVolumeBounds(m_outerBarrelRadius,
-                                                                   m_outerEndcapZ);
-
    if (m_muonSimple) {             
-       Trk::TrackingVolume* topVolume = new Trk::TrackingVolume(new HepTransform3D,
-                                                                globalBounds,
-                                                                m_muonMaterial,
-                                                                m_muonMagneticField,
-                                                                dummyLayers,dummyVolumes,
-                                                                "GlobalVolume",bcorr);
-       m_standaloneTrackingVolume = topVolume;
-       return new Trk::TrackingGeometry(topVolume);
+     Trk::VolumeBounds* globalBounds = new Trk::CylinderVolumeBounds(m_outerBarrelRadius,
+								     m_outerEndcapZ);
+     Trk::TrackingVolume* topVolume = new Trk::TrackingVolume(new HepTransform3D,
+							      globalBounds,
+							      m_muonMaterial,
+							      m_muonMagneticField,
+							      dummyLayers,dummyVolumes,
+							      "GlobalVolume",bcorr);
+     m_standaloneTrackingVolume = topVolume;
+     return new Trk::TrackingGeometry(topVolume);
    }     
 
     log << MSG::INFO  << name() <<"building barrel+innerEndcap+outerEndcap" << endreq;    
@@ -434,6 +436,22 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 StatusCode Muon::MuonTrackingGeometryBuilder::finalize()
 {
     MsgStream log(msgSvc(), name());
+    for (size_t i = 0; i < m_stations->size(); i++)
+      delete (*m_stations)[i];
+    delete m_stations;
+    for (size_t i = 0; i < m_inertObjs->size(); i++)
+      delete (*m_inertObjs)[i];
+    delete m_inertObjs;
+    if (m_stationSpan) {
+      for (size_t i = 0; i < m_stationSpan->size(); i++)
+        delete (*m_stationSpan)[i];
+      delete m_stationSpan;
+    }
+    if (m_inertSpan) {
+      for (size_t i = 0; i < m_inertSpan->size(); i++)
+        delete (*m_inertSpan)[i];
+      delete m_inertSpan;
+    }
     log << MSG::INFO  << name() <<" finalize() successful" << endreq;
     return StatusCode::SUCCESS;
 }
@@ -607,7 +625,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         // define subvolume
         double posZ = (vol->center())[2]+ etaSect * (2.*eta+1.-etaN) ;
         HepTransform3D* transf = new HepTransform3D( HepRotateZ3D( phiSect*(2*phi+1))*HepTranslateZ3D(posZ));
-        const Trk::Volume* subVol= new Trk::Volume(transf, subBds);     
+        const Trk::Volume* subVol= new Trk::Volume(transf, subBds->clone());     
         // enclosed muon objects ?   
 	std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) ; 
         std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol );
@@ -616,6 +634,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 								   m_muonMagneticField,
 								   detVols,
 								   volName );
+        delete subVol;
         // reference position 
 	HepPoint3D gp(subBds->outerRadius(),0.,0.);
 	subVolumes.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
@@ -639,6 +658,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     }
 
     Trk::BinUtility2DPhiZ* volBinUtil=new Trk::BinUtility2DPhiZ(phiN,etaN,subBds->outerRadius(),cyl->halflengthZ(),M_PI, new HepTransform3D(vol->transform()));
+    delete subBds;
     Trk::BinnedArray2D<Trk::TrackingVolume>* subVols=new Trk::BinnedArray2D<Trk::TrackingVolume>(subVolumes,volBinUtil);
 
     tVol = new Trk::TrackingVolume( *vol,

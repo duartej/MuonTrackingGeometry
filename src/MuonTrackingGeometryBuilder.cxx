@@ -436,12 +436,16 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 StatusCode Muon::MuonTrackingGeometryBuilder::finalize()
 {
     MsgStream log(msgSvc(), name());
-    for (size_t i = 0; i < m_stations->size(); i++)
-      delete (*m_stations)[i];
-    delete m_stations;
-    for (size_t i = 0; i < m_inertObjs->size(); i++)
-      delete (*m_inertObjs)[i];
-    delete m_inertObjs;
+    if (m_stations) {
+      for (size_t i = 0; i < m_stations->size(); i++)
+	delete (*m_stations)[i];
+      delete m_stations;
+    } 
+    if (m_inertObjs) {
+      for (size_t i = 0; i < m_inertObjs->size(); i++)
+	delete (*m_inertObjs)[i];
+      delete m_inertObjs;
+    } 
     if (m_stationSpan) {
       for (size_t i = 0; i < m_stationSpan->size(); i++)
         delete (*m_stationSpan)[i];

@@ -1,3 +1,7 @@
+2007-05-14 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix problem in finalization 
+        * tagged as MuonTrackingGeometry-00-00-43
+
 2007-05-07 Sarka Todorova <sarka.todorova@cern.ch>
         * memory leaks - major clean-up (thanks to Scott Snyder)
 	* use of GeoVolumeCursor extended to MuonInertMaterialBuilder

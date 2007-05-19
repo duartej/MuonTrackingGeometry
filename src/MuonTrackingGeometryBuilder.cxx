@@ -638,7 +638,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 								   m_muonMagneticField,
 								   detVols,
 								   volName );
-        delete subVol;
+        //delete subVol;
         // reference position 
 	HepPoint3D gp(subBds->outerRadius(),0.,0.);
 	subVolumes.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),

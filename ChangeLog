@@ -1,3 +1,7 @@
+2007-05-19 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix a problem in geometry builder 
+        * tagged as MuonTrackingGeometry-00-00-44
+
 2007-05-14 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix problem in finalization 
         * tagged as MuonTrackingGeometry-00-00-43

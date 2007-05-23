@@ -1,3 +1,7 @@
+2007-05-23 Sarka Todorova <sarka.todorova@cern.ch>
+        * fix orientation of layer representation in barrel(box) stations
+	* tagged as MuonTrackingGeometry-00-00-45
+	
 2007-05-19 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix a problem in geometry builder 
         * tagged as MuonTrackingGeometry-00-00-44

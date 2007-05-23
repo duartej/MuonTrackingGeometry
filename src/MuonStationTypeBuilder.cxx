@@ -2253,11 +2253,12 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayerRepresentation(const 
 
   const Trk::PlaneLayer* layer = 0;
 
-  if (cubBounds) {
+  if (cubBounds) { 
     double thickness = 2*cubBounds->halflengthX();
     double sf        = 4*cubBounds->halflengthZ()*cubBounds->halflengthY();
-    const std::vector<const Trk::Surface*>* surfs = cubBounds->decomposeToSurfaces(HepTransform3D());
-    const Trk::RectangleBounds* rbounds = dynamic_cast<const Trk::RectangleBounds*> (&(*(surfs))[0]->bounds());
+    //const std::vector<const Trk::Surface*>* surfs = cubBounds->decomposeToSurfaces(HepTransform3D());
+    //const Trk::RectangleBounds* rbounds = dynamic_cast<const Trk::RectangleBounds*> (&(*(surfs))[0]->bounds());
+    const Trk::RectangleBounds rbounds(cubBounds->halflengthY(),cubBounds->halflengthZ());
     Trk::OverlapDescriptor* od=0;
     Trk::MaterialProperties matProp = collectStationMaterial(trVol,sf);
     if (matProp.thickness() > thickness) {
@@ -2265,10 +2266,10 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayerRepresentation(const 
     } 
     if (matProp.thickness()> 0.)  matProp *= thickness/matProp.thickness(); 
     Trk::HomogenousLayerMaterial mat(matProp, Trk::oppositePre);  
-    layer = new Trk::PlaneLayer(new HepTransform3D(trVol->transform()),
-                                new Trk::RectangleBounds(*rbounds), mat, thickness, od, 1 );
-    for (size_t i=0; i<surfs->size(); i++) delete (*surfs)[i];
-    delete surfs;
+    layer = new Trk::PlaneLayer(new HepTransform3D(trVol->transform()*HepRotateY3D(90*deg) * HepRotateZ3D(90*deg) ),
+                                new Trk::RectangleBounds(rbounds), mat, thickness, od, 1 );
+    //for (size_t i=0; i<surfs->size(); i++) delete (*surfs)[i];
+    //delete surfs;
   }
   if (trdBounds) {
     double thickness = 2*trdBounds->halflengthZ();

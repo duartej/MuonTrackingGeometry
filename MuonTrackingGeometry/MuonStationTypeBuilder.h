@@ -78,7 +78,6 @@ namespace Muon {
       const Trk::LayerArray* processCSCTrdComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, HepTransform3D*&) const;
       const Trk::LayerArray* processCSCDiamondComponent(const GeoVPhysVol*&, Trk::DoubleTrapezoidVolumeBounds*&, HepTransform3D*&) const;
       const Trk::LayerArray* processTGCComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, HepTransform3D*&) const;
-      const Trk::MaterialProperties getLayerMaterial(std::string mat, double thickness) const;
       const Trk::Layer* createLayerRepresentation(const Trk::TrackingVolume* trVol) const; 
    
       const void printChildren(const GeoVPhysVol*) const ;

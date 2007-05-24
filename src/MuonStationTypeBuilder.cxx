@@ -1320,8 +1320,9 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
              delete tmp; 
            }
          } 
-	 const Trk::MaterialProperties material = getLayerMaterial(clv->getMaterial()->getName(),thickness);
-         Trk::HomogenousLayerMaterial spacerMaterial(material, Trk::oppositePre);
+	 Trk::MaterialProperties cmat = m_materialConverter->convert(clv->getMaterial());
+         Trk::MaterialProperties material(thickness,cmat.x0(),cmat.zOverAtimesRho(),cmat.averageZ(),cmat.dEdX());  
+	 Trk::HomogenousLayerMaterial spacerMaterial(material, Trk::oppositePre);
 
          layer = new Trk::PlaneLayer(cTr,
                                      bounds,
@@ -1589,12 +1590,6 @@ std::vector<const Trk::TrackingVolume*> Muon::MuonStationTypeBuilder::processTgc
   }
  return tgc_stations;    
 
-}
-
-const Trk::MaterialProperties Muon::MuonStationTypeBuilder::getLayerMaterial(std::string mat, double thickness) const
-{
-  if (mat != "Aluminium") abort();
-  return Trk::MaterialProperties(thickness, 89.8689, 26.98154, 13., 2.7);         
 }
 
 const void Muon::MuonStationTypeBuilder::printChildren(const GeoVPhysVol* pv) const

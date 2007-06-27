@@ -115,6 +115,7 @@ StatusCode Muon::MuonStationTypeBuilder::initialize()
     MsgStream log(msgSvc(), name());
 
     StatusCode s = AlgTool::initialize();
+    if (s.isFailure()) log<< MSG::INFO << "failing to initialize?" << endreq;
 
     // Get DetectorStore service
     //

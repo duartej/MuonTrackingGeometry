@@ -97,6 +97,7 @@ StatusCode Muon::MuonStationBuilder::initialize()
     MsgStream log(msgSvc(), name());
 
     StatusCode s = AlgTool::initialize();
+    if (s.isFailure()) log << MSG::INFO << "failing to initialize?" << endreq; 
 
     // Get DetectorStore service
     //
@@ -249,28 +250,29 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
               } 
 	      if (msTypeName.substr(0,1)=="T") {
 		bool az = true;
+		std::string msName = msTV->trackingVolume()->volumeName();
 		if (transf.getTranslation().z() < 0 ) az = false;
-		if (msTypeName.substr(7,2)=="01") eta = az ? 5 : 4;
-		if (msTypeName.substr(7,2)=="02") eta = az ? 5 : 4;
-		if (msTypeName.substr(7,2)=="03") eta = az ? 6 : 3;
-		if (msTypeName.substr(7,2)=="04") eta = az ? 7 : 2;
-		if (msTypeName.substr(7,2)=="05") eta = az ? 8 : 1;
-		if (msTypeName.substr(7,2)=="06") eta = az ? 5 : 4;
-		if (msTypeName.substr(7,2)=="07") eta = az ? 5 : 4;
-		if (msTypeName.substr(7,2)=="08") eta = az ? 6 : 3;
-		if (msTypeName.substr(7,2)=="09") eta = az ? 7 : 2;
-		if (msTypeName.substr(7,2)=="10") eta = az ? 8 : 1;
-		if (msTypeName.substr(7,2)=="11") eta = az ? 9 : 0;
-		if (msTypeName.substr(7,2)=="12") eta = az ? 5 : 4;
-		if (msTypeName.substr(7,2)=="13") eta = az ? 5 : 4;
-		if (msTypeName.substr(7,2)=="14") eta = az ? 6 : 3;
-		if (msTypeName.substr(7,2)=="15") eta = az ? 7 : 2;
-		if (msTypeName.substr(7,2)=="16") eta = az ? 8 : 1;
-		if (msTypeName.substr(7,2)=="17") eta = az ? 9 : 0;
-		if (msTypeName.substr(7,2)=="18") eta = az ? 5 : 4;
-		if (msTypeName.substr(7,2)=="19") eta = az ? 5 : 4;
-		if (msTypeName.substr(7,2)=="20") eta = az ? 5 : 4;
-		if (msTypeName.substr(7,2)=="21") eta = az ? 5 : 4;
+		if (msName.substr(7,2)=="01") eta = az ? 5 : 4;
+		if (msName.substr(7,2)=="02") eta = az ? 5 : 4;
+		if (msName.substr(7,2)=="03") eta = az ? 6 : 3;
+		if (msName.substr(7,2)=="04") eta = az ? 7 : 2;
+		if (msName.substr(7,2)=="05") eta = az ? 8 : 1;
+		if (msName.substr(7,2)=="06") eta = az ? 5 : 4;
+		if (msName.substr(7,2)=="07") eta = az ? 5 : 4;
+		if (msName.substr(7,2)=="08") eta = az ? 6 : 3;
+		if (msName.substr(7,2)=="09") eta = az ? 7 : 2;
+		if (msName.substr(7,2)=="10") eta = az ? 8 : 1;
+		if (msName.substr(7,2)=="11") eta = az ? 9 : 0;
+		if (msName.substr(7,2)=="12") eta = az ? 5 : 4;
+		if (msName.substr(7,2)=="13") eta = az ? 5 : 4;
+		if (msName.substr(7,2)=="14") eta = az ? 6 : 3;
+		if (msName.substr(7,2)=="15") eta = az ? 7 : 2;
+		if (msName.substr(7,2)=="16") eta = az ? 8 : 1;
+		if (msName.substr(7,2)=="17") eta = az ? 9 : 0;
+		if (msName.substr(7,2)=="18") eta = az ? 5 : 4;
+		if (msName.substr(7,2)=="19") eta = az ? 5 : 4;
+		if (msName.substr(7,2)=="20") eta = az ? 5 : 4;
+		if (msName.substr(7,2)=="21") eta = az ? 5 : 4;
 	      }     
               if (stName.substr(0,1)=="T") {
 		int etaSt = eta - 4;
@@ -296,7 +298,8 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		  phi = static_cast<int> (phic<0 ? 24*phic/M_PI+48 : 24*phic/M_PI);
 		else
                   phi = static_cast<int> (phic<0 ? 12*phic/M_PI+24 : 12*phic/M_PI);
-                if ( phi==0 ) phi=1;
+                //if ( phi==0 ) phi=1;
+                phi++;
               }
 	      if (m_identifyActive) identifyLayers(newStat,eta,phi);  
 	      mStations.push_back(newStat);
@@ -581,14 +584,17 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
       for (int gasgap = 0; gasgap < cscRE->Ngasgaps(); gasgap++) {
         int etaId = eta;
         if (etaId < 1 ) etaId = -1;
-	Identifier idi = m_cscIdHelper->channelID(stationName.substr(0,3),etaId,phi+1,1,gasgap+1,0,cscRE->NetaStrips(gasgap));          
-        const HepPoint3D gpi = cscRE->stripPos(idi);
+	Identifier idi = m_cscIdHelper->channelID(stationName.substr(0,3),etaId,phi+1,1,gasgap+1,0,cscRE->NetaStrips(gasgap));       
+        const Trk::PlaneSurface* stripSurf = dynamic_cast<const Trk::PlaneSurface*> (&(cscRE->surface(idi)));
+        const HepPoint3D gpi = stripSurf->center();
+        //const HepPoint3D gpi = cscRE->stripPos(idi);
         //const HepPoint3D gp = cscRE->stripPos(eta,0,gasgap+1,0,cscRE->NetaStrips(gasgap));
         const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gpi);
         const Trk::Layer* assocLay = 0;
         if (assocVol) assocLay = assocVol->associatedLayer(gpi);
         unsigned int iD = idi;
-        if (assocVol && assocLay) assocLay->setLayerType(iD); 
+        if (assocVol && assocLay) assocLay->setLayerType(iD);        
+	if (assocLay) assocLay->setRef((assocLay->surfaceRepresentation().transform().inverse()*gpi)[1]);
       }
     } else {
       log<< MSG::DEBUG << "cscRE not found:"<<st<<","<<eta<<","<<phi<<std::endl;
@@ -614,8 +620,9 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
       st = 6;
     }
   
-    const MuonGM::TgcReadoutElement* tgc = m_muonMgr->getTgcReadoutElement(st,eta,phi);
-    if (!tgc) {
+    const MuonGM::TgcReadoutElement* tgc = m_muonMgr->getTgcReadoutElement(st,eta,phi-1);
+    
+    if (!tgc || !(station->trackingVolume()->inside(tgc->center(),0.)) ) {
       unsigned int phit=0;
       while ( phit<48 ) {
 	const MuonGM::TgcReadoutElement* tgct = m_muonMgr->getTgcReadoutElement(st,eta,phit);
@@ -627,6 +634,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 	phit++;  
       }
     }
+    
     if (tgc) {
       int etaSt = eta - 4;
       if (eta < 5) etaSt = eta - 5; 
@@ -640,7 +648,11 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 	  Identifier wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,il+1,0,1);
 	  unsigned int id = wireId;
           layers[il]->setLayerType(id); 
-	  // turn wire position into integer to truncate
+	  // strip plane surface
+	  const Trk::PlaneSurface* stripSurf = dynamic_cast<const Trk::PlaneSurface*> (&(tgc->surface(wireId)));
+	  if ( (layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center()).mag()>0.001)   
+	    log<< MSG::INFO << "TGC strip plane shifted:"<<st<<","<<eta<<","<<phi<<":" <<
+	      layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center()<< std::endl;
           /*
 	  Identifier s1 = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,il+1,1,1); 
 	  HepPoint3D lw1 = (layers[il]->surfaceRepresentation().transform().inverse()) * (tgc->channelPos(wireId));
@@ -691,7 +703,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 							  m_rpcIdHelper->doubletZ(id),m_rpcIdHelper->doubletPhi(id),m_rpcIdHelper->gasGap(id),
 							  m_rpcIdHelper->measuresPhi(id),m_rpcIdHelper->strip(id));
               int newid = newId;
-              (*cLays)[il]->setLayerType(newid); 
+              (*cLays)[il]->setLayerType(newid);  
             }
 	  }
 	}
@@ -889,6 +901,8 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
 		    if ((*layers)[il]->layerType() != 0 && (*layers)[il]->isOnLayer(transf.inverse()*rpc->stripPos(etaId)) ) {
 		      unsigned int id = etaId;
 		      (*layers)[il]->setLayerType(id);
+		      (*layers)[il]->setRef((*((*layers)[il]->surfaceRepresentation().globalToLocal(
+					       transf.inverse()*rpc->surface(etaId).center(),0.005)))[Trk::locX]); 
 		      //std::cout <<"identifying RPC:"<<stationName<<","<<iv<<","<<il<<":"<<id <<std::endl;
                       //turn eta position into integer to truncate
 		      //HepPoint3D locPosEta = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(etaId));

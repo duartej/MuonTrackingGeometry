@@ -110,7 +110,7 @@ StatusCode Muon::MuonTrackingGeometryBuilder::initialize()
     MsgStream log(msgSvc(), name());
 
     StatusCode s = AlgTool::initialize();
-
+    if (s.isFailure()) log << MSG::INFO << " failing to initialize ?" << endreq;
 
 
     // Retrieve the magnetic field tool   ----------------------------------------------------    

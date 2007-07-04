@@ -201,6 +201,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
                                             m_muonMaterialProperties[2]);
 
    Trk::MagneticFieldProperties muonMagneticFieldProperties(&(*m_magFieldTool), Trk::RealisticField);    
+   m_muonMagneticField = muonMagneticFieldProperties;
 
 // dummy substructures
    const Trk::LayerArray* dummyLayers = 0;

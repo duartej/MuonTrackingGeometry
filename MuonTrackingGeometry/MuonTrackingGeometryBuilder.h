@@ -92,7 +92,7 @@ namespace Muon {
       double                              m_outerEndcapRadius;
 
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the (empty) material
-      Trk::MagneticFieldProperties        m_muonMagneticField;          //!< the magnetic Field
+      mutable Trk::MagneticFieldProperties  m_muonMagneticField;          //!< the magnetic Field
 
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
       mutable Trk::TrackingVolume*        m_standaloneTrackingVolume;   // muon standalone tracking volume                 

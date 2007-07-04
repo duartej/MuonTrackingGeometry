@@ -89,7 +89,7 @@ namespace Muon {
 
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
-      Trk::MagneticFieldProperties        m_muonMagneticField;          //!< the magnetic Field
+      mutable Trk::MagneticFieldProperties  m_muonMagneticField;          //!< the magnetic Field
       bool                                m_buildBarrel;
       bool                                m_buildEndcap;
       bool                                m_buildCsc;

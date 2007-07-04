@@ -1,3 +1,7 @@
+2007-07-04 Sarka Todorova <sarka.todorova@cern.ch>
+        * fix initialization of magnetic field properties 
+	* tagged as MuonTrackingGeometry-00-00-48
+
 2007-06-27 Sarka Todorova <sarka.todorova@cern.ch>
 	* couple of fixes concerning the identification:  
         - misidentified phi index for TGC stations fixed

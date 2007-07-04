@@ -98,7 +98,7 @@ namespace Muon {
       ToolHandle<Trk::IMagneticFieldTool>            m_magFieldTool;                //!< Tracking Interface to Magnetic Field
 
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
-      Trk::MagneticFieldProperties        m_muonMagneticField;          //!< the magnetic Field
+      mutable Trk::MagneticFieldProperties m_muonMagneticField;          //!< the magnetic Field
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
       mutable Trk::MaterialProperties*    m_mdtTubeMat;                  //
       mutable Trk::MaterialProperties*    m_mdtFoamMat;                  //

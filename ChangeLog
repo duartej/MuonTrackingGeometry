@@ -1,3 +1,7 @@
+2007-07-27 Sarka Todorova <sarka.todorova@cern.ch>
+        * fix an invalid memory access 
+	* tagged as MuonTrackingGeometry-00-00-49
+
 2007-07-04 Sarka Todorova <sarka.todorova@cern.ch>
         * fix initialization of magnetic field properties 
 	* tagged as MuonTrackingGeometry-00-00-48

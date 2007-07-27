@@ -409,10 +409,10 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
           }
           const Trk::TrackingVolume* mdtTrkVol = processMdtBox(mdtVol,compGeo[i],new HepTransform3D(HepTranslateZ3D(-zShift)*(*compTransf[i])),
 							       shiftSign*fabs(zShift));
-          delete mdtVol;
           trkVols.push_back(mdtTrkVol); 
           volSteps->push_back(2.*mdtBounds->halflengthX()); 
           currX += 2.*mdtBounds->halflengthX();
+          delete mdtVol;
           comp_processed = true;
           zShift = 0.;
         }
@@ -691,10 +691,10 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
 	    std::cout << "increase the basic Mdt volume" << std::endl;
           }
           const Trk::TrackingVolume* mdtTrkVol = processMdtTrd(mdtVol,compGeo[i],compTransf[i]);
-          delete mdtVol;
           trkVols.push_back(mdtTrkVol); 
           volSteps->push_back(2*mdtBounds->halflengthZ());
           currX += 2.*mdtBounds->halflengthZ();
+          delete mdtVol;
           comp_processed = true;
         }
         if ( !comp_processed ) std::cout << "unknown technology:" <<compName[i]<<std::endl;

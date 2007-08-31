@@ -1686,8 +1686,8 @@ Trk::MaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerMaterial(
   log << MSG::DEBUG << name() << " actual layer thickness: "<< thickness << std::endl; 
   // scaled material properties to the actual layer thickness
   if (total.thickness() > 0 ) { 
-      total *= thickness/total.thickness();
-      return new Trk::MaterialProperties(total); 
+      double scale = thickness/total.thickness();
+      return new Trk::MaterialProperties(scale*total.thickness(),scale*total.x0(),total.zOverAtimesRho()/scale); 
   }  
   log << MSG::DEBUG << name() << " returns 0 " << std::endl; 
   return 0;

@@ -261,8 +261,10 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
 	    const Trk::Volume* envelope = translateGeoShape(clv->getShape(),new HepTransform3D());
 	    if (envelope) {  
 	      Trk::MaterialProperties mat = m_materialConverter->convert( clv->getMaterial() );
+              const Trk::LayerArray* lays=0;
+              const Trk::TrackingVolumeArray* vols=0;
 	      const Trk::TrackingVolume* newType= new Trk::TrackingVolume( *envelope, mat, m_muonMagneticField,
-									   0,0,vname);
+									   lays,vols,vname);
               if (m_simplify && (vname.substr(0,3)!="ECT" || vname=="ECTTower" || vname=="ECTBottomTower" ||
 		 vname == "ECTServiceTurretTower" ) ){
                 const Trk::TrackingVolume* simType = simplifyShape(newType);

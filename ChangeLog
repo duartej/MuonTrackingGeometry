@@ -1,3 +1,7 @@
+2007-09-02 Sarka Todorova <sarka.todorova@cern.ch>
+        * check pointers before delete in finalization
+	* tagged as MuonTrackingGeometry-00-00-52
+
 2007-09-01 Sarka Todorova <sarka.todorova@cern.ch>
         * fix the ambiguity in MIMB (would not compile with TrkGeometry-00-10-04)
 	* tagged as MuonTrackingGeometry-00-00-51

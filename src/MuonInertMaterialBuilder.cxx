@@ -422,8 +422,14 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
 	      << trap->getDydzp() <<","  << trap->getDxdyndzp() <<","
 	      << trap->getDxdypdzp() <<","  << trap->getAngleydzp() <<std::endl;
     */ 
-    Trk::TrapezoidVolumeBounds* volBounds=new Trk::TrapezoidVolumeBounds(trap->getDxdyndzp(),trap->getDxdyndzn(),
-									 trap->getDydzn(),trap->getZHalfLength() );
+    Trk::TrapezoidVolumeBounds* volBounds = 0;
+    if (trap->getDxdyndzp()<trap->getDxdyndzn()) 
+      volBounds=new Trk::TrapezoidVolumeBounds(trap->getDxdyndzp(),trap->getDxdyndzn(),
+					       trap->getDydzn(),trap->getZHalfLength() );
+    else
+      volBounds=new Trk::TrapezoidVolumeBounds(trap->getDxdyndzn(),trap->getDxdyndzp(),
+					       trap->getDydzn(),trap->getZHalfLength() );
+
     // vol = new Trk::Volume(new HepTransform3D(*transf * HepRotateZ3D(90*deg) ), volBounds );
     vol = new Trk::Volume(new HepTransform3D(*transf), volBounds );
 
@@ -526,13 +532,22 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
     double z = trd->getZHalfLength();  
     //
     if (y1==y2) {
-      Trk::TrapezoidVolumeBounds* volBounds=new Trk::TrapezoidVolumeBounds(x1,x2,y1,z);
-      //Trk::TrapezoidVolumeBounds* volBounds=new Trk::TrapezoidVolumeBounds(x1,x2,z,y1);
-      vol = new Trk::Volume(new HepTransform3D(*transf),volBounds);
+      if ( x1 <= x2 ) {
+	Trk::TrapezoidVolumeBounds* volBounds=new Trk::TrapezoidVolumeBounds(x1,x2,y1,z);
+	vol = new Trk::Volume(new HepTransform3D(*transf*HepRotateZ3D(180*deg)),volBounds);
+      } else {
+       	Trk::TrapezoidVolumeBounds* volBounds=new Trk::TrapezoidVolumeBounds(x2,x1,y1,z);
+	vol = new Trk::Volume(new HepTransform3D(*transf*HepRotateZ3D(180*deg)*HepRotateX3D(180*deg)),volBounds);
+      }
       return vol;
     } else if (x1==x2) {
-      Trk::TrapezoidVolumeBounds* volBounds=new Trk::TrapezoidVolumeBounds(y1,y2,x1,z);
-      vol = new Trk::Volume(new HepTransform3D(*transf*HepRotateZ3D(90*deg)), volBounds );
+      if ( y1 < y2 ) {
+	Trk::TrapezoidVolumeBounds* volBounds=new Trk::TrapezoidVolumeBounds(y1,y2,x1,z);
+	vol = new Trk::Volume(new HepTransform3D(*transf*HepRotateZ3D(90*deg)), volBounds );
+      } else {
+	Trk::TrapezoidVolumeBounds* volBounds=new Trk::TrapezoidVolumeBounds(y2,y1,x1,z);
+	vol = new Trk::Volume(new HepTransform3D(*transf*HepRotateZ3D(-90*deg)), volBounds );
+      }
       return vol;
     } else {
       std::cout << "PROBLEM: translating trapezoid: not recognized:" 

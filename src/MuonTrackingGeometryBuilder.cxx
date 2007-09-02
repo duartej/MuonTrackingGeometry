@@ -439,12 +439,14 @@ StatusCode Muon::MuonTrackingGeometryBuilder::finalize()
     MsgStream log(msgSvc(), name());
     if (m_stations) {
       for (size_t i = 0; i < m_stations->size(); i++)
-	delete (*m_stations)[i];
+	if ((*m_stations)[i]) delete (*m_stations)[i];
+        else log << MSG::DEBUG << name() << " station pointer corrupted ! " << endreq; 
       delete m_stations;
     } 
     if (m_inertObjs) {
       for (size_t i = 0; i < m_inertObjs->size(); i++)
-	delete (*m_inertObjs)[i];
+	if ((*m_inertObjs)[i])	delete (*m_inertObjs)[i];
+        else log << MSG::DEBUG << name() << " inert object pointer corrupted ! " << endreq; 
       delete m_inertObjs;
     } 
     if (m_stationSpan) {

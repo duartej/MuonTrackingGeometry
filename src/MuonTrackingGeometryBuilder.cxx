@@ -79,6 +79,8 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
 {
   m_stationSpan = 0;
   m_inertSpan = 0;
+  m_stations = 0;
+  m_inertObjs = 0;
 
   declareInterface<Trk::IGeometryBuilder>(this);
 
@@ -176,8 +178,6 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
     log << MSG::INFO  << name() <<" building tracking geometry" << endreq;    
 ///////////////////////////////////////////////////////////////////////////////////////////////////
     // process muon material objects
-    m_stations =0;
-    m_inertObjs=0;
     if (m_muonActive && m_stationBuilder) m_stations = m_stationBuilder->buildDetachedTrackingVolumes();
     if (m_muonInert && m_inertBuilder) m_inertObjs = m_inertBuilder->buildDetachedTrackingVolumes();
 

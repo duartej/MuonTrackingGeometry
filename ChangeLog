@@ -1,3 +1,7 @@
+2007-09-03 Sarka Todorova <sarka.todorova@cern.ch>
+        * fix uninitialized pointers ( prevent crash in case of wrong MTG configuration )
+	* tagged as MuonTrackingGeometry-00-00-53
+
 2007-09-02 Sarka Todorova <sarka.todorova@cern.ch>
         * check pointers before delete in finalization
         * fix bug in transcrit of trapezoid volumes

@@ -545,8 +545,21 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     if ( gp[2]>maxZ ) maxZ = gp[2];
     if ( phi < minPhi ) minPhi = phi; 
     if ( phi > maxPhi ) maxPhi = phi; 
+    if (cyl || bcyl ) {
+      double radius = 0.;
+      if (cyl) radius = cyl->outerRadius();
+      if (bcyl) radius = bcyl->outerRadius();
+      if ( gp.perp() < radius ) {
+	minPhi = 0.;
+	maxPhi = 2*M_PI;
+      } else {
+	double dPhi = asin(radius/gp.perp());
+	minPhi = fmin(minPhi, phi - dPhi);
+	maxPhi = fmax(maxPhi, phi + dPhi);
+      }
+    }
   }
-  if ( maxPhi-minPhi > M_PI ) {
+  if ( maxPhi-minPhi > M_PI  &&  maxPhi-minPhi < 2*M_PI ) {
     double medPhi = minPhi;
     minPhi = maxPhi;
     maxPhi = medPhi;

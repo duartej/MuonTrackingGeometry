@@ -531,7 +531,8 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
  	  //std::cout<<"WARNING:component shape not Box nor Trapezoid, determining the x size from subcomponents"<<std::endl; 
 	  double xSize = get_x_size(cv);
           // printChildren(cv);
-          transf = transf*HepRotateY3D(90*deg)*HepRotateZ3D(90*deg);
+	  if (clv->getName().substr(0,1)!="C" && clv->getName().substr(0,2)!="LB")
+	    transf = transf*HepRotateY3D(90*deg)*HepRotateZ3D(90*deg);
           volBounds = new Trk::TrapezoidVolumeBounds(envelope->minHalflengthX(),envelope->maxHalflengthX(),envelope->halflengthY(),xSize);
         }
 	vol = new Trk::Volume(new HepTransform3D(transf),volBounds);

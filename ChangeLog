@@ -1,3 +1,8 @@
+2007-09-10 Sarka Todorova <sarka.todorova@cern.ch>
+        * fix phi span for cylinder volumes
+	* fix orientation of spacer beams in endcap 
+	* tagged as MuonTrackingGeometry-00-00-54
+
 2007-09-03 Sarka Todorova <sarka.todorova@cern.ch>
         * fix uninitialized pointers ( prevent crash in case of wrong MTG configuration )
 	* tagged as MuonTrackingGeometry-00-00-53

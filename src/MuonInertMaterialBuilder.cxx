@@ -155,6 +155,7 @@ StatusCode Muon::MuonInertMaterialBuilder::initialize()
 const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBuilder::buildDetachedTrackingVolumes()
  const
 {
+  MsgStream log(msgSvc(), name());
   std::vector<const Trk::DetachedTrackingVolume*> mInert;
   // treat ECT separately
   std::vector<const Trk::TrackingVolume*> ectPos;
@@ -163,7 +164,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
   if (m_muonMgr) {
     // retrieve muon station prototypes from GeoModel
     const std::vector<const Trk::DetachedTrackingVolume*>* msTypes = buildDetachedTrackingVolumeTypes();
-    std::cout << " obtained " << msTypes->size() << " prototypes" << std::endl;
+    log << MSG::INFO << " obtained " << msTypes->size() << " prototypes" << endreq;
 
     // retrieve muon objects from GeoModel
 
@@ -253,7 +254,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
 	    } 
 	  }  
 	  // if (!found && (vname.substr(0,3)!="ECT" || vname=="ECTWallStdSegment")) {
-	  if (!found ) {
+	  if (!found && vname.substr(0,4)!="Rail" ) {
 	    objName.push_back(vname);
 	    objCount.push_back(1);
 	    // printInfo(cv);
@@ -374,15 +375,12 @@ const void Muon::MuonInertMaterialBuilder::decodeShape(const GeoShape* sh) const
   }
 
   if ( sh->type()=="Subtraction") {
-    while ( sh->type() == "Subtraction" ) {
-      const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction*> (sh);
-      sh = sub->getOpA();
-      const GeoShape* shs = sub->getOpB();
-      std::cout << "decoding subtracted shape:" << std::endl;
-      decodeShape(shs);
-    }
-    std::cout << "decoding shape A:" << std::endl;
-    decodeShape(sh);     
+    const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction*> (sh);
+    const GeoShape* sha = sub->getOpA();
+    const GeoShape* shs = sub->getOpB();
+    std::cout << "decoding subtracted shapeS:" << std::endl;
+    decodeShape(sha);
+    decodeShape(shs);         
   }
 
   if ( sh->type()=="Union") {
@@ -430,7 +428,6 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
       volBounds=new Trk::TrapezoidVolumeBounds(trap->getDxdyndzn(),trap->getDxdyndzp(),
 					       trap->getDydzn(),trap->getZHalfLength() );
 
-    // vol = new Trk::Volume(new HepTransform3D(*transf * HepRotateZ3D(90*deg) ), volBounds );
     vol = new Trk::Volume(new HepTransform3D(*transf), volBounds );
 
     return vol;
@@ -452,29 +449,8 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
     double hlxmax =pgon->getRMaxPlane(0)*sin(phiH);
 
     if (pgon->getDPhi()==2*M_PI) {
-
-      /*
-      std::cout<<"Polygon as 2-side trapezoid "<<hlxmin<<" "<<hlxmax<<" "<<hly<<" "<<hlz<<std::endl;
-
-      Trk::Volume* volume = 0;
-      std::vector<Trk::Volume*> volSeg;
-      for (unsigned int i=0; i<pgon->getNSides(); i++) { 
-        Trk::TrapezoidVolumeBounds* volBounds = new Trk::TrapezoidVolumeBounds(hlxmin,hlxmax,hly,hlz);
-	Trk::Volume* volS = new Trk::Volume(new HepTransform3D(*transf*
-		HepRotateZ3D(2*i*phiH)*HepTranslateX3D(dly)),volBounds);
-        volSeg.push_back(volS);
-	std::cout << "segment center:" <<i << ":" << volS->center() << std::endl;
-      }
-      for (unsigned int i=0; i<pgon->getNSides(); i++) { 
-        if (volume) {
-          Trk::CombinedVolumeBounds* combBounds = new Trk::CombinedVolumeBounds(volume,volSeg[i],false);
-          volume = new Trk::Volume(new HepTransform3D(*transf),combBounds);
-        } else {
-          volume = volSeg[i];
-        }       
-      } 
-      */ 
       
+      std::cout << "Pgon as 2-side trapezoid "<<hlz << std::endl;    
       Trk::CylinderVolumeBounds* volBounds = new Trk::CylinderVolumeBounds(pgon->getRMaxPlane(0),hlz);
       Trk::CuboidVolumeBounds* subBounds = new Trk::CuboidVolumeBounds(hlxmax+tol,hlxmax+tol,hlz+tol);
       Trk::Volume* volume = new Trk::Volume(new HepTransform3D(*transf),volBounds);
@@ -482,40 +458,26 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
 	Trk::Volume* volS = new Trk::Volume(new HepTransform3D(*transf*
                 HepRotateZ3D(2*i*phiH)*HepTranslateX3D(hlxmax+cos(phiH)*pgon->getRMaxPlane(0))),subBounds);
         Trk::SubtractedVolumeBounds* combBounds = new Trk::SubtractedVolumeBounds(volume,volS);
-        volume = new Trk::Volume(new HepTransform3D(*transf),combBounds);
+        volume = new Trk::Volume(new HepTransform3D(),combBounds);
       }      
       return volume; 
     }
-      
-
-   
- 
+       
     if (pgon->getNSides() == 1 ) {
 
-      //std::cout<<"Polygon as 1-side trapezoid "<<hlxmin<<" "<<hlxmax<<" "<<hly<<" "<<hlz<<std::endl;
-
-	Trk::TrapezoidVolumeBounds* volBounds = new Trk::TrapezoidVolumeBounds(hlxmin,hlxmax,hlz,hly);
-	//Trk::TrapezoidVolumeBounds* volBounds = new Trk::TrapezoidVolumeBounds(hlxmin,hlxmax,hly,hlz);
+	Trk::TrapezoidVolumeBounds* volBounds = new Trk::TrapezoidVolumeBounds(hlxmin,hlxmax,hly,hlz);
         std::cout<<"Polygon as 1-side trapezoid "<<hlxmin<<" "<<hlxmax<<" "<<hly<<" "<<hlz<<std::endl;
-	vol = new Trk::Volume(new HepTransform3D(*transf*HepRotateZ3D(-90*deg)*HepTranslateY3D(dly)*HepRotateX3D(-90*deg)),
+	vol = new Trk::Volume(new HepTransform3D(*transf*HepRotateZ3D(-90*deg)*HepTranslateY3D(dly)),
 			      volBounds);
         return vol;
     }
-
        
     if (pgon->getNSides() == 2) {
 
-      //Trk::TrapezoidVolumeBounds* volBounds1 = new Trk::TrapezoidVolumeBounds(hlxmin,hlxmax,hlz,hly);
-      //Trk::TrapezoidVolumeBounds* volBounds2 = new Trk::TrapezoidVolumeBounds(hlxmin,hlxmax,hlz,hly);
-      //std::cout<<"Polygon as 2-side trapezoid "<<hlxmin<<" "<<hlxmax<<" "<<hly<<" "<<hlz<<std::endl;
-      //Trk::Volume* vol1 = new Trk::Volume(new HepTransform3D(*transf*HepRotateZ3D(+phiH-90*deg)*HepTranslateY3D(dly)*HepRotateX3D(-90*deg)),volBounds1);
-      //Trk::Volume* vol2 = new Trk::Volume(new HepTransform3D(*transf*HepRotateZ3D(-phiH-90*deg)*HepTranslateY3D(dly)*HepRotateX3D(-90*deg)),volBounds2);
-      // Trk::CombinedVolumeBounds* combBounds = new Trk::CombinedVolumeBounds(vol1,vol2,false);
-      // vol = new Trk::Volume(new HepTransform3D(), combBounds ); 
       Trk::CylinderVolumeBounds* cylBounds = new Trk::CylinderVolumeBounds(0,dly+hly,hlz);
       vol = new Trk::Volume(new HepTransform3D(), cylBounds ); 
 
-        return vol;
+      return vol;
     }
      
     return vol;
@@ -533,11 +495,11 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
     //
     if (y1==y2) {
       if ( x1 <= x2 ) {
-	Trk::TrapezoidVolumeBounds* volBounds=new Trk::TrapezoidVolumeBounds(x1,x2,y1,z);
-	vol = new Trk::Volume(new HepTransform3D(*transf*HepRotateZ3D(180*deg)),volBounds);
+	Trk::TrapezoidVolumeBounds* volBounds=new Trk::TrapezoidVolumeBounds(x1,x2,z,y1);
+	vol = new Trk::Volume(new HepTransform3D(*transf*HepRotateX3D(90*deg)),volBounds);
       } else {
-       	Trk::TrapezoidVolumeBounds* volBounds=new Trk::TrapezoidVolumeBounds(x2,x1,y1,z);
-	vol = new Trk::Volume(new HepTransform3D(*transf*HepRotateZ3D(180*deg)*HepRotateX3D(180*deg)),volBounds);
+       	Trk::TrapezoidVolumeBounds* volBounds=new Trk::TrapezoidVolumeBounds(x2,x1,z,y1);
+	vol = new Trk::Volume(new HepTransform3D(*transf*HepRotateX3D(90*deg)*HepRotateX3D(180*deg)),volBounds);
       }
       return vol;
     } else if (x1==x2) {
@@ -600,13 +562,6 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
     double dPhi =   tubs->getDPhi();
     Trk::CylinderVolumeBounds* volBounds=new Trk::CylinderVolumeBounds(rMin,rMax,0.5*dPhi,z);
     vol = new Trk::Volume(new HepTransform3D(*transf * HepRotateZ3D(aPhi+dPhi*2)), volBounds );
-    /*
-    const std::vector<const Trk::Surface*>* surf = vol->volumeBounds().decomposeToSurfaces(vol->transform());
-    if (surf->size()==5) {
-      std::cout <<"sector plane4:"<<(*surf)[3]->center() <<","<<(*surf)[3]->normal() << std::endl; 
-      std::cout <<"sector plane5:"<<(*surf)[4]->center() <<","<<(*surf)[4]->normal() << std::endl; 
-    }
-    */
     return vol;
   }
 
@@ -876,7 +831,7 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::findECTEnvelope(const
   std::vector<const Trk::Volume*>* subtractions = new std::vector<const Trk::Volume*>;
   std::vector<const Trk::GlobalPosition*> edges;
   // rMin,rMax,z size
-  double rMin = 50000.; double rMax = 0.; double zMin = 50000.; double zMax = -50000;
+  double rMin = 0.; double rMax = 0.; double zMin = 50000.; double zMax = -50000;
 
   for (unsigned int i=0;i<ectVols->size();i++) {
     constituents->clear();
@@ -995,7 +950,7 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::findECTEnvelope(const
 
   //std::cout << "find ECT envelope:"<<rMin<<","<<rMax<<","<<zMin<<","<<zMax<<std::endl;
   const Trk::Volume* env = new Trk::Volume(new HepTransform3D(HepTranslateZ3D(0.5*(zMin+zMax))),
-					   new Trk::CylinderVolumeBounds(rMin,rMax,0.5*(zMax-zMin)));
+					   new Trk::CylinderVolumeBounds(0.,rMax+50.,0.5*(zMax-zMin)+50.));
   //
   envelope = new Trk::TrackingVolume( *env, m_muonMaterial,m_muonMagneticField,ectVols,"ECT");
   // glue confined volumes

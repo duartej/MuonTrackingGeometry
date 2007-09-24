@@ -1,3 +1,8 @@
+2007-09-24 Sarka Todorova <sarka.todorova@cern.ch>
+        * fix transcript of polygons/trapezoids
+	* disable building of rails (runs out of memory) 
+	* tagged as MuonTrackingGeometry-00-00-55
+
 2007-09-10 Sarka Todorova <sarka.todorova@cern.ch>
         * fix phi span for cylinder volumes
 	* fix orientation of spacer beams in endcap 

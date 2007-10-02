@@ -1,3 +1,8 @@
+2007-10-03 Sarka Todorova <sarka.todorova@cern.ch>
+        * include transcript of inert material into layers 
+	* rails back in build
+	* tagged as MuonTrackingGeometry-00-00-56
+
 2007-09-24 Sarka Todorova <sarka.todorova@cern.ch>
         * fix transcript of polygons/trapezoids
 	* disable building of rails (runs out of memory) 

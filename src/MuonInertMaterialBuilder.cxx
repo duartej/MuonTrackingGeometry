@@ -22,12 +22,16 @@
 #include "TrkVolumes/BoundarySurface.h"
 #include "TrkVolumes/SubtractedVolumeBounds.h"
 #include "TrkVolumes/CombinedVolumeBounds.h"
+#include "TrkVolumes/VolumeExcluder.h"
 #include "TrkSurfaces/DiscBounds.h"
 #include "TrkSurfaces/RectangleBounds.h"
 #include "TrkSurfaces/TrapezoidBounds.h"
 #include "TrkSurfaces/CylinderSurface.h"
 #include "TrkGeometry/DiscLayer.h"
 #include "TrkGeometry/PlaneLayer.h"
+#include "TrkGeometry/CylinderLayer.h"
+#include "TrkGeometry/SubtractedPlaneLayer.h"
+#include "TrkGeometry/SubtractedCylinderLayer.h"
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkGeometry/TrackingGeometry.h"
 #include "TrkMagFieldInterfaces/IMagneticFieldTool.h"
@@ -36,6 +40,7 @@
 #include "TrkMagFieldUtils/MagneticFieldMapConstant.h"
 #include "TrkMagFieldUtils/MagneticFieldMapGrid3D.h"
 #include "TrkMagFieldUtils/MagneticFieldMapSolenoid.h"
+#include "TrkGeometry/HomogenousLayerMaterial.h"
 
 // StoreGate
 #include "StoreGate/StoreGateSvc.h"
@@ -78,11 +83,25 @@ Muon::MuonInertMaterialBuilder::MuonInertMaterialBuilder(const std::string& t, c
   Trk::TrackingVolumeManipulator(),
   m_muonMgrLocation("MuonMgr"),
   m_simplify(1),
+  m_simplifyToLayers(1),
+  m_debugMode(1),
+  m_buildBT(1),
+  m_buildECT(1),
+  m_buildFeets(1),
+  m_buildRails(1),
+  m_buildShields(1),
   m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool")
 {
   declareInterface<Trk::IDetachedTrackingVolumeBuilder>(this);
   declareProperty("MuonDetManagerLocation",           m_muonMgrLocation);
   declareProperty("SimplifyGeometry",                 m_simplify);
+  declareProperty("SimplifyGeometryToLayers",         m_simplifyToLayers);
+  declareProperty("DebugMode",                        m_debugMode);
+  declareProperty("BuildBarrelToroids",               m_buildBT);
+  declareProperty("BuildEndcapToroids",               m_buildECT);
+  declareProperty("BuildFeets",                       m_buildFeets);
+  declareProperty("BuildRails",                       m_buildRails);
+  declareProperty("BuildShields",                     m_buildShields);
 }
 
 // destructor
@@ -229,6 +248,8 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
 
     std::vector<std::string> objName;
     std::vector<unsigned int> objCount;
+    std::vector<unsigned int> surfCount;
+    std::vector<unsigned int> layCount;
 
     if (m_muonMgr){
 
@@ -246,6 +267,15 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
 	{
 //	  std::cout << " INERT muon object found:" << vname <<" "<<ichild<< std::endl;
 
+          bool accepted ;
+          if (  vname.substr(0,2)=="BT" || vname.substr(0,6) == "EdgeBT" || vname.substr(0,6) == "HeadBT" ) accepted = m_buildBT ? true : false;
+          else if ( vname.substr(0,3)=="ECT" ) accepted = m_buildECT ? true : false; 
+          else if ( vname.size()>7 && (vname.substr(3,4)=="Feet" || vname.substr(4,4)=="Feet" ) ) accepted = m_buildFeets ? true : false; 
+          else if ( vname.substr(0,4)=="Rail" ) accepted = m_buildRails ? true : false; 
+          else accepted = m_buildShields ? true : false;
+    
+          if (!accepted) { vol.next(); continue; }  
+
 	  bool found = false;
 	  for (unsigned int ip=0; ip<objName.size();ip++) {
 	    if (vname==objName[ip]) {
@@ -254,36 +284,83 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
 	    } 
 	  }  
 	  // if (!found && (vname.substr(0,3)!="ECT" || vname=="ECTWallStdSegment")) {
-	  if (!found && vname.substr(0,4)!="Rail" ) {
+	  if (!found) {
+
 	    objName.push_back(vname);
 	    objCount.push_back(1);
-	    // printInfo(cv);
+	    //printInfo(cv);
 
-	    const Trk::Volume* envelope = translateGeoShape(clv->getShape(),new HepTransform3D());
-	    if (envelope) {  
-	      Trk::MaterialProperties mat = m_materialConverter->convert( clv->getMaterial() );
-              const Trk::LayerArray* lays=0;
-              const Trk::TrackingVolumeArray* vols=0;
-	      const Trk::TrackingVolume* newType= new Trk::TrackingVolume( *envelope, mat, m_muonMagneticField,
-									   lays,vols,vname);
-              if (m_simplify && (vname.substr(0,3)!="ECT" || vname=="ECTTower" || vname=="ECTBottomTower" ||
-		 vname == "ECTServiceTurretTower" ) ){
-                const Trk::TrackingVolume* simType = simplifyShape(newType);
-         	const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(vname,simType);
-	        objs.push_back(typeStat);
-	      } else {  
-         	const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(vname,newType);
-	        objs.push_back(typeStat);
-              }
-	    }             
-	  } // end new object
+	    std::vector<const GeoShape*> input_shapes;
+            if (clv->getShape()->type()!="Union") input_shapes.push_back(clv->getShape());
+            else splitShape(clv->getShape(),input_shapes);
+
+            for (unsigned int ish=0; ish < input_shapes.size(); ish++) { 
+ 
+	      const Trk::Volume* envelope = translateGeoShape(input_shapes[ish],new HepTransform3D());
+	      if (envelope) {  
+		Trk::MaterialProperties mat = m_materialConverter->convert( clv->getMaterial() );
+		const Trk::TrackingVolume* newType= new Trk::TrackingVolume( *envelope, mat, m_muonMagneticField,
+									     0,0,vname);
+		if ( vname.substr(0,3)!="ECT" || vname=="ECTTower" || vname=="ECTBottomTower" ||
+		     vname == "ECTServiceTurretTower"  ){
+		  const Trk::TrackingVolume* simType = simplifyShape(newType);
+		  const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(vname,simType);
+		  objs.push_back(typeStat);
+		  if (simType->confinedArbitraryLayers()) layCount.push_back(simType->confinedArbitraryLayers()->size());
+		  else layCount.push_back(0);
+		  if (simType->confinedDenseVolumes()) 
+		    surfCount.push_back((*(simType->confinedDenseVolumes()))[0]->volumeBounds().decomposeToSurfaces(HepTransform3D())->size());
+		  else surfCount.push_back(0);
+		} else {  
+		  //if ( !m_simplifyToLayers || vname.substr(0,3)=="ECT") {
+		  if ( !m_simplifyToLayers ) {
+		    const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(vname,newType);
+		    objs.push_back(typeStat);
+		  } else {
+		    std::vector<const Trk::TrackingVolume*>* vols=new std::vector<const Trk::TrackingVolume*>;
+		    vols->push_back(newType); 
+		    std::vector<const Trk::Layer*>* confinedLays = translateToLayers(vols);
+		    if (confinedLays) layCount.push_back(confinedLays->size()); 
+		    else layCount.push_back(0);
+                    const Trk::TrackingVolume* newVol = 0;
+                    if (m_debugMode) 
+		      newVol = new Trk::TrackingVolume( *newType, *newType,m_muonMagneticField,confinedLays,newType->volumeName());
+                    else 
+		      newVol = new Trk::TrackingVolume( *newType, m_muonMaterial,m_muonMagneticField,confinedLays,newType->volumeName());
+		    surfCount.push_back(newVol->volumeBounds().decomposeToSurfaces(HepTransform3D())->size());
+		    delete vols;
+		    const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(vname,newVol);
+		    objs.push_back(typeStat);
+		  }
+		}
+	      }  else {
+		std::cout << " WARNING: no envelope created for volume " << vname << std::endl;
+	      }            
+	    } // end new object
+	  }
 	}
 	vol.next();      	
       }
     }
 
     // print statistics
-    //for (unsigned int i=0;i<objName.size();i++) std::cout << "statistics:" << objName[i] << "," << objCount[i] << std::endl; 
+    unsigned int  lays = 0;
+    unsigned int  bs = 0;
+    unsigned int  io = 0;
+    unsigned int  blays = 0;
+    unsigned int  bbs = 0;
+    for (unsigned int i=0;i<objName.size();i++) {
+      std::cout << "statistics:" << objName[i] << "," << objCount[i]<<","<<layCount[i]<<","<<surfCount[i] << std::endl; 
+      lays = lays+ layCount[i]*objCount[i];
+      bs = bs+ surfCount[i]*objCount[i];
+      if (objName[i].substr(0,3)!="ECT") {
+        blays = blays + layCount[i]*objCount[i];
+        bbs = bbs + surfCount[i]*objCount[i];
+      }
+      io =+ objCount[i];
+    }
+    
+    log << MSG::INFO << name() << "total count:"<<io<<","<<lays<<","<<bs<<","<<blays<<","<<bbs<< endreq;
 
    const std::vector<const Trk::DetachedTrackingVolume*>* mObjects = new std::vector<const Trk::DetachedTrackingVolume*>(objs);
    return mObjects;
@@ -378,7 +455,7 @@ const void Muon::MuonInertMaterialBuilder::decodeShape(const GeoShape* sh) const
     const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction*> (sh);
     const GeoShape* sha = sub->getOpA();
     const GeoShape* shs = sub->getOpB();
-    std::cout << "decoding subtracted shapeS:" << std::endl;
+    std::cout << "decoding subtracted shape:" << std::endl;
     decodeShape(sha);
     decodeShape(shs);         
   }
@@ -678,7 +755,7 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
   const Trk::TrackingVolume* newVol = trVol;
  
   // give up some volumes
-  if (trVol->volumeName()=="BTVoussoirAttachment") return newVol;
+  // if (trVol->volumeName()=="BTVoussoirAttachment") return newVol;
 
   // find envelope
   const Trk::Volume* envelope = findEnvelope(trVol);
@@ -687,10 +764,24 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
     std::vector<const Trk::TrackingVolume*>* confinedVols = new std::vector<const Trk::TrackingVolume*>;
     confinedVols->push_back(trVol);
     std::string envName=trVol->volumeName()+"_envelope";
-    newVol = new Trk::TrackingVolume( *envelope, m_muonMaterial,m_muonMagneticField,confinedVols,envName);
-    // glue confined volumes
-    for (unsigned int iv = 0; iv < confinedVols->size(); iv++)
-      Trk::TrackingVolumeManipulator::confineVolume(*((*confinedVols)[iv]),newVol);
+    if ( !m_simplifyToLayers ) {
+      newVol = new Trk::TrackingVolume( *envelope, m_muonMaterial,m_muonMagneticField,confinedVols,envName);
+      // glue confined volumes
+      for (unsigned int iv = 0; iv < confinedVols->size(); iv++)
+	Trk::TrackingVolumeManipulator::confineVolume(*((*confinedVols)[iv]),newVol);
+    } else {  
+      std::vector<const Trk::Layer*>* confinedLays = translateToLayers(confinedVols);
+      if (m_debugMode) {  // !!! keep both exact dense volumes and their layer transcript !!!
+	newVol = new Trk::TrackingVolume( *envelope, confinedLays,confinedVols, m_muonMaterial,m_muonMagneticField,envName);
+	// glue confined volumes
+	for (unsigned int iv = 0; iv < confinedVols->size(); iv++)
+	  Trk::TrackingVolumeManipulator::confineVolume(*((*confinedVols)[iv]),newVol);
+      }	else { 
+	newVol = new Trk::TrackingVolume( *envelope, m_muonMaterial,m_muonMagneticField,confinedLays,envName);
+        for (unsigned int iv=0; iv< confinedVols->size();iv++) delete (*confinedVols)[iv];
+        delete confinedVols;
+      }
+    }
   }
 
   return newVol;
@@ -699,6 +790,11 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
 const Trk::Volume* Muon::MuonInertMaterialBuilder::findEnvelope(const Trk::TrackingVolume* trVol) const
 {
   const Trk::Volume* envelope = 0;
+
+  //if ( trVol->volumeName().substr(0,3)=="ECT") {
+  //  envelope = new Trk::Volume(*trVol);
+  //  return envelope;
+  //}
    
   std::vector<const Trk::Volume*>* constituents = new std::vector<const Trk::Volume*>;
   std::vector<const Trk::Volume*>* subtractions = new std::vector<const Trk::Volume*>;
@@ -766,6 +862,7 @@ const Trk::Volume* Muon::MuonInertMaterialBuilder::findEnvelope(const Trk::Track
 	  }
         }
       }
+      for (unsigned int is=0;is<surf->size();is++) delete (*surf)[is];
       delete surf;
       sIter++; 
     }
@@ -802,6 +899,7 @@ const Trk::Volume* Muon::MuonInertMaterialBuilder::findEnvelope(const Trk::Track
 	  }
         }
       }
+      for (unsigned int is=0;is<surf->size();is++) delete (*surf)[is];
       delete surf;
       sIter++; 
     }
@@ -820,6 +918,7 @@ const Trk::Volume* Muon::MuonInertMaterialBuilder::findEnvelope(const Trk::Track
   }
   //
 
+  if (!envelope) envelope = new Trk::Volume(*trVol); 
   return envelope;
 }
 
@@ -829,15 +928,19 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::findECTEnvelope(const
    
   std::vector<const Trk::Volume*>* constituents = new std::vector<const Trk::Volume*>;
   std::vector<const Trk::Volume*>* subtractions = new std::vector<const Trk::Volume*>;
+  //std::vector<const Trk::TrackingVolume*>* confinedDense = new std::vector<const Trk::TrackingVolume*>;
+  std::vector<const Trk::Layer*>* confinedLay = new std::vector<const Trk::Layer*>;
   std::vector<const Trk::GlobalPosition*> edges;
   // rMin,rMax,z size
-  double rMin = 0.; double rMax = 0.; double zMin = 50000.; double zMax = -50000;
+  double rMin = 50000.; double rMax = 0.; double zMin = 50000.; double zMax = -50000;
 
   for (unsigned int i=0;i<ectVols->size();i++) {
     constituents->clear();
     subtractions->clear();
     edges.clear();
     constituents->push_back((*ectVols)[i]);
+    const std::vector<const Trk::Layer*>* matLayers = (*ectVols)[i]->confinedArbitraryLayers();
+    if ( matLayers && (m_simplifyToLayers || m_debugMode ) )  for (unsigned int il=0;il<matLayers->size();il++)  confinedLay->push_back((*matLayers)[il]);
     std::vector<const Trk::Volume*>::iterator sIter= constituents->begin(); 
     while (sIter!= constituents->end()) {
       const Trk::CombinedVolumeBounds* comb = dynamic_cast<const Trk::CombinedVolumeBounds*> (&((*sIter)->volumeBounds()));
@@ -894,6 +997,7 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::findECTEnvelope(const
 	  }
 	}
       }
+      for (unsigned int is=0;is<surf->size();is++) delete (*surf)[is];
       delete surf;
       sIter++; 
     }
@@ -932,6 +1036,7 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::findECTEnvelope(const
 	  }
 	}
       }
+      for (unsigned int is=0;is<surf->size();is++) delete (*surf)[is];
       delete surf;
       sIter++; 
     }
@@ -952,10 +1057,619 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::findECTEnvelope(const
   const Trk::Volume* env = new Trk::Volume(new HepTransform3D(HepTranslateZ3D(0.5*(zMin+zMax))),
 					   new Trk::CylinderVolumeBounds(0.,rMax+50.,0.5*(zMax-zMin)+50.));
   //
-  envelope = new Trk::TrackingVolume( *env, m_muonMaterial,m_muonMagneticField,ectVols,"ECT");
+  if (confinedLay->size() &&  m_debugMode ) {
+    envelope = new Trk::TrackingVolume( *env, confinedLay, ectVols, m_muonMaterial,m_muonMagneticField,"ECT");
+    std::cout << "defining endcap both with layers AND dense volumes" << std::endl;
+  } else if (confinedLay->size() && m_simplifyToLayers ) {
+    envelope = new Trk::TrackingVolume( *env, m_muonMaterial,m_muonMagneticField,confinedLay,"ECT");
+  } else {
+    envelope = new Trk::TrackingVolume( *env, m_muonMaterial,m_muonMagneticField,ectVols,"ECT");
+  }
   // glue confined volumes
-    for (unsigned int iv = 0; iv < ectVols->size(); iv++)
-      Trk::TrackingVolumeManipulator::confineVolume(*((*ectVols)[iv]),envelope);
+  for (unsigned int iv = 0; iv < ectVols->size(); iv++) Trk::TrackingVolumeManipulator::confineVolume(*((*ectVols)[iv]),envelope);
 
   return envelope;
+}
+
+std::vector<const Trk::Layer*>* Muon::MuonInertMaterialBuilder::translateToLayers(const std::vector<const Trk::TrackingVolume*>* vols) const
+{
+  std::vector<const Trk::Layer*>* lays = new std::vector<const Trk::Layer*>;
+  if (!vols) return 0; 
+  
+  int mode = 0;
+  
+  for (unsigned int i=0; i< vols->size(); i++) {
+    mode = 0;
+    if ((*vols)[i]->volumeName().substr(0,13)=="BTRibEnvelope") mode = 1;
+    //if ((*vols)[i]->volumeName().substr(0,11)=="BTWingStrut") mode = 1;
+    //if ((*vols)[i]->volumeName().substr(0,17)=="BTVoussoirAttWing") mode = 1;
+    if ((*vols)[i]->volumeName().substr(0,14)=="ECTKeystoneBox") mode = 1;
+    if ((*vols)[i]->volumeName().substr(0,7)=="ECTWall") mode = 1;
+    
+    if (mode==1) {
+      double thickness = 20.;
+      const std::vector< Trk::SharedObject<const Trk::BoundarySurface<Trk::TrackingVolume> > > bounds = (*vols)[i]->boundarySurfaces();
+      for (unsigned int ib=0; ib< bounds.size(); ib++ ){
+	const Trk::Surface& surf = (bounds[ib].getPtr())->surfaceRepresentation();
+        const Trk::Layer* lay = boundarySurfaceToLayer(surf,(*vols)[i], thickness); 
+        if (lay) lays->push_back( lay );
+      }
+    } else {
+      volumeToLayers(*lays,(*vols)[i],0,(*vols)[i], mode);
+    }
+  }
+  
+  return lays;
+}
+
+void Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer*>& lays, const Trk::Volume* vol, Trk::Volume* subtrVol, const Trk::MaterialProperties* mat, int mode) const
+{
+  if (!vol) return;
+  
+  const Trk::CombinedVolumeBounds*   comb = dynamic_cast<const Trk::CombinedVolumeBounds*>   (&(vol->volumeBounds()));
+  const Trk::SubtractedVolumeBounds* sub  = dynamic_cast<const Trk::SubtractedVolumeBounds*> (&(vol->volumeBounds()));
+  const Trk::TrapezoidVolumeBounds*  trap = dynamic_cast<const Trk::TrapezoidVolumeBounds*>  (&(vol->volumeBounds()));
+  const Trk::CuboidVolumeBounds*     box  = dynamic_cast<const Trk::CuboidVolumeBounds*>     (&(vol->volumeBounds()));
+  const Trk::CylinderVolumeBounds*   cyl  = dynamic_cast<const Trk::CylinderVolumeBounds*>   (&(vol->volumeBounds()));
+  
+  if (!comb && !sub && !trap && !box && !cyl ) std::cout << "ERROR: unknown volume boundaries!!!" << std::endl;
+  
+  if (comb) {
+    volumeToLayers(lays,comb->first(),subtrVol,mat,mode);
+    volumeToLayers(lays,comb->second(),subtrVol,mat,mode);
+  } 
+  if (sub) {
+    if (subtrVol) {
+      // here is necessary to combine subtracted volumes
+      Trk::Volume* dsub = new Trk::Volume(new HepTransform3D(),new Trk::CombinedVolumeBounds(sub->inner(),subtrVol,false));
+      volumeToLayers(lays,sub->outer(),dsub,mat,mode);
+    } else {
+      volumeToLayers(lays,sub->outer(),sub->inner(),mat,mode);
+    }
+  } 
+  if (box) {
+    if (!checkVolume(vol)) std::cout << "problems in volume boundaries" << std::endl;
+    double hx = box->halflengthX();
+    double hy = box->halflengthY();
+    double hz = box->halflengthZ();
+    const std::vector<const Trk::Surface*>* box_surf = box->decomposeToSurfaces(vol->transform());    
+    if ( mode == 0 )  {               // single layer
+      
+      Trk::PlaneSurface* plane=0;
+      double thickness = 0.;
+      if ( hz<=hx && hz<=hy ) { // x-y plane
+	Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(dynamic_cast<const Trk::RectangleBounds&> ((*box_surf)[0]->bounds()));
+	plane = new Trk::PlaneSurface(new HepTransform3D(vol->transform()),
+				      rbounds);    
+        thickness = 2*hz;
+      } else if ( hx<=hy && hx<=hz ) {
+	Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(dynamic_cast<const Trk::RectangleBounds&> ((*box_surf)[2]->bounds()));
+	plane = new Trk::PlaneSurface(new HepTransform3D(vol->transform()*HepRotateY3D(90.*deg)*HepRotateZ3D(90.*deg)),
+				      rbounds);    
+        thickness = 2*hx;
+      } else if ( hy<=hx && hy<=hz ) {
+	Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(dynamic_cast<const Trk::RectangleBounds&> ((*box_surf)[4]->bounds()));
+	plane = new Trk::PlaneSurface(new HepTransform3D(vol->transform()*HepRotateY3D(-90.*deg)*HepRotateX3D(-90.*deg)),
+				      rbounds);    
+        thickness = 2*hy;
+      }
+      //material
+      Trk::MaterialProperties material(thickness,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
+      Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+      if (subtrVol) {
+	Trk::Volume* subVol = createSubtractedVolume(plane->transform(), subtrVol);
+	Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*plane,
+										 new Trk::VolumeExcluder(subVol), false );
+	lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf, some_mat,thickness));
+      } else {
+	lays.push_back(new Trk::PlaneLayer(new HepTransform3D(plane->transform()), 
+					   new Trk::RectangleBounds(dynamic_cast<const Trk::RectangleBounds&> (plane->bounds())), 
+					   some_mat, thickness));
+      }
+    } else if ( mode == 1 ) {
+      for( unsigned int i = 0; i < box_surf->size(); i++){
+	const Trk::PlaneSurface* plane = dynamic_cast<const Trk::PlaneSurface*> ((*box_surf)[i]);
+        double thickness = 15.;
+	//material
+	Trk::MaterialProperties material(thickness,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
+	Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+	if(plane){
+          if (subtrVol) {
+	    // subtracted volume should be defined with transform relative to the plane
+	    Trk::Volume* subVol = createSubtractedVolume(plane->transform(), subtrVol);
+	    Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*plane, new Trk::VolumeExcluder(subVol), false );
+	    lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf,  some_mat, thickness));
+	  } else {
+	    lays.push_back(new Trk::PlaneLayer(new HepTransform3D(plane->transform()), 
+					       new Trk::RectangleBounds(dynamic_cast<const Trk::RectangleBounds&> (plane->bounds())), 
+					       some_mat, thickness));
+	  }
+	}
+      }
+    }
+  }
+  
+  if(trap){
+    if (!checkVolume(vol)) std::cout << "problems in volume boundaries" << std::endl;
+    double hxmin = trap->minHalflengthX();
+    double hxmax = trap->maxHalflengthX();
+    double hy = trap->halflengthY();
+    double hz = trap->halflengthZ();
+    const std::vector<const Trk::Surface*>* trap_surf = trap->decomposeToSurfaces(vol->transform());    
+    if ( mode == 0 )  {               // single layer
+      
+      Trk::PlaneSurface* plane=0;
+      double thickness = 0.;
+      bool trapezoid = false;
+      if ( hz<=0.5*(hxmin+hxmax) && hz<=hy ) { // x-y plane
+	Trk::TrapezoidBounds* rbounds = new Trk::TrapezoidBounds(dynamic_cast<const Trk::TrapezoidBounds&> ((*trap_surf)[0]->bounds()));
+	plane = new Trk::PlaneSurface(new HepTransform3D(vol->transform()),
+				      rbounds);    
+        thickness = 2*hz;
+        trapezoid = true;
+      } else if ( 0.5*(hxmin+hxmax)<=hy && 0.5*(hxmin+hxmax)<=hz ) {
+	Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(dynamic_cast<const Trk::RectangleBounds&> ((*trap_surf)[2]->bounds()));
+	plane = new Trk::PlaneSurface(new HepTransform3D(vol->transform()*HepRotateY3D(90.*deg)*HepRotateZ3D(90.*deg)),
+				      rbounds);    
+        thickness = hxmin+hxmax;
+      } else if ( hy<=0.5*(hxmin+hxmax) && hy<=hz ) {
+	Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(dynamic_cast<const Trk::RectangleBounds&> ((*trap_surf)[4]->bounds()));
+	plane = new Trk::PlaneSurface(new HepTransform3D(vol->transform()*HepRotateY3D(-90.*deg)*HepRotateX3D(-90.*deg)),
+				      rbounds);    
+        thickness = 2*hy;
+      }
+      //material
+      Trk::MaterialProperties material(thickness,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
+      Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+      if (subtrVol) {
+	Trk::Volume* subVol = createSubtractedVolume(plane->transform(), subtrVol);
+	Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*plane,
+										 new Trk::VolumeExcluder(subVol), false );
+	lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf, some_mat,thickness));
+      } else {
+        if ( trapezoid )
+	  lays.push_back(new Trk::PlaneLayer(new HepTransform3D(plane->transform()), 
+					     new Trk::TrapezoidBounds(dynamic_cast<const Trk::TrapezoidBounds&> (plane->bounds())), 	
+					     some_mat, thickness));
+        else
+	  lays.push_back(new Trk::PlaneLayer(new HepTransform3D(plane->transform()), 
+					     new Trk::RectangleBounds(dynamic_cast<const Trk::RectangleBounds&> (plane->bounds())), 	
+					     some_mat, thickness));
+      }
+    } else if ( mode == 1 ) {
+      for( unsigned int i = 0; i < trap_surf->size(); i++){
+	const Trk::PlaneSurface* plane = dynamic_cast<const Trk::PlaneSurface*> ((*trap_surf)[i]);
+        double thickness = 15.;
+	//material
+	Trk::MaterialProperties material(thickness,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
+	Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+	if(plane){
+          if (subtrVol) {
+	    // subtracted volume should be defined with relative transform with respect to the plane
+	    Trk::Volume* subVol = createSubtractedVolume(plane->transform(), subtrVol);
+	    Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*plane, new Trk::VolumeExcluder(subVol), false );
+	    lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf,  some_mat, thickness));
+	  } else {
+            if (i<2) 
+	      lays.push_back(new Trk::PlaneLayer(new HepTransform3D(plane->transform()), 
+						 new Trk::TrapezoidBounds(dynamic_cast<const Trk::TrapezoidBounds&> (plane->bounds())), 
+						 some_mat, thickness));
+            else
+	      lays.push_back(new Trk::PlaneLayer(new HepTransform3D(plane->transform()), 
+						 new Trk::RectangleBounds(dynamic_cast<const Trk::RectangleBounds&> (plane->bounds())), 
+						 some_mat, thickness));
+	  }
+	}
+      } 
+    }
+  }
+  
+  if(cyl){
+    const std::vector<const Trk::Surface*>* cyl_surf = cyl->decomposeToSurfaces(vol->transform());    
+    double radius = cyl->mediumRadius();
+    double drad   = cyl->deltaRadius();
+    double hz     = cyl->halflengthZ();
+    if ( mode == 0 ) {
+      if ( hz < 2*drad ) {       // disc/ellipse surface
+	const Trk::PlaneSurface*   plane = dynamic_cast<const Trk::PlaneSurface*> ((*cyl_surf)[0]);
+	const Trk::DiscSurface*     disc = dynamic_cast<const Trk::DiscSurface*> ((*cyl_surf)[0]);
+	//material
+	Trk::MaterialProperties material(hz,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
+	Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+
+	if ( plane ) {
+	  if (subtrVol) {
+	    Trk::PlaneSurface* pSurf = new Trk::PlaneSurface(new HepTransform3D(HepTranslate3D(vol->center())*HepRotate3D(plane->transform().getRotation()) ), 
+							     new Trk::EllipseBounds(dynamic_cast<const Trk::EllipseBounds&> (plane->bounds())));
+	    Trk::Volume* subVol = createSubtractedVolume(pSurf->transform(), subtrVol);
+	    Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*pSurf, new Trk::VolumeExcluder(subVol), false );
+	    lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf,some_mat,hz));
+          } else {
+	    lays.push_back(new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(vol->center())*HepRotate3D(plane->transform().getRotation())), 
+					       new Trk::EllipseBounds(dynamic_cast<const Trk::EllipseBounds&> (plane->bounds())), some_mat,hz));
+	  } 
+	}
+	else if (disc) {
+	  const Trk::DiscBounds* db = dynamic_cast<const Trk::DiscBounds*> (&(disc->bounds())); 
+          if (subtrVol) {
+	    Trk::PlaneSurface* pSurf = new Trk::PlaneSurface(new HepTransform3D(HepTranslate3D(vol->center())*HepRotate3D(disc->transform().getRotation())),  
+							     new Trk::EllipseBounds(db->rMin(),db->rMin(),db->rMax(), db->rMax(),db->halfPhiSector()));
+	    Trk::Volume* subVol = createSubtractedVolume(pSurf->transform(), subtrVol);
+	    Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*pSurf, new Trk::VolumeExcluder(subVol), false );
+	    lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf,some_mat,hz));
+          } else {
+	    lays.push_back(new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(vol->center())*HepRotate3D(disc->transform().getRotation())),  
+					       new Trk::EllipseBounds(db->rMin(),db->rMin(),db->rMax(), db->rMax(),db->halfPhiSector()),
+					       some_mat,hz));
+	  }
+	}
+      } else if ( hz > 200. && drad > 100. ) {   // set of disc/ellipse surface      
+	const Trk::PlaneSurface*   plane = dynamic_cast<const Trk::PlaneSurface*> ((*cyl_surf)[0]);
+	const Trk::DiscSurface*     disc = dynamic_cast<const Trk::DiscSurface*> ((*cyl_surf)[0]);
+        int numSlice = int(hz/200.)+1;
+       
+        for (unsigned int islice = 0; islice < numSlice; islice++) {
+          // distance from center
+          double d = hz * ( (1+2*islice)/numSlice -1 ); 
+	  //material
+	  Trk::MaterialProperties material(2*hz/numSlice,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
+	  Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+	  if ( plane ) {
+	    if (subtrVol) {
+	      Trk::PlaneSurface* pSurf = new Trk::PlaneSurface(new HepTransform3D(HepTranslate3D(vol->center())*HepTranslateZ3D(d)
+										  *HepRotate3D(plane->transform().getRotation())), 
+							       new Trk::EllipseBounds(dynamic_cast<const Trk::EllipseBounds&> (plane->bounds())));
+	      Trk::Volume* subVol = createSubtractedVolume(pSurf->transform(), subtrVol);
+	      Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*pSurf, new Trk::VolumeExcluder(subVol), false );
+	      lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf,some_mat,2*hz/numSlice));
+	    } else {
+	      lays.push_back(new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(vol->center())*HepTranslateZ3D(d)*HepRotate3D(plane->transform().getRotation())), 
+						 new Trk::EllipseBounds(dynamic_cast<const Trk::EllipseBounds&> (plane->bounds())), some_mat,2*hz/numSlice));
+	    } 
+	  } else if (disc) {
+	    const Trk::DiscBounds* db = dynamic_cast<const Trk::DiscBounds*> (&(disc->bounds())); 
+	    if (subtrVol) {
+	      Trk::PlaneSurface* pSurf = new Trk::PlaneSurface(new HepTransform3D(HepTranslate3D(vol->center())*HepTranslateZ3D(d)
+										  *HepRotate3D(disc->transform().getRotation())),  
+							       new Trk::EllipseBounds(db->rMin(),db->rMin(),db->rMax(), db->rMax(),db->halfPhiSector()));
+	      Trk::Volume* subVol = createSubtractedVolume(pSurf->transform(), subtrVol);
+	      Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*pSurf, new Trk::VolumeExcluder(subVol), false );
+	      lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf,some_mat,2*hz/numSlice));
+	    } else {
+	      lays.push_back(new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(vol->center())*HepTranslateZ3D(d)*HepRotate3D(disc->transform().getRotation()) ),  
+						 new Trk::EllipseBounds(db->rMin(),db->rMin(),db->rMax(), db->rMax(),db->halfPhiSector()),
+						 some_mat,2*hz/numSlice));
+	    }
+	  }
+        }
+      } else {           // cylinder layer	
+	//material
+	Trk::MaterialProperties material(2*drad,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
+	Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+        
+	if (subtrVol) {
+	  Trk::CylinderSurface* pSurf = new Trk::CylinderSurface(new HepTransform3D(vol->transform()), 
+								 new Trk::CylinderBounds(radius,hz));
+	  Trk::Volume* subVol = createSubtractedVolume(pSurf->transform(), subtrVol);
+	  Trk::SubtractedCylinderSurface* subtrSurf = new Trk::SubtractedCylinderSurface(*pSurf, new Trk::VolumeExcluder(subVol),
+											 false );
+	  lays.push_back(new Trk::SubtractedCylinderLayer(subtrSurf,some_mat,2*drad));
+	} else {
+	  lays.push_back(new Trk::CylinderLayer(new HepTransform3D(vol->transform()), 
+						new Trk::CylinderBounds(radius,hz),
+						some_mat,2*drad));
+	}
+      }
+    } else if ( mode == 1 ) {
+      //material
+      Trk::MaterialProperties material(15.,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
+      Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+
+      for( unsigned int i = 0; i < cyl_surf->size(); i++){
+	const Trk::PlaneSurface*   plane = dynamic_cast<const Trk::PlaneSurface*> ((*cyl_surf)[i]);
+	const Trk::DiscSurface*     disc = dynamic_cast<const Trk::DiscSurface*> ((*cyl_surf)[i]);
+	const Trk::CylinderSurface*  cyls = dynamic_cast<const Trk::CylinderSurface*> ((*cyl_surf)[i]);
+	if(plane){
+	  if (subtrVol) {
+	    Trk::Volume* subVol = createSubtractedVolume(plane->transform(), subtrVol);
+	    Trk::PlaneSurface* pSurf = new Trk::PlaneSurface(new HepTransform3D(plane->transform()), 
+							     new Trk::EllipseBounds(dynamic_cast<const Trk::EllipseBounds&> (plane->bounds())));
+	    Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*pSurf, new Trk::VolumeExcluder(subVol), false );
+	    lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf,some_mat,15.));
+	  } else {
+	    lays.push_back(new Trk::PlaneLayer(new HepTransform3D(plane->transform()), 
+					       new Trk::EllipseBounds(dynamic_cast<const Trk::EllipseBounds&> (plane->bounds())),
+					       some_mat,15.));
+	  } 
+	} else if (disc) {
+	  const Trk::DiscBounds* db = dynamic_cast<const Trk::DiscBounds*> (&(disc->bounds())); 
+	  if (subtrVol) {
+	    Trk::Volume* subVol = createSubtractedVolume(disc->transform(), subtrVol);
+	    Trk::PlaneSurface* pSurf = new Trk::PlaneSurface(new HepTransform3D(disc->transform()), 
+							     new Trk::EllipseBounds(db->rMin(),db->rMin(),db->rMax(),
+										    db->rMax(),db->halfPhiSector()));
+	    Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*pSurf, new Trk::VolumeExcluder(subVol), false );
+	    lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf,some_mat,15.));
+	  } else {
+	    lays.push_back(new Trk::PlaneLayer(new HepTransform3D(disc->transform()), 
+					       new Trk::EllipseBounds(db->rMin(),db->rMin(),db->rMax(),
+								      db->rMax(),db->halfPhiSector()),
+					       some_mat,15.));
+	  }
+	} else if (cyls) {
+	  Trk::MaterialProperties material(2*drad,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
+	  Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+	  if (subtrVol) {
+	    Trk::Volume* subVol = createSubtractedVolume(cyls->transform(), subtrVol);
+	    Trk::CylinderSurface* pSurf = new Trk::CylinderSurface(new HepTransform3D(cyls->transform()), 
+								   new Trk::CylinderBounds(dynamic_cast<const Trk::CylinderBounds&> (cyls->bounds())));
+	    Trk::SubtractedCylinderSurface* subtrSurf = new Trk::SubtractedCylinderSurface(*pSurf, new Trk::VolumeExcluder(subVol),
+											   false );
+	    lays.push_back(new Trk::SubtractedCylinderLayer(subtrSurf,some_mat,2*drad));
+	  } else {
+	    lays.push_back(new Trk::CylinderLayer(new HepTransform3D(cyls->transform()), 
+						  new Trk::CylinderBounds(dynamic_cast<const Trk::CylinderBounds&> (cyls->bounds())),
+						  some_mat,2*drad));
+	  }
+	} 
+      }
+    }
+  }
+  return;
+}
+
+const Trk::Layer* Muon::MuonInertMaterialBuilder::boundarySurfaceToLayer( const Trk::Surface& surf, const Trk::MaterialProperties* mat, double thickness) const
+{
+  const Trk::Layer* layer = 0;
+
+  Trk::MaterialProperties material(thickness,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
+  Trk::HomogenousLayerMaterial layMat(material, Trk::oppositePre);
+
+  const Trk::SubtractedPlaneSurface* subPlane = dynamic_cast<const Trk::SubtractedPlaneSurface*> (&surf);
+  const Trk::SubtractedCylinderSurface* subCyl = dynamic_cast<const Trk::SubtractedCylinderSurface*> (&surf);
+
+  if (subCyl)  {
+    layer = new Trk::SubtractedCylinderLayer(new Trk::SubtractedCylinderSurface(*subCyl),layMat,thickness); 
+    return layer;
+  } else if (subPlane) {
+    layer = new Trk::SubtractedPlaneLayer(new Trk::SubtractedPlaneSurface(*subPlane),layMat,thickness); 
+    return layer;
+  }
+
+  const Trk::PlaneSurface* plane = dynamic_cast<const Trk::PlaneSurface*> (&surf);
+  const Trk::CylinderSurface* cyl = dynamic_cast<const Trk::CylinderSurface*> (&surf);
+  const Trk::DiscSurface* disc = dynamic_cast<const Trk::DiscSurface*> (&surf);
+
+  if (cyl)  {
+    const Trk::CylinderBounds* cl = dynamic_cast<const Trk::CylinderBounds*> (&(cyl->bounds()));
+    layer = new Trk::CylinderLayer(new HepTransform3D(cyl->transform()),
+                                   new Trk::CylinderBounds(cl->r(),cl->halflengthZ()),
+				   layMat,thickness); 
+    return layer;
+  } else if (plane) {
+    const Trk::RectangleBounds* box = dynamic_cast<const Trk::RectangleBounds*> (&(plane->bounds()));
+    const Trk::TrapezoidBounds* trd = dynamic_cast<const Trk::TrapezoidBounds*> (&(plane->bounds()));
+    const Trk::EllipseBounds* elli = dynamic_cast<const Trk::EllipseBounds*> (&(plane->bounds()));
+    if (box) layer = new Trk::PlaneLayer(new HepTransform3D(plane->transform()),
+					 new Trk::RectangleBounds(*box),layMat,thickness); 
+    if (trd) layer = new Trk::PlaneLayer(new HepTransform3D(plane->transform()),
+					 new Trk::TrapezoidBounds(*trd),layMat,thickness); 
+    if (elli) layer = new Trk::PlaneLayer(new HepTransform3D(plane->transform()),
+					  new Trk::EllipseBounds(*elli),layMat,thickness); 
+  } else if (disc) {
+    const Trk::DiscBounds* db = dynamic_cast<const Trk::DiscBounds*> (&(disc->bounds()));
+    layer = new Trk::DiscLayer(new HepTransform3D(disc->transform()),
+			       new Trk::DiscBounds(*db),layMat,thickness); 
+  }
+  return layer;
+}
+ 
+Trk::Volume* Muon::MuonInertMaterialBuilder::createSubtractedVolume(const HepTransform3D& transf, Trk::Volume* subtrVol) const
+{
+  Trk::Volume* subVol = 0;
+  if (!subtrVol) return subVol;
+  
+  const Trk::CombinedVolumeBounds*   scomb = dynamic_cast<const Trk::CombinedVolumeBounds*>   (&(subtrVol->volumeBounds()));
+  const Trk::SubtractedVolumeBounds* ssub  = dynamic_cast<const Trk::SubtractedVolumeBounds*> (&(subtrVol->volumeBounds()));
+  const Trk::TrapezoidVolumeBounds*  strap = dynamic_cast<const Trk::TrapezoidVolumeBounds*>  (&(subtrVol->volumeBounds()));
+  const Trk::CuboidVolumeBounds*     sbox  = dynamic_cast<const Trk::CuboidVolumeBounds*>     (&(subtrVol->volumeBounds()));
+  const Trk::CylinderVolumeBounds*   scyl  = dynamic_cast<const Trk::CylinderVolumeBounds*>   (&(subtrVol->volumeBounds()));
+
+  Trk::VolumeBounds* subBounds = 0;
+  if (scomb) subBounds = new Trk::CombinedVolumeBounds(*scomb);
+  if (ssub) subBounds = new Trk::SubtractedVolumeBounds(*ssub);
+  if (strap) subBounds = new Trk::TrapezoidVolumeBounds(*strap);
+  if (scyl) subBounds = new Trk::CylinderVolumeBounds(*scyl);
+  if (sbox) subBounds = new Trk::CuboidVolumeBounds(*sbox);
+  
+  subVol = new Trk::Volume( new HepTransform3D(transf.inverse()*subtrVol->transform()), subBounds);
+  return subVol;
+}
+
+const bool  Muon::MuonInertMaterialBuilder::checkVolume(const Trk::Volume* chVol) const
+{
+  const std::vector<const Trk::Surface*>* surf = chVol->volumeBounds().decomposeToSurfaces(chVol->transform());
+  std::vector<const Trk::GlobalPosition*> bd_apexes;
+  bool cylinder = false;
+  
+  for( unsigned int i = 0; i< surf->size(); i++ ){
+    const Trk::PlaneSurface* plane = dynamic_cast<const Trk::PlaneSurface*> ((*surf)[i]);
+    const Trk::CylinderSurface* cyl = dynamic_cast<const Trk::CylinderSurface*> ((*surf)[i]);
+    if (cyl) { cylinder = true; break; }
+    if (plane) {
+      const Trk::TrapezoidBounds* trd  = dynamic_cast<const Trk::TrapezoidBounds*> (&(plane->bounds()));
+      const Trk::RectangleBounds* rect = dynamic_cast<const Trk::RectangleBounds*> (&(plane->bounds()));
+      if(trd){
+	bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition( trd->maxHalflengthX(), trd->halflengthY())));  
+	bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition(-trd->maxHalflengthX(), trd->halflengthY())));  
+	bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition( trd->minHalflengthX(),-trd->halflengthY())));  
+	bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition(-trd->minHalflengthX(),-trd->halflengthY()))); 
+      }
+      if(rect){
+	bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition( rect->halflengthX(), rect->halflengthY())));  
+	bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition(-rect->halflengthX(), rect->halflengthY())));  
+	bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition( rect->halflengthX(),-rect->halflengthY())));  
+	bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition(-rect->halflengthX(),-rect->halflengthY()))); 
+      }
+    }
+  }
+
+  const int n_apexes = 4; //nr of apexes for one surface
+  const double tol = 0.001;
+  const int n_surf = surf->size(); 
+  int apex_s[n_surf];
+  for( int i = 0; i < n_surf; i++) apex_s[i] = 0;
+ 
+  for( unsigned int i = 0; i < n_apexes; i++){
+    for( unsigned int j =  2*n_apexes; j < bd_apexes.size(); j++){
+      if( (fabs( bd_apexes[i]->x() - bd_apexes[j]->x()) < tol) &&
+	  (fabs( bd_apexes[i]->y() - bd_apexes[j]->y()) < tol) &&
+	  (fabs( bd_apexes[i]->z() - bd_apexes[j]->z()) < tol)) apex_s[0]++;
+      if( (fabs( bd_apexes[i+n_apexes]->x() - bd_apexes[j]->x()) < tol) &&
+	  (fabs( bd_apexes[i+n_apexes]->y() - bd_apexes[j]->y()) < tol) &&
+	  (fabs( bd_apexes[i+n_apexes]->z() - bd_apexes[j]->z()) < tol)) apex_s[1]++;
+    }
+  }
+
+  for( unsigned int i = 2*n_apexes; i < 3*n_apexes; i++){
+    for( unsigned int j =  4*n_apexes; j < bd_apexes.size(); j++){
+      if( (fabs( bd_apexes[i]->x() - bd_apexes[j]->x()) < tol) &&
+	  (fabs( bd_apexes[i]->y() - bd_apexes[j]->y()) < tol) &&
+	  (fabs( bd_apexes[i]->z() - bd_apexes[j]->z()) < tol)) apex_s[2]++;
+      if( (fabs( bd_apexes[i+n_apexes]->x() - bd_apexes[j]->x()) < tol) &&
+	  (fabs( bd_apexes[i+n_apexes]->y() - bd_apexes[j]->y()) < tol) &&
+	  (fabs( bd_apexes[i+n_apexes]->z() - bd_apexes[j]->z()) < tol)) apex_s[3]++;
+    }
+  }
+
+  for( unsigned int i = 2*n_apexes; i < 3*n_apexes; i++){
+    for( unsigned int j =  0; j < 2*n_apexes; j++){
+      if( (fabs( bd_apexes[i]->x() - bd_apexes[j]->x()) < tol) &&
+	  (fabs( bd_apexes[i]->y() - bd_apexes[j]->y()) < tol) &&
+	  (fabs( bd_apexes[i]->z() - bd_apexes[j]->z()) < tol)) apex_s[2]++;
+      if( (fabs( bd_apexes[i+n_apexes]->x() - bd_apexes[j]->x()) < tol) &&
+	  (fabs( bd_apexes[i+n_apexes]->y() - bd_apexes[j]->y()) < tol) &&
+	  (fabs( bd_apexes[i+n_apexes]->z() - bd_apexes[j]->z()) < tol)) apex_s[3]++;
+    }
+  }
+
+  for( unsigned int i = 4*n_apexes; i < 5*n_apexes; i++){
+    for( unsigned int j =  0; j < 4*n_apexes;  j++){
+      if( (fabs( bd_apexes[i]->x() - bd_apexes[j]->x()) < tol) &&
+	  (fabs( bd_apexes[i]->y() - bd_apexes[j]->y()) < tol) &&
+	  (fabs( bd_apexes[i]->z() - bd_apexes[j]->z()) < tol)) apex_s[4]++;
+      if( (fabs( bd_apexes[i+n_apexes]->x() - bd_apexes[j]->x()) < tol) &&
+	  (fabs( bd_apexes[i+n_apexes]->y() - bd_apexes[j]->y()) < tol) &&
+	  (fabs( bd_apexes[i+n_apexes]->z() - bd_apexes[j]->z()) < tol)) apex_s[5]++;
+    }
+  }
+
+  
+  for( int i = 0; i < n_surf; i++){
+    if( apex_s[i] != 8 ){
+      for( int j = 0; j < n_surf; j++) {
+	const Trk::PlaneSurface* plane = dynamic_cast<const Trk::PlaneSurface*> ((*surf)[j]);
+	if (plane) {
+	  const Trk::TrapezoidBounds* trd  = dynamic_cast<const Trk::TrapezoidBounds*> (&(plane->bounds()));
+	  const Trk::RectangleBounds* rect = dynamic_cast<const Trk::RectangleBounds*> (&(plane->bounds()));
+	  std::cout<<"\tSurf["<<j<<"] common appexes::(trd,rect)" << trd <<"," << rect <<","<<apex_s[j]<<std::endl;
+        }
+      } 
+      return false;
+    }
+  }	  
+  return true;
+}
+  /*
+  for( unsigned int i = 0; i< surf->size(); i+=2 ){
+    const Trk::PlaneSurface* plane = dynamic_cast<const Trk::PlaneSurface*> ((*surf)[i]);
+    //if(plane// <-allways true, but what if somebody put cylinder
+    //add the conditions for the cylinder and tube layers
+
+    const Trk::TrapezoidBounds* trd  = dynamic_cast<const Trk::TrapezoidBounds*> (&(plane->bounds()));
+    const Trk::RectangleBounds* rect = dynamic_cast<const Trk::RectangleBounds*> (&(plane->bounds()));
+    if(trd){
+      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition( trd->maxHalflengthX(), trd->halflengthY())));  
+      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition(-trd->maxHalflengthX(), trd->halflengthY())));  
+      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition( trd->minHalflengthX(),-trd->halflengthY())));  
+      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition(-trd->minHalflengthX(),-trd->halflengthY()))); 
+    }
+    if(rect){
+      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition( rect->halflengthX(), rect->halflengthY())));  
+      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition(-rect->halflengthX(), rect->halflengthY())));  
+      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition( rect->halflengthX(),-rect->halflengthY())));  
+      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition(-rect->halflengthX(),-rect->halflengthY()))); 
+    }
+  }
+
+  
+  if(bd_apexes.size() !=12) {
+    if(msg) std::cerr<<"WRONG number of apexes. There is::"<<bd_apexes.size()<<"; should be::12"<<std::endl;
+    return false;
+  }
+
+  bool common_fst_sec = false;
+  for(int i = 0; i < n_apexes; i++){
+    for(int j = n_apexes; j < 2*n_apexes; j++){
+      if( (fabs( bd_apexes[i]->x() - bd_apexes[j]->x()) < tol) &&
+	  (fabs( bd_apexes[i]->y() - bd_apexes[j]->y()) < tol) &&
+	  (fabs( bd_apexes[i]->z() - bd_apexes[j]->z()) < tol)){
+	common_fst_sec = true; // boundaries 1. & 2. has got common apex, check if it is common wiht 3. boundary
+	for(unsigned int k = 2*n_apexes; k < bd_apexes.size(); k++){
+	  if( (fabs( bd_apexes[i]->x() - bd_apexes[k]->x()) < tol) &&
+	      (fabs( bd_apexes[i]->y() - bd_apexes[k]->y()) < tol) &&
+	      (fabs( bd_apexes[i]->z() - bd_apexes[k]->z()) < tol)){
+	    //if(msg) std::cout<<"Volume decomposition is correct"<<std::endl;
+	    return true;
+	  }
+	}
+      }
+    }
+  }
+  if(common_fst_sec) {
+    if(msg) std::cout<<"Surf[4] has wrong orientation"<<std::endl;
+    return false;
+  }
+  else{
+    //if 1. & 2. doesn't have common apexes check for 1. & 3. 
+    int ap_counter = 0;
+    for(int i = 0; i < n_apexes; i++){
+      for(int k = 2*n_apexes; k < 3*n_apexes; k++){
+	if( (fabs( bd_apexes[i]->x() - bd_apexes[k]->x()) < tol) &&
+	    (fabs( bd_apexes[i]->y() - bd_apexes[k]->y()) < tol) &&
+	    (fabs( bd_apexes[i]->z() - bd_apexes[k]->z()) < tol)) ap_counter++;
+      }
+    }
+    if(ap_counter == 2){
+      //  if(msg) std::cout<<"\t1&3 has got "<<ap_counter<<" common apexes"<<std::endl<<"\tSurf[2] has wrong orientation"<<std::endl;
+      return false;
+    }
+  
+    //if 1. & 2. and 1.& 3. don't have common apexes check for 2. & 3.
+    for(int j = n_apexes; j < 2*n_apexes; j++){
+      for(int k = 2*n_apexes; k < 3*n_apexes; k++){
+	if( (fabs( bd_apexes[j]->x() - bd_apexes[k]->x()) < tol) &&
+	    (fabs( bd_apexes[j]->y() - bd_apexes[k]->y()) < tol) &&
+	    (fabs( bd_apexes[j]->z() - bd_apexes[k]->z()) < tol)) ap_counter++;
+      }
+    }
+    if(ap_counter == 2){
+      // if(msg) std::cout<<"\t2&3 has got "<<ap_counter<<" common apexes"<<std::endl<<"\tSurf[0] has wrong orientation"<<std::endl;
+      return false;
+    }
+  }
+  return false;*/
+
+void  Muon::MuonInertMaterialBuilder::splitShape(const GeoShape* sh, std::vector<const GeoShape*>& shapes) const
+{
+  if ( sh->type()=="Union" ) {
+    const GeoShapeUnion* sub = dynamic_cast<const GeoShapeUnion*> (sh);
+    const GeoShape* shA = sub->getOpA();
+    const GeoShape* shB = sub->getOpB();
+    splitShape(shA,shapes);
+    splitShape(shB,shapes);
+  } else {
+    shapes.push_back(sh);
+  }
+  return;
 }

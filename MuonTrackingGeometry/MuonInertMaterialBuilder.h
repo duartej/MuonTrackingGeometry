@@ -82,6 +82,14 @@ namespace Muon {
       const Trk::TrackingVolume* simplifyShape(const Trk::TrackingVolume* tr) const;
       const Trk::Volume* findEnvelope(const Trk::TrackingVolume* tr) const;
       const Trk::TrackingVolume* findECTEnvelope(const std::vector<const Trk::TrackingVolume*>* vols) const;
+      const Trk::Layer* boundarySurfaceToLayer(const Trk::Surface&, const Trk::MaterialProperties*, double) const;
+      Trk::Volume* createSubtractedVolume(const HepTransform3D& tr, Trk::Volume* subtrVol) const;
+      void  splitShape(const GeoShape* sh, std::vector<const GeoShape*>& shapes) const;
+
+      std::vector<const Trk::Layer*>* translateToLayers(const std::vector<const Trk::TrackingVolume*>* vols) const;
+      void volumeToLayers(std::vector<const Trk::Layer*>& lays, const Trk::Volume* vol, Trk::Volume* subtrVol,
+				    const Trk::MaterialProperties* mat, int mode) const;
+      const bool checkVolume(const Trk::Volume*) const;
 
       Trk::TrapezoidVolumeBounds* decodeColdSegment(const GeoShape* sh) const;
       Trk::VolumeBounds* decodeECTSegment(const GeoShape* sh) const;
@@ -90,6 +98,13 @@ namespace Muon {
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
       bool                                m_simplify;              // switch geometry simplification on/off 
+      bool                                m_simplifyToLayers;              // switch geometry simplification on/off 
+      bool                                m_debugMode;                   // build layers & dense volumes in parallel - double counting material !!! 
+      bool                                m_buildBT;                    // build barrel toroids 
+      bool                                m_buildECT;                   // build endcap toroids 
+      bool                                m_buildFeets;                 // build feets 
+      bool                                m_buildRails;                 // build rails 
+      bool                                m_buildShields;               // build shieldings 
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system
  

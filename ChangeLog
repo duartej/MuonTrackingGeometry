@@ -1,3 +1,7 @@
+2007-10-12 Sarka Todorova <sarka.todorova@cern.ch>
+        * extend RPC layer identifier to ensure proper orientation of local coordinates
+	* tagged as MuonTrackingGeometry-00-00-57
+
 2007-10-03 Sarka Todorova <sarka.todorova@cern.ch>
         * include transcript of inert material into layers 
 	* rails back in build

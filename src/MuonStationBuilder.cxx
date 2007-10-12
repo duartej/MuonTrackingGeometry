@@ -899,9 +899,11 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
 		if (1/*m_rpcIdHelper->valid(etaId)*/){
 		  for (unsigned int il=0;il<layers->size();il++) {
 		    if ((*layers)[il]->layerType() != 0 && (*layers)[il]->isOnLayer(transf.inverse()*rpc->stripPos(etaId)) ) {
+                      double swap = ( fabs( (*((*layers)[il]->surfaceRepresentation().globalToLocal(transf.inverse()*rpc->stripPos(etaId))))[Trk::locY]
+					    -(*(rpc->surface(etaId).globalToLocal(rpc->stripPos(etaId))))[Trk::locX] ) > 0.001 ) ? 20000. : 0. ; 
 		      unsigned int id = etaId;
 		      (*layers)[il]->setLayerType(id);
-		      (*layers)[il]->setRef((*((*layers)[il]->surfaceRepresentation().globalToLocal(
+		      (*layers)[il]->setRef(swap + (*((*layers)[il]->surfaceRepresentation().globalToLocal(
 					       transf.inverse()*rpc->surface(etaId).center(),0.005)))[Trk::locX]); 
 		      //std::cout <<"identifying RPC:"<<stationName<<","<<iv<<","<<il<<":"<<id <<std::endl;
                       //turn eta position into integer to truncate

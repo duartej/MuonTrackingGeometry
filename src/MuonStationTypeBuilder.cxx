@@ -833,7 +833,14 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
            x_mat.push_back(mdtMat);
            x_thickness.push_back( 2*xv );
            currX = transfc.getTranslation()[0];
-           x_ref.push_back( transfc.getTranslation()[2] ) ;
+           if ( fabs(transfc.getTranslation()[1])>0.001) {
+             // code 2.corrdinate shift
+             double ref =  transfc.getTranslation()[2]+10e5;
+             ref += int(1000*transfc.getTranslation()[1])*10e6; 
+	     x_ref.push_back( ref ) ;
+	   } else {
+	     x_ref.push_back( transfc.getTranslation()[2] ) ;
+	   }
 	   // std::cout << "layer info included:" << clv->getName()<<"," << 2*xv <<","<< currX<< std::endl; 
          } else {
 	  std::vector<double>::iterator xIter=x_array.begin();
@@ -844,7 +851,15 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
           x_array.insert(xIter,transfc.getTranslation()[0]);
           x_mat.insert(mIter,mdtMat);
           x_thickness.insert(tIter,2*xv);
-          x_ref.insert(rIter,transfc.getTranslation()[2] ) ;
+	  if ( fabs(transfc.getTranslation()[1])>0.001) {
+	    // code 2.corrdinate shift
+            double sign = (transfc.getTranslation()[1]>0.) ? 1. : -1.;
+	    double ref =  transfc.getTranslation()[2]+sign*10e5;            
+	    ref += int(1000*transfc.getTranslation()[1])*10e6; 
+	    x_ref.insert( rIter,ref ) ;
+	  } else {
+	    x_ref.insert(rIter,transfc.getTranslation()[2] ) ;
+          }
           currX = transfc.getTranslation()[0];
         }
        }     

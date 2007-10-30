@@ -1517,7 +1517,7 @@ const bool  Muon::MuonInertMaterialBuilder::checkVolume(const Trk::Volume* chVol
   const int n_apexes = 4; //nr of apexes for one surface
   const double tol = 0.001;
   const int n_surf = surf->size(); 
-  int apex_s[n_surf];
+  int apex_s[16];
   for( int i = 0; i < n_surf; i++) apex_s[i] = 0;
  
   for( unsigned int i = 0; i < n_apexes; i++){

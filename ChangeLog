@@ -1,3 +1,7 @@
+2007-10-30 Sarka Todorova <sarka.todorova@cern.ch>
+        * extend MDT layer reference to code shift of second local coordinate
+	* tagged as MuonTrackingGeometry-00-00-58
+
 2007-10-12 Sarka Todorova <sarka.todorova@cern.ch>
         * extend RPC layer identifier to ensure proper orientation of local coordinates
 	* tagged as MuonTrackingGeometry-00-00-57

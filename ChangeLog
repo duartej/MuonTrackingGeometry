@@ -1,7 +1,7 @@
 2007-11-07 Sarka Todorova <sarka.todorova@cern.ch>
         * include mixed inert material description ( dense volumes & layers ) with optional limit
 	  on layer thickness in x0 
-	* tagged as MuonTrackingGeometry-00-00-59
+	* tagged as MuonTrackingGeometry-00-00-59/60
 
 2007-10-30 Sarka Todorova <sarka.todorova@cern.ch>
         * extend MDT layer reference to code shift of second local coordinate

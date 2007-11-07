@@ -782,6 +782,10 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
 	newVol = new Trk::TrackingVolume( *envelope, confinedObjs.first, confinedObjs.second, m_muonMaterial,m_muonMagneticField,envName);
         //for (unsigned int iv=0; iv< confinedVols->size();iv++) delete (*confinedVols)[iv];
         delete confinedVols;
+        if (confinedObjs.second) {
+	  for (unsigned int iv = 0; iv < confinedObjs.second->size(); iv++)
+	    Trk::TrackingVolumeManipulator::confineVolume(*((*(confinedObjs.second))[iv]),newVol);
+	}
       }
     }
   }
@@ -1108,7 +1112,7 @@ std::pair<std::vector<const Trk::Layer*>*,std::vector<const Trk::TrackingVolume*
     } else {
       std::vector<const Trk::Layer*>* temp_layers= new std::vector<const Trk::Layer*>;
       double thick = volumeToLayers(*temp_layers,(*vols)[i],0,(*vols)[i], mode);
-      if ( m_layerThicknessLimit>0. && thick<m_layerThicknessLimit ) {
+      if ( m_layerThicknessLimit<0. || thick<m_layerThicknessLimit ) {
         if (!lays && temp_layers->size()) lays = new std::vector<const Trk::Layer*>;
 	for (unsigned int il=0;il<temp_layers->size();il++) lays->push_back((*temp_layers)[il]);
       }

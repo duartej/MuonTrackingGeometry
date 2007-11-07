@@ -84,6 +84,7 @@ Muon::MuonInertMaterialBuilder::MuonInertMaterialBuilder(const std::string& t, c
   m_muonMgrLocation("MuonMgr"),
   m_simplify(1),
   m_simplifyToLayers(1),
+  m_layerThicknessLimit(2.),
   m_debugMode(1),
   m_buildBT(1),
   m_buildECT(1),
@@ -96,6 +97,7 @@ Muon::MuonInertMaterialBuilder::MuonInertMaterialBuilder(const std::string& t, c
   declareProperty("MuonDetManagerLocation",           m_muonMgrLocation);
   declareProperty("SimplifyGeometry",                 m_simplify);
   declareProperty("SimplifyGeometryToLayers",         m_simplifyToLayers);
+  declareProperty("LayerThicknessLimit",              m_layerThicknessLimit);
   declareProperty("DebugMode",                        m_debugMode);
   declareProperty("BuildBarrelToroids",               m_buildBT);
   declareProperty("BuildEndcapToroids",               m_buildECT);
@@ -318,15 +320,15 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
 		    objs.push_back(typeStat);
 		  } else {
 		    std::vector<const Trk::TrackingVolume*>* vols=new std::vector<const Trk::TrackingVolume*>;
-		    vols->push_back(newType); 
-		    std::vector<const Trk::Layer*>* confinedLays = translateToLayers(vols);
-		    if (confinedLays) layCount.push_back(confinedLays->size()); 
+		    vols->push_back(newType);  
+		    std::pair<std::vector<const Trk::Layer*>*, std::vector<const Trk::TrackingVolume*>* > confinedObjs = translateToLayers(vols);
+		    if (confinedObjs.first) layCount.push_back(confinedObjs.first->size()); 
 		    else layCount.push_back(0);
                     const Trk::TrackingVolume* newVol = 0;
                     if (m_debugMode) 
-		      newVol = new Trk::TrackingVolume( *newType, *newType,m_muonMagneticField,confinedLays,newType->volumeName());
+		      newVol = new Trk::TrackingVolume( *newType, *newType,m_muonMagneticField,confinedObjs.first,newType->volumeName());
                     else 
-		      newVol = new Trk::TrackingVolume( *newType, m_muonMaterial,m_muonMagneticField,confinedLays,newType->volumeName());
+		      newVol = new Trk::TrackingVolume( *newType,confinedObjs.first,confinedObjs.second,m_muonMaterial,m_muonMagneticField,newType->volumeName());
 		    surfCount.push_back(newVol->volumeBounds().decomposeToSurfaces(HepTransform3D())->size());
 		    delete vols;
 		    const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(vname,newVol);
@@ -770,15 +772,15 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
       for (unsigned int iv = 0; iv < confinedVols->size(); iv++)
 	Trk::TrackingVolumeManipulator::confineVolume(*((*confinedVols)[iv]),newVol);
     } else {  
-      std::vector<const Trk::Layer*>* confinedLays = translateToLayers(confinedVols);
+      std::pair<std::vector<const Trk::Layer*>*,std::vector<const Trk::TrackingVolume*>* >  confinedObjs = translateToLayers(confinedVols);
       if (m_debugMode) {  // !!! keep both exact dense volumes and their layer transcript !!!
-	newVol = new Trk::TrackingVolume( *envelope, confinedLays,confinedVols, m_muonMaterial,m_muonMagneticField,envName);
+	newVol = new Trk::TrackingVolume( *envelope, confinedObjs.first, confinedVols, m_muonMaterial,m_muonMagneticField,envName);
 	// glue confined volumes
 	for (unsigned int iv = 0; iv < confinedVols->size(); iv++)
 	  Trk::TrackingVolumeManipulator::confineVolume(*((*confinedVols)[iv]),newVol);
       }	else { 
-	newVol = new Trk::TrackingVolume( *envelope, m_muonMaterial,m_muonMagneticField,confinedLays,envName);
-        for (unsigned int iv=0; iv< confinedVols->size();iv++) delete (*confinedVols)[iv];
+	newVol = new Trk::TrackingVolume( *envelope, confinedObjs.first, confinedObjs.second, m_muonMaterial,m_muonMagneticField,envName);
+        //for (unsigned int iv=0; iv< confinedVols->size();iv++) delete (*confinedVols)[iv];
         delete confinedVols;
       }
     }
@@ -928,7 +930,7 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::findECTEnvelope(const
    
   std::vector<const Trk::Volume*>* constituents = new std::vector<const Trk::Volume*>;
   std::vector<const Trk::Volume*>* subtractions = new std::vector<const Trk::Volume*>;
-  //std::vector<const Trk::TrackingVolume*>* confinedDense = new std::vector<const Trk::TrackingVolume*>;
+  std::vector<const Trk::TrackingVolume*>* confinedDense = new std::vector<const Trk::TrackingVolume*>;
   std::vector<const Trk::Layer*>* confinedLay = new std::vector<const Trk::Layer*>;
   std::vector<const Trk::GlobalPosition*> edges;
   // rMin,rMax,z size
@@ -941,6 +943,9 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::findECTEnvelope(const
     constituents->push_back((*ectVols)[i]);
     const std::vector<const Trk::Layer*>* matLayers = (*ectVols)[i]->confinedArbitraryLayers();
     if ( matLayers && (m_simplifyToLayers || m_debugMode ) )  for (unsigned int il=0;il<matLayers->size();il++)  confinedLay->push_back((*matLayers)[il]);
+    const std::vector<const Trk::TrackingVolume*>* matDense = (*ectVols)[i]->confinedDenseVolumes();
+    if ( matDense && (m_simplifyToLayers || m_debugMode ) )  for (unsigned int il=0;il<matDense->size();il++)  confinedDense->push_back((*matDense)[il]);
+    if (!matDense && !matLayers) confinedDense->push_back((*ectVols)[i]);
     std::vector<const Trk::Volume*>::iterator sIter= constituents->begin(); 
     while (sIter!= constituents->end()) {
       const Trk::CombinedVolumeBounds* comb = dynamic_cast<const Trk::CombinedVolumeBounds*> (&((*sIter)->volumeBounds()));
@@ -1060,21 +1065,24 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::findECTEnvelope(const
   if (confinedLay->size() &&  m_debugMode ) {
     envelope = new Trk::TrackingVolume( *env, confinedLay, ectVols, m_muonMaterial,m_muonMagneticField,"ECT");
     std::cout << "defining endcap both with layers AND dense volumes" << std::endl;
-  } else if (confinedLay->size() && m_simplifyToLayers ) {
-    envelope = new Trk::TrackingVolume( *env, m_muonMaterial,m_muonMagneticField,confinedLay,"ECT");
+  } else if (m_simplifyToLayers ) {
+    envelope = new Trk::TrackingVolume( *env, confinedLay, confinedDense, m_muonMaterial,m_muonMagneticField,"ECT");
+    // glue confined volumes
+    for (unsigned int iv = 0; iv < confinedDense->size(); iv++) Trk::TrackingVolumeManipulator::confineVolume(*((*confinedDense)[iv]),envelope);
   } else {
     envelope = new Trk::TrackingVolume( *env, m_muonMaterial,m_muonMagneticField,ectVols,"ECT");
+    // glue confined volumes
+    for (unsigned int iv = 0; iv < ectVols->size(); iv++) Trk::TrackingVolumeManipulator::confineVolume(*((*ectVols)[iv]),envelope);
   }
-  // glue confined volumes
-  for (unsigned int iv = 0; iv < ectVols->size(); iv++) Trk::TrackingVolumeManipulator::confineVolume(*((*ectVols)[iv]),envelope);
 
   return envelope;
 }
 
-std::vector<const Trk::Layer*>* Muon::MuonInertMaterialBuilder::translateToLayers(const std::vector<const Trk::TrackingVolume*>* vols) const
+std::pair<std::vector<const Trk::Layer*>*,std::vector<const Trk::TrackingVolume*>* >  Muon::MuonInertMaterialBuilder::translateToLayers(const std::vector<const Trk::TrackingVolume*>* vols) const
 {
-  std::vector<const Trk::Layer*>* lays = new std::vector<const Trk::Layer*>;
-  if (!vols) return 0; 
+  std::vector<const Trk::Layer*>* lays = 0;
+  std::vector<const Trk::TrackingVolume*>* dVols = 0;
+  if (!vols) return std::pair<std::vector<const Trk::Layer*>*,std::vector<const Trk::TrackingVolume*>* > (0,0); 
   
   int mode = 0;
   
@@ -1083,7 +1091,7 @@ std::vector<const Trk::Layer*>* Muon::MuonInertMaterialBuilder::translateToLayer
     if ((*vols)[i]->volumeName().substr(0,13)=="BTRibEnvelope") mode = 1;
     //if ((*vols)[i]->volumeName().substr(0,11)=="BTWingStrut") mode = 1;
     //if ((*vols)[i]->volumeName().substr(0,17)=="BTVoussoirAttWing") mode = 1;
-    if ((*vols)[i]->volumeName().substr(0,14)=="ECTKeystoneBox") mode = 1;
+    //if ((*vols)[i]->volumeName().substr(0,14)=="ECTKeystoneBox") mode = 1;
     if ((*vols)[i]->volumeName().substr(0,7)=="ECTWall") mode = 1;
     
     if (mode==1) {
@@ -1092,19 +1100,35 @@ std::vector<const Trk::Layer*>* Muon::MuonInertMaterialBuilder::translateToLayer
       for (unsigned int ib=0; ib< bounds.size(); ib++ ){
 	const Trk::Surface& surf = (bounds[ib].getPtr())->surfaceRepresentation();
         const Trk::Layer* lay = boundarySurfaceToLayer(surf,(*vols)[i], thickness); 
-        if (lay) lays->push_back( lay );
+        if (lay) {
+          if (!lays) lays = new std::vector<const Trk::Layer*>;
+	  lays->push_back( lay );
+	}
       }
     } else {
-      volumeToLayers(*lays,(*vols)[i],0,(*vols)[i], mode);
+      std::vector<const Trk::Layer*>* temp_layers= new std::vector<const Trk::Layer*>;
+      double thick = volumeToLayers(*temp_layers,(*vols)[i],0,(*vols)[i], mode);
+      if ( m_layerThicknessLimit>0. && thick<m_layerThicknessLimit ) {
+        if (!lays && temp_layers->size()) lays = new std::vector<const Trk::Layer*>;
+	for (unsigned int il=0;il<temp_layers->size();il++) lays->push_back((*temp_layers)[il]);
+      }
+      else {
+        if (!dVols) dVols = new std::vector<const Trk::TrackingVolume*>;
+	dVols->push_back((*vols)[i]);
+	for (unsigned int il=0;il<temp_layers->size();il++) delete (*temp_layers)[il];
+      }
+      delete temp_layers;
     }
   }
   
-  return lays;
+  return std::pair<std::vector<const Trk::Layer*>*,std::vector<const Trk::TrackingVolume*>* > (lays,dVols);
 }
 
-void Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer*>& lays, const Trk::Volume* vol, Trk::Volume* subtrVol, const Trk::MaterialProperties* mat, int mode) const
+double Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer*>& lays, const Trk::Volume* vol, Trk::Volume* subtrVol, const Trk::MaterialProperties* mat, int mode) const
 {
-  if (!vol) return;
+  double thickness = 0.;  
+  if (!vol) return thickness;
+  double thInX0 = 0.;
   
   const Trk::CombinedVolumeBounds*   comb = dynamic_cast<const Trk::CombinedVolumeBounds*>   (&(vol->volumeBounds()));
   const Trk::SubtractedVolumeBounds* sub  = dynamic_cast<const Trk::SubtractedVolumeBounds*> (&(vol->volumeBounds()));
@@ -1115,16 +1139,15 @@ void Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer
   if (!comb && !sub && !trap && !box && !cyl ) std::cout << "ERROR: unknown volume boundaries!!!" << std::endl;
   
   if (comb) {
-    volumeToLayers(lays,comb->first(),subtrVol,mat,mode);
-    volumeToLayers(lays,comb->second(),subtrVol,mat,mode);
+    thInX0 = fmax(volumeToLayers(lays,comb->first(),subtrVol,mat,mode),volumeToLayers(lays,comb->second(),subtrVol,mat,mode));
   } 
   if (sub) {
     if (subtrVol) {
       // here is necessary to combine subtracted volumes
       Trk::Volume* dsub = new Trk::Volume(new HepTransform3D(),new Trk::CombinedVolumeBounds(sub->inner(),subtrVol,false));
-      volumeToLayers(lays,sub->outer(),dsub,mat,mode);
+      thInX0 = volumeToLayers(lays,sub->outer(),dsub,mat,mode);
     } else {
-      volumeToLayers(lays,sub->outer(),sub->inner(),mat,mode);
+      thInX0 = volumeToLayers(lays,sub->outer(),sub->inner(),mat,mode);
     }
   } 
   if (box) {
@@ -1136,7 +1159,6 @@ void Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer
     if ( mode == 0 )  {               // single layer
       
       Trk::PlaneSurface* plane=0;
-      double thickness = 0.;
       if ( hz<=hx && hz<=hy ) { // x-y plane
 	Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(dynamic_cast<const Trk::RectangleBounds&> ((*box_surf)[0]->bounds()));
 	plane = new Trk::PlaneSurface(new HepTransform3D(vol->transform()),
@@ -1156,6 +1178,8 @@ void Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer
       //material
       Trk::MaterialProperties material(thickness,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
       Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+      thInX0 = material.thicknessInX0();  
+
       if (subtrVol) {
 	Trk::Volume* subVol = createSubtractedVolume(plane->transform(), subtrVol);
 	Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*plane,
@@ -1169,10 +1193,11 @@ void Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer
     } else if ( mode == 1 ) {
       for( unsigned int i = 0; i < box_surf->size(); i++){
 	const Trk::PlaneSurface* plane = dynamic_cast<const Trk::PlaneSurface*> ((*box_surf)[i]);
-        double thickness = 15.;
+        thickness = 15.;
 	//material
 	Trk::MaterialProperties material(thickness,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
 	Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+	thInX0 = material.thicknessInX0();  
 	if(plane){
           if (subtrVol) {
 	    // subtracted volume should be defined with transform relative to the plane
@@ -1199,7 +1224,6 @@ void Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer
     if ( mode == 0 )  {               // single layer
       
       Trk::PlaneSurface* plane=0;
-      double thickness = 0.;
       bool trapezoid = false;
       if ( hz<=0.5*(hxmin+hxmax) && hz<=hy ) { // x-y plane
 	Trk::TrapezoidBounds* rbounds = new Trk::TrapezoidBounds(dynamic_cast<const Trk::TrapezoidBounds&> ((*trap_surf)[0]->bounds()));
@@ -1221,6 +1245,7 @@ void Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer
       //material
       Trk::MaterialProperties material(thickness,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
       Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+      thInX0 = material.thicknessInX0();  
       if (subtrVol) {
 	Trk::Volume* subVol = createSubtractedVolume(plane->transform(), subtrVol);
 	Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*plane,
@@ -1239,10 +1264,11 @@ void Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer
     } else if ( mode == 1 ) {
       for( unsigned int i = 0; i < trap_surf->size(); i++){
 	const Trk::PlaneSurface* plane = dynamic_cast<const Trk::PlaneSurface*> ((*trap_surf)[i]);
-        double thickness = 15.;
+        thickness = 15.;
 	//material
 	Trk::MaterialProperties material(thickness,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
 	Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+	thInX0 = material.thicknessInX0();  
 	if(plane){
           if (subtrVol) {
 	    // subtracted volume should be defined with relative transform with respect to the plane
@@ -1276,6 +1302,7 @@ void Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer
 	//material
 	Trk::MaterialProperties material(hz,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
 	Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+	thInX0 = material.thicknessInX0();  
 
 	if ( plane ) {
 	  if (subtrVol) {
@@ -1314,6 +1341,7 @@ void Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer
 	  //material
 	  Trk::MaterialProperties material(2*hz/numSlice,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
 	  Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+	  thInX0 = material.thicknessInX0();  
 	  if ( plane ) {
 	    if (subtrVol) {
 	      Trk::PlaneSurface* pSurf = new Trk::PlaneSurface(new HepTransform3D(HepTranslate3D(vol->center())*HepTranslateZ3D(d)
@@ -1346,6 +1374,7 @@ void Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer
 	//material
 	Trk::MaterialProperties material(2*drad,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
 	Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+	thInX0 = material.thicknessInX0();  
         
 	if (subtrVol) {
 	  Trk::CylinderSurface* pSurf = new Trk::CylinderSurface(new HepTransform3D(vol->transform()), 
@@ -1364,6 +1393,7 @@ void Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer
       //material
       Trk::MaterialProperties material(15.,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
       Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+      thInX0 = material.thicknessInX0();  
 
       for( unsigned int i = 0; i < cyl_surf->size(); i++){
 	const Trk::PlaneSurface*   plane = dynamic_cast<const Trk::PlaneSurface*> ((*cyl_surf)[i]);
@@ -1399,6 +1429,8 @@ void Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer
 	} else if (cyls) {
 	  Trk::MaterialProperties material(2*drad,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
 	  Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
+	  thInX0 = material.thicknessInX0(); 
+ 
 	  if (subtrVol) {
 	    Trk::Volume* subVol = createSubtractedVolume(cyls->transform(), subtrVol);
 	    Trk::CylinderSurface* pSurf = new Trk::CylinderSurface(new HepTransform3D(cyls->transform()), 
@@ -1415,7 +1447,7 @@ void Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Layer
       }
     }
   }
-  return;
+  return thInX0;
 }
 
 const Trk::Layer* Muon::MuonInertMaterialBuilder::boundarySurfaceToLayer( const Trk::Surface& surf, const Trk::MaterialProperties* mat, double thickness) const

@@ -86,9 +86,10 @@ namespace Muon {
       Trk::Volume* createSubtractedVolume(const HepTransform3D& tr, Trk::Volume* subtrVol) const;
       void  splitShape(const GeoShape* sh, std::vector<const GeoShape*>& shapes) const;
 
-      std::vector<const Trk::Layer*>* translateToLayers(const std::vector<const Trk::TrackingVolume*>* vols) const;
-      void volumeToLayers(std::vector<const Trk::Layer*>& lays, const Trk::Volume* vol, Trk::Volume* subtrVol,
-				    const Trk::MaterialProperties* mat, int mode) const;
+      std::pair<std::vector<const Trk::Layer*>*, std::vector<const Trk::TrackingVolume*>* >
+	translateToLayers(const std::vector<const Trk::TrackingVolume*>* vols) const;
+      double volumeToLayers(std::vector<const Trk::Layer*>& lays, const Trk::Volume* vol, 
+			  Trk::Volume* subtrVol, const Trk::MaterialProperties* mat, int mode) const;
       const bool checkVolume(const Trk::Volume*) const;
 
       Trk::TrapezoidVolumeBounds* decodeColdSegment(const GeoShape* sh) const;
@@ -99,6 +100,7 @@ namespace Muon {
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
       bool                                m_simplify;              // switch geometry simplification on/off 
       bool                                m_simplifyToLayers;              // switch geometry simplification on/off 
+      double                              m_layerThicknessLimit;      // maximal thickness (in X0)   
       bool                                m_debugMode;                   // build layers & dense volumes in parallel - double counting material !!! 
       bool                                m_buildBT;                    // build barrel toroids 
       bool                                m_buildECT;                   // build endcap toroids 

@@ -81,7 +81,6 @@ namespace Muon {
       Trk::Volume* translateGeoShape(const GeoShape* sh, HepTransform3D* tr) const;
       const Trk::TrackingVolume* simplifyShape(const Trk::TrackingVolume* tr) const;
       const Trk::Volume* findEnvelope(const Trk::TrackingVolume* tr) const;
-      const Trk::TrackingVolume* findECTEnvelope(const std::vector<const Trk::TrackingVolume*>* vols) const;
       const Trk::Layer* boundarySurfaceToLayer(const Trk::Surface&, const Trk::MaterialProperties*, double) const;
       Trk::Volume* createSubtractedVolume(const HepTransform3D& tr, Trk::Volume* subtrVol) const;
       void  splitShape(const GeoShape* sh, std::vector<const GeoShape*>& shapes) const;

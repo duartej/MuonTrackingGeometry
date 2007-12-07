@@ -1,3 +1,7 @@
+2007-12-07 Sarka Todorova <sarka.todorova@cern.ch>
+        * remove special treatment for ECT - extra envelope slows down the extrapolation
+	* tagged as MuonTrackingGeometry-00-00-61
+
 2007-11-07 Sarka Todorova <sarka.todorova@cern.ch>
         * include mixed inert material description ( dense volumes & layers ) with optional limit
 	  on layer thickness in x0 

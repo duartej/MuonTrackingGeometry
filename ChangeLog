@@ -1,3 +1,8 @@
+2007-12-14 Sarka Todorova <sarka.todorova@cern.ch>
+        * adjust binning of static volume frame (by default to a non-equidistant Z,Phi binning)
+	* introduce 3D binning (optional) 
+	* tagged as MuonTrackingGeometry-00-00-62
+
 2007-12-07 Sarka Todorova <sarka.todorova@cern.ch>
         * remove special treatment for ECT - extra envelope slows down the extrapolation
 	* tagged as MuonTrackingGeometry-00-00-61

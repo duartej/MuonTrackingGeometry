@@ -58,12 +58,17 @@ namespace Muon {
       /** Private method to find z/phi span of detached volumes */
       const Span* findVolumeSpan(const Trk::VolumeBounds* volBounds, HepTransform3D transf, double zTol, double phiTol) const;
       const std::vector<const Span*>* findVolumesSpan(const std::vector<const Trk::DetachedTrackingVolume*>*& objs, double zTol, double phiTol) const;
-      /** Private method to define subvolumes and fill them with detached volumes */
+      /** Private methods to define subvolumes and fill them with detached volumes */
       const Trk::TrackingVolume* processVolume( const Trk::Volume*, int, int, std::string) const; 
+      const Trk::TrackingVolume* processVolume( const Trk::Volume*, int, std::string) const; 
       /** Private method to check volume properties */
       void checkVolume(const Trk::TrackingVolume*) const;
       /** Private method to find detached volumes */
       std::vector<const Trk::DetachedTrackingVolume*>* getDetachedObjects(const Trk::Volume*) const;
+      /** Private method to retrieve z/phi/h partition */
+      void getZParts() const;
+      void getPhiParts() const;
+      void getHParts() const;
            
       ToolHandle<Trk::IMagneticFieldTool>                  m_magFieldTool;                  //!< Tracking Interface to Magnetic Field
 
@@ -100,10 +105,17 @@ namespace Muon {
       int                                 m_innerEndcapEtaPartition;
       int                                 m_outerEndcapEtaPartition;
       int                                 m_phiPartition;
+      bool                                m_adjustStatic;
+      bool                                m_blendInertMaterial; 
       mutable const std::vector<const Trk::DetachedTrackingVolume*>*    m_stations;    // muon chambers 
       mutable const std::vector<const Trk::DetachedTrackingVolume*>*    m_inertObjs;   // muon inert material 
       mutable const std::vector<const Span*>*                     m_stationSpan; 
       mutable const std::vector<const Span*>*                     m_inertSpan; 
+      mutable std::vector<double>                                 m_zPartitions;
+      mutable std::vector<int>                                    m_zPartitionsType;
+      mutable std::vector<double>                                 m_adjustedPhi;
+      mutable std::vector<int>                                    m_adjustedPhiType;
+      mutable std::vector<std::vector<std::vector<std::vector<std::pair<int,double> > > > > m_hPartitions;
  };
 
 

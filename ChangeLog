@@ -1,3 +1,8 @@
+2007-12-17 Sarka Todorova <sarka.todorova@cern.ch>
+        * bugfix 3D static volume binning
+	* introduce radial span 
+	* tagged as MuonTrackingGeometry-00-00-63
+
 2007-12-14 Sarka Todorova <sarka.todorova@cern.ch>
         * adjust binning of static volume frame (by default to a non-equidistant Z,Phi binning)
 	* introduce 3D binning (optional) 

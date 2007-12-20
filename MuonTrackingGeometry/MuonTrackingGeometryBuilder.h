@@ -89,12 +89,14 @@ namespace Muon {
 
       // Overall Dimensions
       mutable double                      m_innerBarrelRadius;             //!< minimal extend in radial dimension of the muon barrel
-      double                              m_outerBarrelRadius;             //!< maximal extend in radial dimension of the muon barrel
+      mutable double                      m_outerBarrelRadius;             //!< maximal extend in radial dimension of the muon barrel
       mutable double                      m_barrelZ;                  //!< maximal extend in z of the muon barrel
       double                              m_innerEndcapZ;             //!< maximal extend in z of the inner part of muon endcap 
       double                              m_outerEndcapZ;             //!< maximal extend in z of the outer part of muon endcap
       double                              m_beamPipeRadius;
-      double                              m_outerEndcapRadius;
+      double                              m_innerShieldRadius;
+      double                              m_outerShieldRadius;
+      double                              m_diskShieldZ;
 
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the (empty) material
       mutable Trk::MagneticFieldProperties  m_muonMagneticField;          //!< the magnetic Field
@@ -107,6 +109,8 @@ namespace Muon {
       int                                 m_phiPartition;
       bool                                m_adjustStatic;
       bool                                m_blendInertMaterial; 
+      mutable double                      m_alignTolerance;
+
       mutable const std::vector<const Trk::DetachedTrackingVolume*>*    m_stations;    // muon chambers 
       mutable const std::vector<const Trk::DetachedTrackingVolume*>*    m_inertObjs;   // muon inert material 
       mutable const std::vector<const Span*>*                     m_stationSpan; 

@@ -1,3 +1,9 @@
+2007-12-20 Sarka Todorova <sarka.todorova@cern.ch>
+        * change static frame : adapt to shieldings, suppress cavern cutouts
+        * 3D binning functional in combined geometry
+	* recover from mismatch of enclosed envelope/glue volumes dimensions 
+	* tagged as MuonTrackingGeometry-00-00-64
+
 2007-12-17 Sarka Todorova <sarka.todorova@cern.ch>
         * bugfix 3D static volume binning
 	* introduce radial span 

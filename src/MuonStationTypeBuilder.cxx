@@ -167,7 +167,7 @@ StatusCode Muon::MuonStationTypeBuilder::initialize()
   if (m_muonMaterialProperties.size() < 3){
     // set 0. / 0. / 0. / 0.
     m_muonMaterialProperties = std::vector<double>();
-    m_muonMaterialProperties.push_back(0.);
+    m_muonMaterialProperties.push_back(1.);
     m_muonMaterialProperties.push_back(0.);
     m_muonMaterialProperties.push_back(0.);
   }
@@ -755,6 +755,7 @@ StatusCode Muon::MuonStationTypeBuilder::finalize()
 {
     MsgStream log(msgSvc(), name());
     
+    delete m_matCSCspacer1;
     delete m_matCSCspacer2;
     delete m_materialConverter;
     delete m_matCSC01;
@@ -2275,8 +2276,12 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayerRepresentation(const 
     Trk::MaterialProperties matProp = collectStationMaterial(trVol,sf);
     if (matProp.thickness() > thickness) {
       log << MSG::DEBUG << " thickness of combined station material exceeds station size:" << trVol->volumeName()<<endreq;
-    } 
-    if (matProp.thickness()> 0.)  matProp *= thickness/matProp.thickness(); 
+    } else {
+      //if (matProp.thickness()> 0.)  matProp *= thickness/matProp.thickness();
+      Trk::MaterialProperties empty = m_muonMaterial;
+      empty *=(thickness-matProp.thickness()); 
+      matProp.addMaterial(empty); 
+    }
     Trk::HomogenousLayerMaterial mat(matProp, Trk::oppositePre);  
     layer = new Trk::PlaneLayer(new HepTransform3D(trVol->transform()*HepRotateY3D(90*deg) * HepRotateZ3D(90*deg) ),
                                 new Trk::RectangleBounds(rbounds), mat, thickness, od, 1 );
@@ -2292,8 +2297,12 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayerRepresentation(const 
     Trk::MaterialProperties matProp = collectStationMaterial(trVol,sf);
     if (matProp.thickness() > thickness) {
       log << MSG::DEBUG << " thickness of combined station material exceeds station size:" << trVol->volumeName()<<endreq;
-    } 
-    if (matProp.thickness()> 0.)  matProp *= thickness/matProp.thickness(); 
+    } else { 
+      //if (matProp.thickness()> 0.)  matProp *= thickness/matProp.thickness(); 
+      Trk::MaterialProperties empty = m_muonMaterial;
+      empty *=(thickness-matProp.thickness()); 
+      matProp.addMaterial(empty); 
+    }
     Trk::HomogenousLayerMaterial mat(matProp, Trk::oppositePre);  
     layer = new Trk::PlaneLayer(new HepTransform3D(trVol->transform()),
                                 new Trk::TrapezoidBounds(*tbounds), mat, thickness, od, 1 );
@@ -2310,8 +2319,12 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayerRepresentation(const 
     Trk::MaterialProperties matProp = collectStationMaterial(trVol,sf);
     if (matProp.thickness() > thickness) {
       log << MSG::DEBUG << " thickness of combined station material exceeds station size:" << trVol->volumeName()<<endreq;
-    } 
-    if (matProp.thickness()> 0.)  matProp *= thickness/matProp.thickness(); 
+    } else { 
+      //if (matProp.thickness()> 0.)  matProp *= thickness/matProp.thickness(); 
+      Trk::MaterialProperties empty = m_muonMaterial;
+      empty *=(thickness-matProp.thickness()); 
+      matProp.addMaterial(empty); 
+    }
     Trk::HomogenousLayerMaterial mat(matProp, Trk::oppositePre);  
     layer = new Trk::PlaneLayer(new HepTransform3D(trVol->transform()),
                                 new Trk::DiamondBounds(*dbounds), mat, thickness, od, 1 );

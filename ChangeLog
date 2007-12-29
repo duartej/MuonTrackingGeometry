@@ -1,3 +1,8 @@
+2007-12-29 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix memory leaks in MSB/MSTB
+	* fix material scaling for station layer representation
+	* tagged as MuonTrackingGeometry-00-00-65
+	
 2007-12-20 Sarka Todorova <sarka.todorova@cern.ch>
         * change static frame : adapt to shieldings, suppress cavern cutouts
         * 3D binning functional in combined geometry

@@ -51,6 +51,8 @@
 //CLHEP
 #include "CLHEP/Units/SystemOfUnits.h"
 
+//#include "PathResolver/PathResolver.h"
+
 // STD
 #include <map>
 
@@ -82,15 +84,16 @@ Muon::MuonInertMaterialBuilder::MuonInertMaterialBuilder(const std::string& t, c
   AlgTool(t,n,p),
   Trk::TrackingVolumeManipulator(),
   m_muonMgrLocation("MuonMgr"),
-  m_simplify(1),
-  m_simplifyToLayers(1),
+  m_simplify(false),
+  m_simplifyToLayers(false),
   m_layerThicknessLimit(2.),
-  m_debugMode(1),
-  m_buildBT(1),
-  m_buildECT(1),
-  m_buildFeets(1),
-  m_buildRails(1),
-  m_buildShields(1),
+  m_debugMode(false),
+  m_resizeEnvelope(true),
+  m_buildBT(true),
+  m_buildECT(true),
+  m_buildFeets(true),
+  m_buildRails(true),
+  m_buildShields(true),
   m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool")
 {
   declareInterface<Trk::IDetachedTrackingVolumeBuilder>(this);
@@ -167,8 +170,9 @@ StatusCode Muon::MuonInertMaterialBuilder::initialize()
 // mw
     m_materialConverter= new Trk::GeoMaterialConverter();
 
-
     log << MSG::INFO  << name() <<" initialize() successful" << endreq;
+
+    getVolumeFractions();
     
   return StatusCode::SUCCESS;
 }
@@ -216,8 +220,6 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
 
   log << MSG::INFO << name() << " returns  " << (*muonObjects).size() << " objects (detached volumes)" << endreq;
 
-//   checkObject(muonObjects);   /debug function to printout object features
-
   return muonObjects;
 
 }
@@ -249,8 +251,10 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
 	  if (  vname.substr(0,2)=="BT" || vname.substr(0,6) == "EdgeBT" || vname.substr(0,6) == "HeadBT" ) accepted = m_buildBT ? true : false;
 	  else if ( vname.substr(0,3)=="ECT" ) accepted = m_buildECT ? true : false; 
 	  else if ( vname.size()>7 && (vname.substr(3,4)=="Feet" || vname.substr(4,4)=="Feet" ) ) accepted = m_buildFeets ? true : false; 
-	      else if ( vname.substr(0,4)=="Rail" ) accepted = m_buildRails ? true : false; 
+	  else if ( vname.substr(0,4)=="Rail" ) accepted = m_buildRails ? true : false; 
 	  else accepted = m_buildShields ? true : false;
+
+          if ( vname=="EdgeBTVoussoir" && accepted && m_simplify ) accepted = false;
 	  
 	  if (!accepted) { vol.next(); continue; }  
 	      
@@ -267,20 +271,21 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
 	    //printInfo(cv);
 	    
 	    std::vector<const GeoShape*> input_shapes;
-	    if (clv->getShape()->type()!="Union") input_shapes.push_back(clv->getShape());
-	    else splitShape(clv->getShape(),input_shapes);
+	    // 
+	    if (!m_simplify && vname == "Rail") splitShape(clv->getShape(),input_shapes);
+	    else input_shapes.push_back(clv->getShape());
 	    
 	    for (unsigned int ish=0; ish < input_shapes.size(); ish++) { 
 	      
-	      const Trk::Volume* envelope = translateGeoShape(input_shapes[ish],new HepTransform3D());
-	      if (envelope) {  
+	      const Trk::Volume* trObject = translateGeoShape(input_shapes[ish],new HepTransform3D());
+	      if (trObject) {  
 		Trk::MaterialProperties mat = m_materialConverter->convert( clv->getMaterial() );
-		const Trk::TrackingVolume* newType= new Trk::TrackingVolume( *envelope, mat, m_muonMagneticField,0,0,vname);
+		const Trk::TrackingVolume* newType= new Trk::TrackingVolume( *trObject, mat, m_muonMagneticField,0,0,vname);
 		const Trk::TrackingVolume* simType = simplifyShape(newType);
 		const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(vname,simType);
 		objs.push_back(typeStat);
 	      }  else {
-		log << MSG::WARNING << name()<< " no envelope created for volume " << vname << std::endl;
+		log << MSG::WARNING << name()<< " volume not translated: " << vname << std::endl;
 	      }            
 	    } // end new object
 	  }
@@ -301,28 +306,6 @@ StatusCode Muon::MuonInertMaterialBuilder::finalize()
     return StatusCode::SUCCESS;
 }
 //
-
-
-
-
-
-Trk::BevelledCylinderVolumeBounds* Muon::MuonInertMaterialBuilder::decodeBevelledCylinder(const GeoShape* sh) const
-{
-  Trk::BevelledCylinderVolumeBounds* bevCylBounds=0;
-
-  while ( sh->type() == "Subtraction" ) {
-    const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction*> (sh);
-    sh = sub->getOpA();
-  }
-  if ( sh->type() == "Tube" ) {
-    const GeoTube* tube=dynamic_cast<const GeoTube*> (sh);
-//  MW hard-coded angle, to be changed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    double theta = 22.5*deg;
-    return new Trk::BevelledCylinderVolumeBounds(tube->getRMin(),tube->getRMax(),
-              tube->getZHalfLength(),theta,theta);
-  }
-  return bevCylBounds;
-}
 
 const void Muon::MuonInertMaterialBuilder::printInfo(const GeoVPhysVol* pv) const
 {
@@ -679,48 +662,10 @@ const void Muon::MuonInertMaterialBuilder::printChildren(const GeoVPhysVol* pv) 
 
 const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const Trk::TrackingVolume* trVol) const
 {
-  const Trk::TrackingVolume* newVol = trVol;
- 
-  // give up some volumes
-  // if (trVol->volumeName()=="BTVoussoirAttachment") return newVol;
-
-  // find envelope
-  const Trk::Volume* envelope = findEnvelope(trVol);
-  
-  if (envelope) {
-    std::vector<const Trk::TrackingVolume*>* confinedVols = new std::vector<const Trk::TrackingVolume*>;
-    confinedVols->push_back(trVol);
-    std::string envName=trVol->volumeName()+"_envelope";
-    if ( !m_simplifyToLayers ) {
-      newVol = new Trk::TrackingVolume( *envelope, m_muonMaterial,m_muonMagneticField,confinedVols,envName);
-      // glue confined volumes
-      for (unsigned int iv = 0; iv < confinedVols->size(); iv++)
-	Trk::TrackingVolumeManipulator::confineVolume(*((*confinedVols)[iv]),newVol);
-    } else {  
-      std::pair<std::vector<const Trk::Layer*>*,std::vector<const Trk::TrackingVolume*>* >  confinedObjs = translateToLayers(confinedVols);
-      if (m_debugMode) {  // !!! keep both exact dense volumes and their layer transcript !!!
-	newVol = new Trk::TrackingVolume( *envelope, confinedObjs.first, confinedVols, m_muonMaterial,m_muonMagneticField,envName);
-	// glue confined volumes
-	for (unsigned int iv = 0; iv < confinedVols->size(); iv++)
-	  Trk::TrackingVolumeManipulator::confineVolume(*((*confinedVols)[iv]),newVol);
-      }	else { 
-	newVol = new Trk::TrackingVolume( *envelope, confinedObjs.first, confinedObjs.second, m_muonMaterial,m_muonMagneticField,envName);
-        //for (unsigned int iv=0; iv< confinedVols->size();iv++) delete (*confinedVols)[iv];
-        delete confinedVols;
-        if (confinedObjs.second) {
-	  for (unsigned int iv = 0; iv < confinedObjs.second->size(); iv++)
-	    Trk::TrackingVolumeManipulator::confineVolume(*((*(confinedObjs.second))[iv]),newVol);
-	}
-      }
-    }
-  }
-
-  return newVol;
-}
-
-const Trk::Volume* Muon::MuonInertMaterialBuilder::findEnvelope(const Trk::TrackingVolume* trVol) const
-{
   const Trk::Volume* envelope = 0;
+  int simpleMode = 0;
+  double maxD    = 45.;
+  double fraction = 0.;
    
   std::vector<const Trk::Volume*>* constituents = new std::vector<const Trk::Volume*>;
   std::vector<const Trk::Volume*>* subtractions = new std::vector<const Trk::Volume*>;
@@ -743,136 +688,276 @@ const Trk::Volume* Muon::MuonInertMaterialBuilder::findEnvelope(const Trk::Track
       sIter++; 
     }    
   } 
-  // easy case
-  if (constituents->size()==1) {
-    if (!subtractions->size()) {
-    } else {
-      envelope = new Trk::Volume(*(constituents->front()));
-      //std::cout<<"volume bounds?"<< &(envelope->volumeBounds())<<std::endl;
-      //const Trk::CylinderVolumeBounds*  cyl = dynamic_cast<const Trk::CylinderVolumeBounds*> (&(envelope->volumeBounds()));
-      //const Trk::CuboidVolumeBounds*    box = dynamic_cast<const Trk::CuboidVolumeBounds*> (&(envelope->volumeBounds()));
-      //const Trk::TrapezoidVolumeBounds* trd = dynamic_cast<const Trk::TrapezoidVolumeBounds*> (&(envelope->volumeBounds()));
+  
+  if (constituents->size() == 1) {  // easy case
+
+    envelope = new Trk::Volume(*(constituents->front()));
+
+    if ( m_simplify ) { 
+      if ( subtractions->size()==0 || trVol->volumeName().substr(0,4)=="ECTC" ) {
+        simpleMode = 2;
+      } else {
+	for (unsigned int ivol=0; ivol<m_volFractions.size(); ivol++) {
+	  if (m_volFractions[ivol].first == trVol->volumeName() ) { fraction = m_volFractions[ivol].second.second ; break; }
+	}         
+	//double test = thinDim(envelope,maxD,fraction);
+        if ( fraction > 0.4 ) {   // layers or resize envelope
+	  double thin = thinDim(envelope,maxD,fraction);
+          if ( thin < maxD ) simpleMode = 1;      // layers
+          else if (thin>0.)  simpleMode = 3;      // resized envelope 
+	}
+      }
     }
+
   } else {
-    std::vector<const Trk::GlobalPosition*> edges;
+    
+    double xSize = 0.;
+    double ySize = 0.;
+    double zSize = 0.; 
+    double rSize = -1.;
+
     sIter = constituents->begin();
     while (sIter!= constituents->end()) {
-      const std::vector<const Trk::Surface*>* surf = (*sIter)->volumeBounds().decomposeToSurfaces((*sIter)->transform());
-      for (unsigned int is=0;is<surf->size();is++) {
-        const Trk::PlaneSurface* plane = dynamic_cast<const Trk::PlaneSurface*> ((*surf)[is]);
-        //const Trk::CylinderSurface* cyl = dynamic_cast<const Trk::CylinderSurface*> ((*surf)[is]);
-        const Trk::DiscSurface* disc = dynamic_cast<const Trk::DiscSurface*> ((*surf)[is]);
-        if (disc) {
-          edges.push_back(disc->localToGlobal(Trk::LocalPosition(0.,0.)));  
-        }
-        if (plane) {
-          const Trk::RectangleBounds* rect = dynamic_cast<const Trk::RectangleBounds*> (&(plane->bounds()));
-          const Trk::TrapezoidBounds* trd  = dynamic_cast<const Trk::TrapezoidBounds*> (&(plane->bounds()));
-          const Trk::EllipseBounds*   ell  = dynamic_cast<const Trk::EllipseBounds*>   (&(plane->bounds()));
-          if (rect) {
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition( rect->halflengthX(), rect->halflengthY())));  
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition(-rect->halflengthX(), rect->halflengthY())));  
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition( rect->halflengthX(),-rect->halflengthY())));  
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition(-rect->halflengthX(),-rect->halflengthY())));  
-	    edges.push_back(plane->localToGlobal(Trk::LocalPosition(0.,0.)));  
-          }
-          if (trd) {
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition( trd->maxHalflengthX(), trd->halflengthY())));  
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition(-trd->maxHalflengthX(), trd->halflengthY())));  
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition( trd->minHalflengthX(),-trd->halflengthY())));  
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition(-trd->minHalflengthX(),-trd->halflengthY())));  
-	    edges.push_back(plane->localToGlobal(Trk::LocalPosition(0.,0.)));  
-          }
-	  if (ell) {
-	    edges.push_back(plane->localToGlobal(Trk::LocalPosition(0.,0.)));  
-	  }
+      const Trk::CylinderVolumeBounds*  cylBounds = dynamic_cast<const Trk::CylinderVolumeBounds*>  (&((*sIter)->volumeBounds()));
+      const Trk::CuboidVolumeBounds*    cubBounds = dynamic_cast<const Trk::CuboidVolumeBounds*>    (&((*sIter)->volumeBounds()));
+      const Trk::TrapezoidVolumeBounds* trdBounds = dynamic_cast<const Trk::TrapezoidVolumeBounds*> (&((*sIter)->volumeBounds()));
+      if (cylBounds) {  
+        double rOut = cylBounds->outerRadius();
+        double hZ   = cylBounds->halflengthZ();
+        rSize = fmax(rSize,rOut);
+	Trk::GlobalPosition gpp = (*sIter)->transform() * Trk::GlobalPosition( 0., 0., hZ );
+	Trk::GlobalPosition gpm = (*sIter)->transform() * Trk::GlobalPosition( 0., 0.,-hZ );
+	Trk::GlobalDirection gpd = (*sIter)->transform().getRotation() * Trk::GlobalDirection( 0., 0.,1. );
+        xSize = fmax( xSize, fabs(gpp.x())+rOut*(1.-fabs(gpd[0])) );
+        ySize = fmax( ySize, fabs(gpp.y())+rOut*(1.-fabs(gpd[1])) );
+        zSize = fmax( zSize, fabs(gpp.z())+rOut*(1.-fabs(gpd[2])) );
+        xSize = fmax( xSize, fabs(gpm.x())+rOut*(1.-fabs(gpd[0])) );
+        ySize = fmax( ySize, fabs(gpm.y())+rOut*(1.-fabs(gpd[1])) );
+        zSize = fmax( zSize, fabs(gpm.z())+rOut*(1.-fabs(gpd[2])) );
+      }
+      if (cubBounds) {  
+        double x = cubBounds->halflengthX();
+        double y = cubBounds->halflengthY();
+        double z = cubBounds->halflengthZ();
+	std::vector<Trk::GlobalPosition> edges;
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition( x, y, z));
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition(-x, y, z));
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition( x,-y, z));
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition(-x,-y, z));
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition( x, y,-z));
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition(-x, y,-z));
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition( x,-y,-z));
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition(-x,-y,-z));
+	for (unsigned int ie=0; ie < edges.size(); ie++) {
+	  xSize = fmax( xSize, fabs(edges[ie].x()) );
+	  ySize = fmax( ySize, fabs(edges[ie].y()) );
+	  zSize = fmax( zSize, fabs(edges[ie].z()) );
         }
       }
-      for (unsigned int is=0;is<surf->size();is++) delete (*surf)[is];
-      delete surf;
-      sIter++; 
-    }
-    sIter = subtractions->begin();
-    while (sIter!= subtractions->end()) {
-      const std::vector<const Trk::Surface*>* surf = (*sIter)->volumeBounds().decomposeToSurfaces((*sIter)->transform());
-      for (unsigned int is=0;is<surf->size();is++) {
-        const Trk::PlaneSurface* plane = dynamic_cast<const Trk::PlaneSurface*> ((*surf)[is]);
-        //const Trk::CylinderSurface* cyl = dynamic_cast<const Trk::CylinderSurface*> ((*surf)[is]);
-        const Trk::DiscSurface* disc = dynamic_cast<const Trk::DiscSurface*> ((*surf)[is]);
-        if (disc) {
-          edges.push_back(disc->localToGlobal(Trk::LocalPosition(0.,0.)));  
-        }
-        if (plane) {
-          const Trk::RectangleBounds* rect = dynamic_cast<const Trk::RectangleBounds*> (&(plane->bounds()));
-          const Trk::TrapezoidBounds* trd  = dynamic_cast<const Trk::TrapezoidBounds*> (&(plane->bounds()));
-          const Trk::EllipseBounds*   ell  = dynamic_cast<const Trk::EllipseBounds*>   (&(plane->bounds()));
-          if (rect) {
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition( rect->halflengthX(), rect->halflengthY())));  
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition(-rect->halflengthX(), rect->halflengthY())));  
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition( rect->halflengthX(),-rect->halflengthY())));  
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition(-rect->halflengthX(),-rect->halflengthY())));  
-	    edges.push_back(plane->localToGlobal(Trk::LocalPosition(0.,0.)));  
-          }
-          if (trd) {
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition( trd->maxHalflengthX(), trd->halflengthY())));  
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition(-trd->maxHalflengthX(), trd->halflengthY())));  
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition( trd->minHalflengthX(),-trd->halflengthY())));  
-            edges.push_back(plane->localToGlobal(Trk::LocalPosition(-trd->minHalflengthX(),-trd->halflengthY())));  
-	    edges.push_back(plane->localToGlobal(Trk::LocalPosition(0.,0.)));  
-          }
-	  if (ell) {
-	    edges.push_back(plane->localToGlobal(Trk::LocalPosition(0.,0.)));  
-	  }
+      if (trdBounds) {  
+        double x1 = trdBounds->minHalflengthX();
+        double x2 = trdBounds->maxHalflengthX();
+        double y  = trdBounds->halflengthY();
+        double z  = trdBounds->halflengthZ();
+	std::vector<Trk::GlobalPosition> edges;
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition( x2, y, z));
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition(-x2, y, z));
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition( x1,-y, z));
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition(-x1,-y, z));
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition( x2, y,-z));
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition(-x2, y,-z));
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition( x1,-y,-z));
+	edges.push_back((*sIter)->transform()*Trk::GlobalPosition(-x1,-y,-z));
+	for (unsigned int ie=0; ie < edges.size(); ie++) {
+	  xSize = fmax( xSize, fabs(edges[ie].x()) );
+	  ySize = fmax( ySize, fabs(edges[ie].y()) );
+	  zSize = fmax( zSize, fabs(edges[ie].z()) );
         }
       }
-      for (unsigned int is=0;is<surf->size();is++) delete (*surf)[is];
-      delete surf;
-      sIter++; 
+      sIter++;
     }
-    // x,y,z size
-    double xSize = 0.; double ySize = 0.; double zSize = 0.;
-    for (unsigned int ie = 0; ie < edges.size(); ie++) {
-      if (trVol->inside(*edges[ie],0.001)) {
-        if (fabs(edges[ie]->x()) > xSize ) xSize = fabs(edges[ie]->x());   
-        if (fabs(edges[ie]->y()) > ySize ) ySize = fabs(edges[ie]->y());   
-        if (fabs(edges[ie]->z()) > zSize ) zSize = fabs(edges[ie]->z());   
-      } else {
-	//std::cout << "edge outside volume?" << *(edges[ie])<<std::endl;
-      }
-    }
-    envelope = new Trk::Volume(new HepTransform3D(trVol->transform()),new Trk::CuboidVolumeBounds(xSize,ySize,zSize));
-  }
-  //
 
-  if (!envelope) envelope = new Trk::Volume(*trVol); 
-  return envelope;
+    //std::cout << " processing volume " << trVol->volumeName() << std::endl;
+    //std::cout << "envelope dimension:" << xSize <<"," << ySize << "," << zSize <<":" << rSize << std::endl;
+
+    for (unsigned int ivol=0; ivol<m_volFractions.size(); ivol++) {
+      if (m_volFractions[ivol].first == trVol->volumeName() ) { fraction = m_volFractions[ivol].second.second ; break; }
+    }
+
+    if (rSize>0. && xSize <=rSize && ySize <=rSize ) {
+      if ( m_simplify && m_resizeEnvelope && fraction > 0.1 ) {
+        simpleMode = 3;
+        if (rSize<=zSize ) rSize *= sqrt(fraction);
+        if (zSize<=rSize ) zSize *= fraction;
+      }
+      envelope = new Trk::Volume(new HepTransform3D(trVol->transform()),new Trk::CylinderVolumeBounds(rSize,zSize));
+    } else { 
+      if ( m_simplify && fraction > 0.1 ) {
+        simpleMode = 3;
+        if (m_resizeEnvelope) {
+	  if (xSize<=ySize && xSize<=zSize) xSize *= fraction;
+	  if (ySize<=xSize && ySize<=zSize) ySize *= fraction;
+	  if (zSize<=ySize && zSize<=xSize) zSize *= fraction;
+	}
+      }
+      if (m_simplify && trVol->volumeName()=="BTVoussoir" ) { // merge with EdgeBTVoussoir
+	std::pair<double,double> fedge;
+	for (unsigned int ivol=0; ivol<m_volFractions.size(); ivol++) {
+	  if (m_volFractions[ivol].first == "EdgeBTVoussoir" ) { fedge = m_volFractions[ivol].second ; break; }
+	}
+        if (m_resizeEnvelope) {
+	  //double xAdj =  (fedge.first*fedge.second+8*xSize*ySize*zSize)/ySize/zSize/8;
+	  //envelope = new Trk::Volume(new HepTransform3D(trVol->transform()),new Trk::CuboidVolumeBounds( xAdj,ySize,zSize));
+	  double zAdj =  (fedge.first*fedge.second+8*xSize*ySize*zSize)/ySize/2148./8;
+	  envelope = new Trk::Volume(new HepTransform3D(trVol->transform()),new Trk::TrapezoidVolumeBounds(2026.,2270.,ySize,zAdj));
+	} else { 
+	  envelope = new Trk::Volume(new HepTransform3D(trVol->transform()),new Trk::TrapezoidVolumeBounds(2026.,2270.,ySize,zSize));
+          fraction = ( 8*fraction*xSize*ySize*zSize + fedge.first*fedge.second )/8/2148/ySize/zSize;
+	}
+      } else {
+	envelope = new Trk::Volume(new HepTransform3D(trVol->transform()),new Trk::CuboidVolumeBounds(xSize,ySize,zSize));
+      }
+    }
+  }
+
+  if (!envelope) envelope = new Trk::Volume(*trVol);
+
+  const Trk::TrackingVolume* newVol;
+  std::vector<const Trk::TrackingVolume*>* confinedVols = new std::vector<const Trk::TrackingVolume*>;
+
+  if ( m_simplifyToLayers && !simpleMode ) simpleMode = 1;
+
+  if ( m_simplify  && !simpleMode ) {
+    if (trVol->volumeName().substr(0,6)=="ECTWal" || trVol->volumeName().substr(0,6)=="ECTKey" ||
+        trVol->volumeName().substr(0,6)=="BTRibE" ) simpleMode=5;
+    else simpleMode = 4;
+  }
+ 
+  if ( simpleMode==1 ) {
+    confinedVols->push_back(trVol);
+    std::pair<std::vector<const Trk::Layer*>*,std::vector<const Trk::TrackingVolume*>* >  confinedObjs = translateToLayers(confinedVols, simpleMode-1 );
+    std::string envName=trVol->volumeName()+"_envelope";
+    newVol = new Trk::TrackingVolume( *envelope, confinedObjs.first, confinedObjs.second, m_muonMaterial,m_muonMagneticField,envName);
+    if (confinedObjs.second) {
+      for (unsigned int iv = 0; iv < confinedObjs.second->size(); iv++)
+	Trk::TrackingVolumeManipulator::confineVolume(*((*(confinedObjs.second))[iv]),newVol);
+    }
+  } else if ( simpleMode==2 ) {
+    newVol = trVol;
+    delete confinedVols;    
+  } else if ( simpleMode==3 ) {
+    std::string envName=trVol->volumeName()+"_resized";
+    Trk::MaterialProperties mat(*trVol);
+    if (!m_resizeEnvelope) {
+      double lScale = pow(fraction,0.33);
+      mat = Trk::MaterialProperties(1.,trVol->x0()/lScale,fraction*trVol->zOverAtimesRho());
+    }
+    newVol = new Trk::TrackingVolume( *envelope, mat, m_muonMagneticField, confinedVols, envName);    
+  } else if ( simpleMode==4 ) {
+    std::vector<const Trk::Layer*>* confinedLays = translateBoundariesToLayers(envelope,trVol,fraction);
+    std::string envName=trVol->volumeName()+"_envelope";
+    newVol = new Trk::TrackingVolume( *envelope, m_muonMaterial, m_muonMagneticField, confinedLays, envName);    
+  } else if ( simpleMode==5 ) {
+    confinedVols->push_back(trVol);
+    std::pair<std::vector<const Trk::Layer*>*,std::vector<const Trk::TrackingVolume*>* >  confinedObjs = translateToLayers(confinedVols, simpleMode-1 );
+    std::string envName=trVol->volumeName()+"_envelope";
+    newVol = new Trk::TrackingVolume( *envelope, confinedObjs.first, confinedObjs.second, m_muonMaterial,m_muonMagneticField,envName);
+    if (confinedObjs.second) {
+      for (unsigned int iv = 0; iv < confinedObjs.second->size(); iv++)
+	Trk::TrackingVolumeManipulator::confineVolume(*((*(confinedObjs.second))[iv]),newVol);
+    }
+  } else {    
+    confinedVols->push_back(trVol);
+    std::string envName=trVol->volumeName()+"_envelope";
+    newVol = new Trk::TrackingVolume( *envelope, m_muonMaterial, m_muonMagneticField, confinedVols, envName);    
+  }
+
+  return newVol;
 }
 
-std::pair<std::vector<const Trk::Layer*>*,std::vector<const Trk::TrackingVolume*>* >  Muon::MuonInertMaterialBuilder::translateToLayers(const std::vector<const Trk::TrackingVolume*>* vols) const
+std::vector<const Trk::Layer*>*  Muon::MuonInertMaterialBuilder::translateBoundariesToLayers(const Trk::Volume* envelope, const Trk::TrackingVolume* trVol, double fraction) const
+{
+  std::vector<const Trk::Layer*>* lays = 0;
+  if (!envelope) return lays; 
+  double thickness = 0.;
+  
+  const Trk::CylinderVolumeBounds*   cyl  = dynamic_cast<const Trk::CylinderVolumeBounds*>   (&(envelope->volumeBounds()));
+
+  const std::vector<const Trk::Surface*>* bSurfs = envelope->volumeBounds().decomposeToSurfaces(envelope->transform());
+
+  if (cyl) {
+    for (unsigned int ib=0; ib< bSurfs->size(); ib++ ){
+      const Trk::Surface* surf = (*bSurfs)[ib];
+
+      if (ib<2) thickness = (envelope->transform().inverse()*surf->center()).mag()*fraction/2;
+      else thickness = (cyl->outerRadius()-cyl->innerRadius())*fraction/2;
+  
+      const Trk::Layer* lay = boundarySurfaceToLayer(*surf,trVol, thickness);
+      if (lay) {
+	lay->setLayerType(0); 
+	if (!lays) lays = new std::vector<const Trk::Layer*>;
+	lays->push_back( lay );
+      }
+    }
+
+  } else {
+    for (unsigned int ib=0; ib< bSurfs->size(); ib++ ){
+      const Trk::Surface* surf = (*bSurfs)[ib];
+      thickness = (envelope->transform().inverse()*surf->center()).mag()*fraction/3; 
+      const Trk::Layer* lay = boundarySurfaceToLayer(*surf,trVol, thickness); 
+      if (lay) {
+	lay->setLayerType(0); 
+	if (!lays) lays = new std::vector<const Trk::Layer*>;
+	lays->push_back( lay );
+      }
+    }
+  }
+  delete bSurfs;
+  
+  return lays; 
+}
+
+std::pair<std::vector<const Trk::Layer*>*,std::vector<const Trk::TrackingVolume*>* >  Muon::MuonInertMaterialBuilder::translateToLayers(const std::vector<const Trk::TrackingVolume*>* vols, int mode) const
 {
   std::vector<const Trk::Layer*>* lays = 0;
   std::vector<const Trk::TrackingVolume*>* dVols = 0;
   if (!vols) return std::pair<std::vector<const Trk::Layer*>*,std::vector<const Trk::TrackingVolume*>* > (0,0); 
+  double tol = 0.001;
   
-  int mode = 0;
   
   for (unsigned int i=0; i< vols->size(); i++) {
-    mode = 0;
-    if ((*vols)[i]->volumeName().substr(0,13)=="BTRibEnvelope") mode = 1;
-    //if ((*vols)[i]->volumeName().substr(0,11)=="BTWingStrut") mode = 1;
-    //if ((*vols)[i]->volumeName().substr(0,17)=="BTVoussoirAttWing") mode = 1;
-    //if ((*vols)[i]->volumeName().substr(0,14)=="ECTKeystoneBox") mode = 1;
-    if ((*vols)[i]->volumeName().substr(0,7)=="ECTWall") mode = 1;
     
-    if (mode==1) {
-      double thickness = 20.;
+    if ( mode!=0 ) {
+      double thickness = 2000.;
       const std::vector< Trk::SharedObject<const Trk::BoundarySurface<Trk::TrackingVolume> > > bounds = (*vols)[i]->boundarySurfaces();
       for (unsigned int ib=0; ib< bounds.size(); ib++ ){
+	thickness = 2000.;
 	const Trk::Surface& surf = (bounds[ib].getPtr())->surfaceRepresentation();
-        const Trk::Layer* lay = boundarySurfaceToLayer(surf,(*vols)[i], thickness); 
-        if (lay) {
-          if (!lays) lays = new std::vector<const Trk::Layer*>;
-	  lays->push_back( lay );
+	for (unsigned int ib2=ib+1; ib2< bounds.size(); ib2++ ){
+	  const Trk::Surface& surf2 = (bounds[ib2].getPtr())->surfaceRepresentation();
+          if ( fabs(surf.normal().dot(surf2.normal()))>0.99 ) {
+            double dist = (surf.center()-surf2.center()).dot(surf.normal());
+            if ( !bounds[ib].getPtr()->attachedVolume(surf.center(),surf.normal(),Trk::alongMomentum) && dist > tol && dist < thickness ) thickness = dist; 
+            if ( bounds[ib].getPtr()->attachedVolume(surf.center(),surf.normal(),Trk::alongMomentum) && dist < tol && dist > -thickness ) thickness = -dist; 
+	  }
+	}
+        if ( thickness > tol && thickness < 100 ) {
+	  const Trk::Layer* lay = boundarySurfaceToLayer(surf,(*vols)[i], thickness); 
+	  if (lay) {
+            lay->setLayerType(0);
+	    if (!lays) lays = new std::vector<const Trk::Layer*>;
+	    lays->push_back( lay );
+	  }
+	} else if ((*vols)[i]->volumeName().substr(0,3)=="ECT" ) {
+          const Trk::CylinderBounds* cyl = dynamic_cast<const Trk::CylinderBounds*> (&(surf.bounds()));
+          if (cyl) {
+	    const Trk::Layer* lay = boundarySurfaceToLayer(surf,(*vols)[i], 70.); 
+	    if (lay) {
+	      lay->setLayerType(0);
+	      if (!lays) lays = new std::vector<const Trk::Layer*>;
+	      lays->push_back( lay );
+	    }
+	  }
 	}
       }
     } else {
@@ -880,7 +965,7 @@ std::pair<std::vector<const Trk::Layer*>*,std::vector<const Trk::TrackingVolume*
       double thick = volumeToLayers(*temp_layers,(*vols)[i],0,(*vols)[i], mode);
       if ( m_layerThicknessLimit<0. || thick<m_layerThicknessLimit ) {
         if (!lays && temp_layers->size()) lays = new std::vector<const Trk::Layer*>;
-	for (unsigned int il=0;il<temp_layers->size();il++) lays->push_back((*temp_layers)[il]);
+	for (unsigned int il=0;il<temp_layers->size();il++) { (*temp_layers)[il]->setLayerType(0); lays->push_back((*temp_layers)[il]);}
       }
       else {
         if (!dVols) dVols = new std::vector<const Trk::TrackingVolume*>;
@@ -921,7 +1006,7 @@ double Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Lay
     }
   } 
   if (box) {
-    if (!checkVolume(vol)) std::cout << "problems in volume boundaries" << std::endl;
+    //if (!checkVolume(vol)) std::cout << "problems in volume boundaries" << std::endl;
     double hx = box->halflengthX();
     double hy = box->halflengthY();
     double hz = box->halflengthZ();
@@ -985,7 +1070,7 @@ double Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Lay
   }
   
   if(trap){
-    if (!checkVolume(vol)) std::cout << "problems in volume boundaries" << std::endl;
+    //if (!checkVolume(vol)) std::cout << "problems in volume boundaries" << std::endl;
     double hxmin = trap->minHalflengthX();
     double hxmax = trap->maxHalflengthX();
     double hy = trap->halflengthY();
@@ -1066,7 +1151,7 @@ double Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Lay
     double drad   = cyl->deltaRadius();
     double hz     = cyl->halflengthZ();
     if ( mode == 0 ) {
-      if ( hz < 2*drad ) {       // disc/ellipse surface
+      if ( hz < drad ) {       // disc/ellipse surface
 	const Trk::PlaneSurface*   plane = dynamic_cast<const Trk::PlaneSurface*> ((*cyl_surf)[0]);
 	const Trk::DiscSurface*     disc = dynamic_cast<const Trk::DiscSurface*> ((*cyl_surf)[0]);
 	//material
@@ -1142,7 +1227,7 @@ double Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Lay
         }
       } else {           // cylinder layer	
 	//material
-	Trk::MaterialProperties material(2*drad,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
+	Trk::MaterialProperties material(drad,mat->x0(),mat->zOverAtimesRho(),mat->averageZ(),mat->dEdX());  
 	Trk::HomogenousLayerMaterial some_mat(material, Trk::oppositePre);
 	thInX0 = material.thicknessInX0();  
         
@@ -1152,11 +1237,11 @@ double Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Lay
 	  Trk::Volume* subVol = createSubtractedVolume(pSurf->transform(), subtrVol);
 	  Trk::SubtractedCylinderSurface* subtrSurf = new Trk::SubtractedCylinderSurface(*pSurf, new Trk::VolumeExcluder(subVol),
 											 false );
-	  lays.push_back(new Trk::SubtractedCylinderLayer(subtrSurf,some_mat,2*drad));
+	  lays.push_back(new Trk::SubtractedCylinderLayer(subtrSurf,some_mat,drad));
 	} else {
 	  lays.push_back(new Trk::CylinderLayer(new HepTransform3D(vol->transform()), 
 						new Trk::CylinderBounds(radius,hz),
-						some_mat,2*drad));
+						some_mat,drad));
 	}
       }
     } else if ( mode == 1 ) {
@@ -1382,85 +1467,6 @@ const bool  Muon::MuonInertMaterialBuilder::checkVolume(const Trk::Volume* chVol
   }	  
   return true;
 }
-  /*
-  for( unsigned int i = 0; i< surf->size(); i+=2 ){
-    const Trk::PlaneSurface* plane = dynamic_cast<const Trk::PlaneSurface*> ((*surf)[i]);
-    //if(plane// <-allways true, but what if somebody put cylinder
-    //add the conditions for the cylinder and tube layers
-
-    const Trk::TrapezoidBounds* trd  = dynamic_cast<const Trk::TrapezoidBounds*> (&(plane->bounds()));
-    const Trk::RectangleBounds* rect = dynamic_cast<const Trk::RectangleBounds*> (&(plane->bounds()));
-    if(trd){
-      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition( trd->maxHalflengthX(), trd->halflengthY())));  
-      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition(-trd->maxHalflengthX(), trd->halflengthY())));  
-      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition( trd->minHalflengthX(),-trd->halflengthY())));  
-      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition(-trd->minHalflengthX(),-trd->halflengthY()))); 
-    }
-    if(rect){
-      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition( rect->halflengthX(), rect->halflengthY())));  
-      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition(-rect->halflengthX(), rect->halflengthY())));  
-      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition( rect->halflengthX(),-rect->halflengthY())));  
-      bd_apexes.push_back(plane->localToGlobal(Trk::LocalPosition(-rect->halflengthX(),-rect->halflengthY()))); 
-    }
-  }
-
-  
-  if(bd_apexes.size() !=12) {
-    if(msg) std::cerr<<"WRONG number of apexes. There is::"<<bd_apexes.size()<<"; should be::12"<<std::endl;
-    return false;
-  }
-
-  bool common_fst_sec = false;
-  for(int i = 0; i < n_apexes; i++){
-    for(int j = n_apexes; j < 2*n_apexes; j++){
-      if( (fabs( bd_apexes[i]->x() - bd_apexes[j]->x()) < tol) &&
-	  (fabs( bd_apexes[i]->y() - bd_apexes[j]->y()) < tol) &&
-	  (fabs( bd_apexes[i]->z() - bd_apexes[j]->z()) < tol)){
-	common_fst_sec = true; // boundaries 1. & 2. has got common apex, check if it is common wiht 3. boundary
-	for(unsigned int k = 2*n_apexes; k < bd_apexes.size(); k++){
-	  if( (fabs( bd_apexes[i]->x() - bd_apexes[k]->x()) < tol) &&
-	      (fabs( bd_apexes[i]->y() - bd_apexes[k]->y()) < tol) &&
-	      (fabs( bd_apexes[i]->z() - bd_apexes[k]->z()) < tol)){
-	    //if(msg) std::cout<<"Volume decomposition is correct"<<std::endl;
-	    return true;
-	  }
-	}
-      }
-    }
-  }
-  if(common_fst_sec) {
-    if(msg) std::cout<<"Surf[4] has wrong orientation"<<std::endl;
-    return false;
-  }
-  else{
-    //if 1. & 2. doesn't have common apexes check for 1. & 3. 
-    int ap_counter = 0;
-    for(int i = 0; i < n_apexes; i++){
-      for(int k = 2*n_apexes; k < 3*n_apexes; k++){
-	if( (fabs( bd_apexes[i]->x() - bd_apexes[k]->x()) < tol) &&
-	    (fabs( bd_apexes[i]->y() - bd_apexes[k]->y()) < tol) &&
-	    (fabs( bd_apexes[i]->z() - bd_apexes[k]->z()) < tol)) ap_counter++;
-      }
-    }
-    if(ap_counter == 2){
-      //  if(msg) std::cout<<"\t1&3 has got "<<ap_counter<<" common apexes"<<std::endl<<"\tSurf[2] has wrong orientation"<<std::endl;
-      return false;
-    }
-  
-    //if 1. & 2. and 1.& 3. don't have common apexes check for 2. & 3.
-    for(int j = n_apexes; j < 2*n_apexes; j++){
-      for(int k = 2*n_apexes; k < 3*n_apexes; k++){
-	if( (fabs( bd_apexes[j]->x() - bd_apexes[k]->x()) < tol) &&
-	    (fabs( bd_apexes[j]->y() - bd_apexes[k]->y()) < tol) &&
-	    (fabs( bd_apexes[j]->z() - bd_apexes[k]->z()) < tol)) ap_counter++;
-      }
-    }
-    if(ap_counter == 2){
-      // if(msg) std::cout<<"\t2&3 has got "<<ap_counter<<" common apexes"<<std::endl<<"\tSurf[0] has wrong orientation"<<std::endl;
-      return false;
-    }
-  }
-  return false;*/
 
 void  Muon::MuonInertMaterialBuilder::splitShape(const GeoShape* sh, std::vector<const GeoShape*>& shapes) const
 {
@@ -1474,4 +1480,209 @@ void  Muon::MuonInertMaterialBuilder::splitShape(const GeoShape* sh, std::vector
     shapes.push_back(sh);
   }
   return;
+}
+
+void  Muon::MuonInertMaterialBuilder::getVolumeFractions( ) const
+{
+  m_volFractions.clear();
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTBevelledLongTubeIn", std::pair<double,double> (1.20078e+09,0.9367) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTBevelledLongTubeOut", std::pair<double,double> (1.20078e+09,0.9566) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTVoussoirAttWing", std::pair<double,double> (2.37221e+09,0.0073) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTBevelledShortTube", std::pair<double,double> (1.78598e+08,0.8698) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTBevelledCornerTube", std::pair<double,double> (6.34357e+07,0.6432) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTRibEnvelope", std::pair<double,double> (5.09211e+08,0.1497) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTWingRib", std::pair<double,double> (5.60805e+08,0.0479) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTVoussoirAttachment", std::pair<double,double> (2.036e+08,0.031) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTColdLongSegment", std::pair<double,double> (5.95526e+09,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTColdShortSegment", std::pair<double,double> (8.37822e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTColdCornerSegment", std::pair<double,double> (1.69662e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTColdRib", std::pair<double,double> (2.4552e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTVoussoir", std::pair<double,double> (1.47921e+09,0.307) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("EdgeBTVoussoir", std::pair<double,double> (2.0092e+09,0.0509) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("HeadBTVoussoir", std::pair<double,double> (3.54772e+08,0.5719) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTStrut", std::pair<double,double> (2.0905e+09,0.1766) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTWingStrut", std::pair<double,double> (1.56065e+09,0.0489) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("BTCryoring", std::pair<double,double> (2.00278e+08,0.9803) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("Rail", std::pair<double,double> (8.01099e+09,0.4905) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ECTEndplateStdSegment", std::pair<double,double> (9.42675e+08,0.8750) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ECTEndplateRailSegment6", std::pair<double,double> (9.42675e+08,0.8748) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ECTEndplateRailSegment8", std::pair<double,double> (9.42675e+08,0.8736) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ECTWallStdSegment", std::pair<double,double> (5.59807e+10,0) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ECTWallRailSegment", std::pair<double,double> (5.59807e+10,0) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ECTCentralTube", std::pair<double,double> (2.90421e+09,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ECTStaytube", std::pair<double,double> (2.44805e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ECTConductorBox", std::pair<double,double> (5.3088e+09,0.9619) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ECTKeystoneBox", std::pair<double,double> (1.91453e+10,0.0569) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ECTTower", std::pair<double,double> (1.55166e+11,0.0422) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ECTBottomTower", std::pair<double,double> (2.06925e+08,0.7120) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ECTBackTowerWall", std::pair<double,double> (9.25155e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ECTServiceTurretTower", std::pair<double,double> (4.72478e+10,0.0108) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("StdFeetSidePlate", std::pair<double,double> (2.72438e+09,0.206) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("StdFeetLargePlate", std::pair<double,double> (1.31733e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("StdFeetCoverPlate", std::pair<double,double> (2.24968e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("StdFeetInnerPlate", std::pair<double,double> (5.34198e+07,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("StdFeetBottomPlate", std::pair<double,double> (1.1682e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ExtrFeetSidePlate", std::pair<double,double> (2.83923e+09,0.1966) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ExtrFeetLargePlate", std::pair<double,double> (1.38125e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ExtrFeetInclinedPlate", std::pair<double,double> (7.11822e+07,0.8284) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ExtrFeetCoverPlate", std::pair<double,double> (3.02684e+08,0.9619) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ExtrFeetInnerPlate", std::pair<double,double> (7.41336e+07,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ExtrFeetInnerTopVoussPlate", std::pair<double,double> (5.695e+07,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ExtrFeetBottomPlate", std::pair<double,double> (1.57176e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("StdFeetGirder01", std::pair<double,double> (9.98861e+08,0.1605) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("StdFeetGirder02", std::pair<double,double> (1.26939e+09,0.1545) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("StdFeetGirder03", std::pair<double,double> (1.40019e+09,0.1517) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("StdFeetRailSupport", std::pair<double,double> (5.84777e+08,0.5076) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ExtrFeetMinusRailSupport", std::pair<double,double> (8.1122e+08,0.4129) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ExtrFeetPlusRailSupport", std::pair<double,double> (7.9211e+08,0.4238) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("StdFeetVoussoir", std::pair<double,double> (1.26638e+09,0.3078) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ConnFeetVoussoir", std::pair<double,double> (1.9295e+08,0.4927) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("DiskShieldingFrontDisk", std::pair<double,double> (1.05675e+09,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("DiskShieldingBackDisk", std::pair<double,double> (4.89468e+09,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("DiskShieldingPlugsExtension", std::pair<double,double> (9.07988e+06,0) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("DiskShieldingPlugs", std::pair<double,double> (1.21083e+09,0.8779) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("DiskShieldingTubeBackDisk", std::pair<double,double> (7.18286e+07,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("DiskShieldingMainTube", std::pair<double,double> (6.46201e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("DiskShieldingBrassCone", std::pair<double,double> (1.17168e+08,0.4441) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("DiskShieldingPolyCone", std::pair<double,double> (2.86637e+07,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("DiskShieldingLeadCone", std::pair<double,double> (1.2051e+07,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("DiskShieldingHubBrassCone", std::pair<double,double> (7.90909e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("DiskShieldingPolyCladding", std::pair<double,double> (2.59232e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("DiskShieldingLeadCladding", std::pair<double,double> (1.17697e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ToroidShieldingOuterPlugs", std::pair<double,double> (4.5584e+09,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ToroidShieldingInnerPlugs", std::pair<double,double> (3.47561e+09,0.8579) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ToroidShieldingPolyRingsTube", std::pair<double,double> (9.50078e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ToroidShieldingPolyRingsCone", std::pair<double,double> (1.28304e+07,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ForwardShieldingPlug", std::pair<double,double> (1.50796e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ForwardShieldingMainCylinder", std::pair<double,double> (5.25941e+10,0.9762) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ForwardShieldingOctogon", std::pair<double,double> (4.86944e+10,0.4814) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ForwardShieldingTX1STMTube", std::pair<double,double> (8.63938e+08,1) ) );
+m_volFractions.push_back(std::pair<std::string,std::pair<double,double> > ("ForwardShieldingTX1STMCone", std::pair<double,double> (6.28319e+08,1) ) );
+  return;
+}
+
+void Muon::MuonInertMaterialBuilder::removeTV( const Trk::Volume* vol ) const
+{ 
+  const Trk::CombinedVolumeBounds* comb = dynamic_cast<const Trk::CombinedVolumeBounds*> (&(vol->volumeBounds()));
+  const Trk::SubtractedVolumeBounds* sub  = dynamic_cast<const Trk::SubtractedVolumeBounds*> (&(vol->volumeBounds()));
+
+  if (comb) {
+    removeTV(comb->first());
+    removeTV(comb->second());
+  } else if (sub) {
+    removeTV(sub->outer());
+    removeTV(sub->inner());
+  } else {
+    delete vol;
+  }
+  return;
+}
+
+double Muon::MuonInertMaterialBuilder::thinDim( const Trk::Volume*& vol, double maxD, double fraction ) const
+{ 
+  double dim = -1.;
+ 
+  const Trk::CylinderVolumeBounds* cylBounds = dynamic_cast<const Trk::CylinderVolumeBounds*> (&(vol->volumeBounds()));
+  const Trk::CuboidVolumeBounds*   cubBounds = dynamic_cast<const Trk::CuboidVolumeBounds*>   (&(vol->volumeBounds()));
+  const Trk::TrapezoidVolumeBounds* trdBounds = dynamic_cast<const Trk::TrapezoidVolumeBounds*> (&(vol->volumeBounds()));
+	  
+  if (cylBounds) {
+    double z = cylBounds->halflengthZ(); 
+    double ri = cylBounds->innerRadius(); 
+    double ro = cylBounds->outerRadius(); 
+    if ( z <= (ro-ri) ) {
+      if ( z < maxD ) return z;
+      else {
+        if (m_resizeEnvelope) {
+	  HepTransform3D* transf = new HepTransform3D(vol->transform());
+	  delete vol;
+	  vol = new Trk::Volume(transf,new Trk::CylinderVolumeBounds(ri,ro,fraction*z));
+	}
+        return z;
+      }
+    } else {
+      if ( ro-ri < maxD ) return (ro-ri);
+      else  {
+        if (m_resizeEnvelope) {
+	  HepTransform3D* transf = new HepTransform3D(vol->transform());
+	  delete vol;
+	  vol = new Trk::Volume(transf,new Trk::CylinderVolumeBounds(ri,ri+fraction*(ro-ri),z));
+        }
+        return (ro-ri);
+      } 
+    }
+  }
+
+  if (cubBounds ) {
+    double x =  cubBounds->halflengthX();
+    double y =  cubBounds->halflengthY(); 
+    double z = 	cubBounds->halflengthZ();
+
+    if ( z<=x && z<=y ) {
+      if ( z < maxD ) return z;
+      else {
+        if (m_resizeEnvelope) {
+	  HepTransform3D* transf = new HepTransform3D(vol->transform());
+	  delete vol;
+	  vol = new Trk::Volume(transf,new Trk::CuboidVolumeBounds(x,y,fraction*z));
+	}
+        return z;
+      }
+    } 
+
+    if ( y<=x && y<=z ) {
+      if ( y < maxD ) return y;
+      else {
+        if (m_resizeEnvelope) {
+	  HepTransform3D* transf = new HepTransform3D(vol->transform());
+	  delete vol;
+	  vol = new Trk::Volume(transf,new Trk::CuboidVolumeBounds(x,fraction*y,z));
+	}
+        return y;
+      }
+    }
+ 
+    if ( x < maxD ) return x;
+    else {
+      if (m_resizeEnvelope) {
+	HepTransform3D* transf = new HepTransform3D(vol->transform());
+	delete vol;
+	vol = new Trk::Volume(transf,new Trk::CuboidVolumeBounds(fraction*x,y,z));
+      }
+      return x;
+    }
+  }
+
+  if (trdBounds ) {
+    double y =  trdBounds->halflengthY(); 
+    double z = 	trdBounds->halflengthZ();
+
+    if ( z<=y ) {
+      if ( z < maxD ) return z;
+      else {
+        if (m_resizeEnvelope) {
+	  HepTransform3D* transf = new HepTransform3D(vol->transform());
+	  delete vol;
+	  vol = new Trk::Volume(transf,new Trk::TrapezoidVolumeBounds(trdBounds->minHalflengthX(),trdBounds->maxHalflengthX(),
+								      y,fraction*z));
+	}
+        return z;
+      }
+    } 
+
+    if ( y<z ) {
+      if ( y < maxD ) return y;
+      else {
+        if (m_resizeEnvelope) {
+	  HepTransform3D* transf = new HepTransform3D(vol->transform());
+	  delete vol;
+	  vol = new Trk::Volume(transf,new Trk::TrapezoidVolumeBounds(trdBounds->minHalflengthX(),trdBounds->maxHalflengthX(),
+								      fraction*y,z));
+	}
+        return y;
+      }
+    }
+  }
+   
+  return dim;
 }

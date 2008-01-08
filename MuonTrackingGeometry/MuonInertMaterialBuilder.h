@@ -24,7 +24,6 @@
 #include "TrkVolumes/BevelledCylinderVolumeBounds.h"
 #include "TrkVolumes/CylinderVolumeBounds.h"
 
-
 namespace Trk {
  class TrackingGeometry;
  class TrackingVolume;
@@ -73,27 +72,24 @@ namespace Muon {
 
     private:
 
-//        void checkObject( const Trk::TrackingVolume* objs) const;
-      void checkObject( const std::vector<const Trk::DetachedTrackingVolume*>*trkVolumes) const;
       const void printInfo(const GeoVPhysVol* pv) const;
       const void printChildren(const GeoVPhysVol* pv) const;
       const void decodeShape(const GeoShape* sh) const;
       Trk::Volume* translateGeoShape(const GeoShape* sh, HepTransform3D* tr) const;
       const Trk::TrackingVolume* simplifyShape(const Trk::TrackingVolume* tr) const;
-      const Trk::Volume* findEnvelope(const Trk::TrackingVolume* tr) const;
       const Trk::Layer* boundarySurfaceToLayer(const Trk::Surface&, const Trk::MaterialProperties*, double) const;
       Trk::Volume* createSubtractedVolume(const HepTransform3D& tr, Trk::Volume* subtrVol) const;
       void  splitShape(const GeoShape* sh, std::vector<const GeoShape*>& shapes) const;
 
       std::pair<std::vector<const Trk::Layer*>*, std::vector<const Trk::TrackingVolume*>* >
-	translateToLayers(const std::vector<const Trk::TrackingVolume*>* vols) const;
+	translateToLayers(const std::vector<const Trk::TrackingVolume*>* vols, int mode) const;
+      std::vector<const Trk::Layer*>*  translateBoundariesToLayers(const Trk::Volume* vol, const Trk::TrackingVolume* trVol, double) const;
       double volumeToLayers(std::vector<const Trk::Layer*>& lays, const Trk::Volume* vol, 
 			  Trk::Volume* subtrVol, const Trk::MaterialProperties* mat, int mode) const;
       const bool checkVolume(const Trk::Volume*) const;
-
-      Trk::TrapezoidVolumeBounds* decodeColdSegment(const GeoShape* sh) const;
-      Trk::VolumeBounds* decodeECTSegment(const GeoShape* sh) const;
-      Trk::BevelledCylinderVolumeBounds* decodeBevelledCylinder(const GeoShape* sh) const;
+      void getVolumeFractions() const;
+      void removeTV(const Trk::Volume*) const;
+      double thinDim( const Trk::Volume*& vol, double maxD, double fraction ) const;
 
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
@@ -101,6 +97,7 @@ namespace Muon {
       bool                                m_simplifyToLayers;              // switch geometry simplification on/off 
       double                              m_layerThicknessLimit;      // maximal thickness (in X0)   
       bool                                m_debugMode;                   // build layers & dense volumes in parallel - double counting material !!! 
+      bool                                m_resizeEnvelope;             // resize envelope or dilute material 
       bool                                m_buildBT;                    // build barrel toroids 
       bool                                m_buildECT;                   // build endcap toroids 
       bool                                m_buildFeets;                 // build feets 
@@ -114,6 +111,9 @@ namespace Muon {
 
 //mw
       Trk::GeoMaterialConverter*           m_materialConverter;          //!< material converter
+
+      mutable std::vector<std::pair<std::string,std::pair<double,double> > >   m_volFractions;
+
     };
 
 

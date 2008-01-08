@@ -69,6 +69,7 @@ namespace Muon {
       void getZParts() const;
       void getPhiParts() const;
       void getHParts() const;
+      double calculateVolume(const Trk::Volume*) const;
            
       ToolHandle<Trk::IMagneticFieldTool>                  m_magFieldTool;                  //!< Tracking Interface to Magnetic Field
 
@@ -108,6 +109,7 @@ namespace Muon {
       int                                 m_outerEndcapEtaPartition;
       int                                 m_phiPartition;
       bool                                m_adjustStatic;
+      bool                                m_static3d;
       bool                                m_blendInertMaterial; 
       mutable double                      m_alignTolerance;
 

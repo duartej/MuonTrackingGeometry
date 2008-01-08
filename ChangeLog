@@ -1,3 +1,8 @@
+2008-01-08 Sarka Todorova <sarka.todorova@cern.ch>
+	* code simplified inert material (optional)
+	* add various options (resize,rescale, blend material into static volume material properties), not all have public switch yet
+	* tagged as MuonTrackingGeometry-00-01-00
+
 2007-12-29 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix memory leaks in MSB/MSTB
 	* fix material scaling for station layer representation

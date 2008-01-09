@@ -1,3 +1,8 @@
+2008-01-09 Sarka Todorova <sarka.todorova@cern.ch>
+	* change gluing order in MTGB (temporary solution, better to fix it in TrackingVolumeHelper )
+	* 3D partition runs into infinite loops, probably due to bug in BevelledCylinderVolumeBounds, use 2D partition as default till fixed
+	* tagged as MuonTrackingGeometry-00-01-01
+
 2008-01-08 Sarka Todorova <sarka.todorova@cern.ch>
 	* code simplified inert material (optional)
 	* add various options (resize,rescale, blend material into static volume material properties), not all have public switch yet

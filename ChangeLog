@@ -1,3 +1,7 @@
+2008-01-15 Sarka Todorova <sarka.todorova@cern.ch>
+	* added configuration file; to be used both by muon-standalone and combined geometry
+	* tagged as MuonTrackingGeometry-00-01-02
+
 2008-01-09 Sarka Todorova <sarka.todorova@cern.ch>
 	* change gluing order in MTGB (temporary solution, better to fix it in TrackingVolumeHelper )
 	* 3D partition runs into infinite loops, probably due to bug in BevelledCylinderVolumeBounds, use 2D partition as default till fixed

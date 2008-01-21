@@ -1,3 +1,7 @@
+2008-01-21 Sarka Todorova <sarka.todorova@cern.ch>
+	* configuration python file
+	* tagged as MuonTrackingGeometry-00-01-03
+
 2008-01-15 Sarka Todorova <sarka.todorova@cern.ch>
 	* added configuration file; to be used both by muon-standalone and combined geometry
 	* tagged as MuonTrackingGeometry-00-01-02

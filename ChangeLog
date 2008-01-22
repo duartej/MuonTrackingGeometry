@@ -1,3 +1,7 @@
+2008-01-22 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix configuration python file
+	* tagged as MuonTrackingGeometry-00-01-04
+
 2008-01-21 Sarka Todorova <sarka.todorova@cern.ch>
 	* configuration python file
 	* tagged as MuonTrackingGeometry-00-01-03

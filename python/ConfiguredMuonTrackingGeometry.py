@@ -1,4 +1,6 @@
 
+from AthenaCommon.AppMgr import ToolSvc
+
 # muon active/passive geometry setup
 from MuonTrackingGeometry.MuonTrackingGeometryConf import Muon__MuonStationBuilder
 MuonStationBuilder= Muon__MuonStationBuilder(name = 'MuonStationBuilder',

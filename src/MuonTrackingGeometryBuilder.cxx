@@ -69,7 +69,9 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_trackingVolumeArrayCreator("Trk::TrackingVolumeArrayCreator/TrackingVolumeArrayCreator"),
   m_trackingVolumeHelper("Trk::TrackingVolumeHelper/TrackingVolumeHelper"),
   m_trackingVolumeDisplayer("Trk::TrackingVolumeDisplayer/TrackingVolumeDisplayer"),
+  m_tvSvc("Trk::TrackingVolumesSvc/TrackingVolumesSvc",n),
   m_muonSimple(false),
+  m_loadMSentry(false),
   m_muonActive(false),
   m_muonInert(false),
   m_innerBarrelRadius(4300.),
@@ -98,6 +100,7 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   declareInterface<Trk::IGeometryBuilder>(this);
 
   declareProperty("SimpleMuonGeometry",               m_muonSimple);  
+  declareProperty("LoadMSEntry",                      m_loadMSentry);  
   declareProperty("BuildActiveMaterial",              m_muonActive);  
   declareProperty("BuildInertMaterial",               m_muonInert);
   declareProperty("MagneticFieldTool",                m_magFieldTool);  
@@ -180,6 +183,13 @@ StatusCode Muon::MuonTrackingGeometryBuilder::initialize()
       } else
           log << MSG::INFO << "Retrieved tool " << m_trackingVolumeArrayCreator << endreq;
     }
+
+    // Retrieve the tracking volumes Svc (if configured) -------------------------------------------    
+    if (m_tvSvc.retrieve().isFailure()) {
+      log << MSG::WARNING << "Failed to load " << m_tvSvc << " switch to default volume size" << endreq;
+      m_loadMSentry = false;
+    }
+
         
     log << MSG::INFO  << name() <<" initialize() successful" << endreq;    
     
@@ -377,8 +387,22 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
     }
     
   } else {     // no input, create the enclosed volume
-    enclosedBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
-						   m_barrelZ);
+    if (m_loadMSentry && m_tvSvc ) {
+      const Trk::CylinderVolumeBounds* cylMS = dynamic_cast<const Trk::CylinderVolumeBounds*> (&(m_tvSvc->volume(ITrackingVolumesSvc::MuonSpectrometerEntryLayer).volumeBounds()));
+      if ( cylMS ) {
+        double rMS = cylMS->outerRadius();
+        double zMS = cylMS->halflengthZ();
+        if ( rMS <= m_innerBarrelRadius && zMS <= m_barrelZ ) {
+	  enclosedBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
+							 m_barrelZ);
+	} else {
+	  log << MSG::INFO << name() << " input MSEntrance size (R,Z:"<< rMS <<","<<zMS<<") clashes with MS material, switch to default values (R,Z:" << m_innerBarrelRadius <<","<< m_barrelZ << ")" << endreq;
+	}
+      }
+    }
+    
+    if (!enclosedBounds) enclosedBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
+									m_barrelZ);
     enclosed = new Trk::TrackingVolume(new HepTransform3D(),
 				       enclosedBounds,
 				       m_muonMaterial,

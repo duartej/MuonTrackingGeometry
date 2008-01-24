@@ -1656,6 +1656,8 @@ double Muon::MuonInertMaterialBuilder::thinDim( const Trk::Volume*& vol, double 
   if (trdBounds ) {
     double y =  trdBounds->halflengthY(); 
     double z = 	trdBounds->halflengthZ();
+    double minX = trdBounds->minHalflengthX();
+    double maxX = trdBounds->maxHalflengthX();
 
     if ( z<=y ) {
       if ( z < maxD ) return z;
@@ -1663,8 +1665,7 @@ double Muon::MuonInertMaterialBuilder::thinDim( const Trk::Volume*& vol, double 
         if (m_resizeEnvelope) {
 	  HepTransform3D* transf = new HepTransform3D(vol->transform());
 	  delete vol;
-	  vol = new Trk::Volume(transf,new Trk::TrapezoidVolumeBounds(trdBounds->minHalflengthX(),trdBounds->maxHalflengthX(),
-								      y,fraction*z));
+	  vol = new Trk::Volume(transf,new Trk::TrapezoidVolumeBounds( minX, maxX, y, fraction*z));
 	}
         return z;
       }
@@ -1676,8 +1677,7 @@ double Muon::MuonInertMaterialBuilder::thinDim( const Trk::Volume*& vol, double 
         if (m_resizeEnvelope) {
 	  HepTransform3D* transf = new HepTransform3D(vol->transform());
 	  delete vol;
-	  vol = new Trk::Volume(transf,new Trk::TrapezoidVolumeBounds(trdBounds->minHalflengthX(),trdBounds->maxHalflengthX(),
-								      fraction*y,z));
+	  vol = new Trk::Volume(transf,new Trk::TrapezoidVolumeBounds( minX, maxX, fraction*y, z));
 	}
         return y;
       }

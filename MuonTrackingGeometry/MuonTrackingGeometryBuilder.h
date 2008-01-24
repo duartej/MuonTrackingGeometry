@@ -7,11 +7,13 @@
 
 //Trk
 #include "TrkDetDescrInterfaces/IGeometryBuilder.h"
+#include "TrkDetDescrInterfaces/ITrackingVolumesSvc.h"
 #include "TrkGeometry/MagneticFieldProperties.h"
 #include "TrkGeometry/MaterialProperties.h"
 // Gaudi
 #include "GaudiKernel/AlgTool.h"
 #include "GaudiKernel/ToolHandle.h"
+#include "GaudiKernel/ServiceHandle.h"
 #include "MuonTrackingGeometry/MuonStationBuilder.h"
 #include "MuonTrackingGeometry/MuonInertMaterialBuilder.h"
 
@@ -83,8 +85,11 @@ namespace Muon {
 
       ToolHandle<Trk::ITrackingVolumeDisplayer>            m_trackingVolumeDisplayer;       //!< Displayer Tool to create TrackingVolumes
 
+      ServiceHandle<ITrackingVolumesSvc>                   m_tvSvc;       //!< service to provide input volume size
+
    
       bool                                m_muonSimple;
+      bool                                m_loadMSentry;
       bool                                m_muonActive;
       bool                                m_muonInert;
 

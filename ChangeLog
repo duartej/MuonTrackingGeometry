@@ -1,3 +1,8 @@
+2008-01-24 Sarka Todorova <sarka.todorova@cern.ch>
+	* add option to load MSEntry from TrackingVolumesSvc
+	* bugfix in MIMB (volume bounds called after delete )
+	* tagged as MuonTrackingGeometry-00-01-05
+
 2008-01-22 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix configuration python file
 	* tagged as MuonTrackingGeometry-00-01-04

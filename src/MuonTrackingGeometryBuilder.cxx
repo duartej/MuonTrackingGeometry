@@ -184,10 +184,12 @@ StatusCode Muon::MuonTrackingGeometryBuilder::initialize()
           log << MSG::INFO << "Retrieved tool " << m_trackingVolumeArrayCreator << endreq;
     }
 
-    // Retrieve the tracking volumes Svc (if configured) -------------------------------------------    
-    if (m_tvSvc.retrieve().isFailure()) {
-      log << MSG::WARNING << "Failed to load " << m_tvSvc << " switch to default volume size" << endreq;
-      m_loadMSentry = false;
+    if (m_loadMSentry ) {
+      // Retrieve the tracking volumes Svc (if configured) -------------------------------------------    
+      if (m_tvSvc.retrieve().isFailure()) {
+	log << MSG::WARNING << "Failed to load " << m_tvSvc << " switch to default volume size" << endreq;
+	m_loadMSentry = false;
+      }
     }
 
         

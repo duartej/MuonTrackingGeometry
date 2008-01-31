@@ -836,7 +836,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
            currX = transfc.getTranslation()[0];
            if ( fabs(transfc.getTranslation()[1])>0.001) {
              // code 2.corrdinate shift
-             double ref =  transfc.getTranslation()[2]+10e5;
+             double ref =  transfc.getTranslation()[2]+1e5;
              ref += int(1000*transfc.getTranslation()[1])*10e6; 
 	     x_ref.push_back( ref ) ;
 	   } else {
@@ -855,7 +855,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
 	  if ( fabs(transfc.getTranslation()[1])>0.001) {
 	    // code 2.corrdinate shift
             double sign = (transfc.getTranslation()[1]>0.) ? 1. : -1.;
-	    double ref =  transfc.getTranslation()[2]+sign*10e5;            
+	    double ref =  transfc.getTranslation()[2]+sign*1e5;            
 	    ref += int(1000*transfc.getTranslation()[1])*10e6; 
 	    x_ref.insert( rIter,ref ) ;
 	  } else {

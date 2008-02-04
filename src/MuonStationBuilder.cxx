@@ -245,7 +245,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
               if (msTypeName.substr(0,1)=="C") {
                 eta = 1;
 		if (transf.getTranslation().z() < 0 ) eta = 0;
-		double phic = transf.getTranslation().phi();  
+		double phic = transf.getTranslation().phi() + 0.1 ;  
                 phi = static_cast<int> (phic<0 ? 4*phic/M_PI+8 : 4*phic/M_PI);
               } 
 	      if (msTypeName.substr(0,1)=="T") {

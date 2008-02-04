@@ -1,4 +1,8 @@
 2008-01-31 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix the identification of CSC stations
+	* tagged as MuonTrackingGeometry-00-01-08
+
+2008-01-31 Sarka Todorova <sarka.todorova@cern.ch>
 	* modify coding of secondary coordinate for stations with cutouts (BOG)
 	* tagged as MuonTrackingGeometry-00-01-07
 

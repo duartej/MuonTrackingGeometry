@@ -592,8 +592,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 											  "All::Container::CompleteDetector");
 //
    Trk::TrackingGeometry* trackingGeometry = new Trk::TrackingGeometry(detector,Trk::globalSearch);
-   log << MSG::INFO << name() << " print volume hierarchy" << endreq;
-   trackingGeometry->printVolumeHierarchy(log);
+   //log << MSG::INFO << name() << " print volume hierarchy" << endreq;
+   //trackingGeometry->printVolumeHierarchy(log);
 
    log << MSG::INFO  << name() <<" returning tracking geometry " << endreq;    
    return trackingGeometry;  

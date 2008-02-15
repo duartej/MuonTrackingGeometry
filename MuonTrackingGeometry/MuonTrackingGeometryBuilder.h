@@ -8,6 +8,7 @@
 //Trk
 #include "TrkDetDescrInterfaces/IGeometryBuilder.h"
 #include "TrkDetDescrInterfaces/ITrackingVolumesSvc.h"
+#include "TrkDetDescrUtils/GeometrySignature.h"
 #include "TrkGeometry/MagneticFieldProperties.h"
 #include "TrkGeometry/MaterialProperties.h"
 // Gaudi
@@ -56,6 +57,9 @@ namespace Muon {
       /** TrackingGeometry Interface methode */
       const Trk::TrackingGeometry* trackingGeometry(const Trk::TrackingVolume* tvol = 0) const; 
 
+      /** The unique signature */
+      Trk::GeometrySignature geometrySignature() const { return Trk::MS; }
+      
     private:
       /** Private method to find z/phi span of detached volumes */
       const Span* findVolumeSpan(const Trk::VolumeBounds* volBounds, HepTransform3D transf, double zTol, double phiTol) const;

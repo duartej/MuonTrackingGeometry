@@ -1,3 +1,7 @@
+2008-02-15 Sarka Todorova <sarka.todorova@cern.ch>
+	* define "MuonSpectrometerEntrance" volume in combined tracking geometry
+	* tagged as MuonTrackingGeometry-00-01-10
+
 2008-02-08 Sarka Todorova <sarka.todorova@cern.ch>
 	* auppress printout of geometry volume tree
 	* tagged as MuonTrackingGeometry-00-01-09

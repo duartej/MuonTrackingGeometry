@@ -286,6 +286,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
   Trk::CylinderVolumeBounds* posOuterShieldBounds = 0;
 // if input, redefine dimensions to fit expected MS entry 
   if (tvol){
+    bool msEntryDefined = false;
+    if ( tvol->volumeName() == "MuonSpectrometerEntrance" ) msEntryDefined = true; 
     // get dimensions
     const Trk::CylinderVolumeBounds* enclosedDetectorBounds 
       = dynamic_cast<const Trk::CylinderVolumeBounds*>(&(tvol->volumeBounds()));
@@ -381,9 +383,12 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 	const Trk::TrackingVolume* barrelZP = m_trackingVolumeHelper->glueTrackingVolumeArrays(*barrelR, Trk::positiveFaceXY,
 											       *barrelZPBuffer,Trk::negativeFaceXY, 
 											       "All::Gaps::BarrelZP");    
+        // set name
+	std::string nameEncl = msEntryDefined ? "All::Gaps::Barrel" : "MuonSpectrometerEntrance" ;
 	enclosed = m_trackingVolumeHelper->glueTrackingVolumeArrays(*barrelZP, Trk::negativeFaceXY,
 								    *barrelZMBuffer,Trk::positiveFaceXY, 
-								    "All::Gaps::Barrel");    
+								    nameEncl);    
+ 
       } else enclosed = barrelR;
       
     }

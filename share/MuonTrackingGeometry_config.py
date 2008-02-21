@@ -21,8 +21,8 @@ MuonTrackingGeometryBuilder= Muon__MuonTrackingGeometryBuilder(name = 'MuonTrack
 
 ToolSvc += MuonTrackingGeometryBuilder
 ToolSvc.MuonTrackingGeometryBuilder.BuildActiveMaterial = True
-ToolSvc.MuonTrackingGeometryBuilder.BuildInertMaterial = True
+ToolSvc.MuonTrackingGeometryBuilder.BuildInertMaterial = False
 ToolSvc.MuonTrackingGeometryBuilder.AdjustStatic = True
-ToolSvc.MuonTrackingGeometryBuilder.StaticPartition3D = True
+ToolSvc.MuonTrackingGeometryBuilder.StaticPartition3D = False
 
 print MuonTrackingGeometryBuilder

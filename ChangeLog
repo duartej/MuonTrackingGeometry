@@ -1,3 +1,7 @@
+2008-02-21 Sarka Todorova <sarka.todorova@cern.ch>
+	* switch to simpler default configuration (active material only, 2D partition)
+	* tagged as MuonTrackingGeometry-00-02-01
+
 2008-02-16 Andreas Salzburger < Andreas.Salzburger - at - cern.ch >
         * add signature
 	* tagged as MuonTrackingGeometry-00-02-00

@@ -21,9 +21,9 @@ ToolSvc += MuonInertMaterialBuilder
 from MuonTrackingGeometry.MuonTrackingGeometryConf import Muon__MuonTrackingGeometryBuilder
 MuonTrackingGeometryBuilder= Muon__MuonTrackingGeometryBuilder(name = 'MuonTrackingGeometryBuilder',
                                                                 BuildActiveMaterial = True,
-                                                                BuildInertMaterial = True,
+                                                                BuildInertMaterial = False,
                                                                 AdjustStatic = True,
-                                                                StaticPartition3D = True )
+                                                                StaticPartition3D = False )
 
 ToolSvc += MuonTrackingGeometryBuilder
 

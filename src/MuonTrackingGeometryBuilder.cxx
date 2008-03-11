@@ -423,14 +423,14 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
   negDiskShieldBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
 						      0.5*(m_diskShieldZ - m_barrelZ) );
   Hep3Vector negDiskShieldPosition(0.,0.,-0.5*(m_diskShieldZ+m_barrelZ));
-  const Trk::Volume* negDiskVol= new Trk::Volume(new HepTransform3D(Trk::s_idRotation,negDiskShieldPosition),negDiskShieldBounds);
-  negDiskShield = processVolume(negDiskVol,1,1,"Muons::Detectors::NegativeDiskShield");
+  Trk::Volume negDiskVol(new HepTransform3D(Trk::s_idRotation,negDiskShieldPosition),negDiskShieldBounds);
+  negDiskShield = processVolume(&negDiskVol,1,1,"Muons::Detectors::NegativeDiskShield");
 
   posDiskShieldBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
 						      0.5*(m_diskShieldZ - m_barrelZ) );
   Hep3Vector posDiskShieldPosition(0.,0., 0.5*(m_diskShieldZ+m_barrelZ));
-  const Trk::Volume* posDiskVol= new Trk::Volume(new HepTransform3D(Trk::s_idRotation,posDiskShieldPosition),posDiskShieldBounds);
-  posDiskShield = processVolume(posDiskVol,1,1,"Muons::Detectors::PositiveDiskShield");
+  Trk::Volume posDiskVol(new HepTransform3D(Trk::s_idRotation,posDiskShieldPosition),posDiskShieldBounds);
+  posDiskShield = processVolume(&posDiskVol,1,1,"Muons::Detectors::PositiveDiskShield");
 	   
   log << MSG::INFO << name() << "glue enclosed  + disk shields" << endreq;
   const Trk::TrackingVolume* centralP = m_trackingVolumeHelper->glueTrackingVolumeArrays(*enclosed, Trk::positiveFaceXY,
@@ -447,12 +447,12 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
   barrelBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
 					       m_outerBarrelRadius,
 					       m_diskShieldZ);
-  const Trk::Volume* barrelVol= new Trk::Volume(new HepTransform3D(),barrelBounds);
+  Trk::Volume barrelVol(new HepTransform3D(),barrelBounds);
 // process volume
 // barrel
-  if (m_adjustStatic && m_static3d) muonBarrel = processVolume( barrelVol,0,"Muon::Detectors::Barrel"); 
-  else if (m_adjustStatic) muonBarrel = processVolume( barrelVol,-1,"Muon::Detectors::Barrel"); 
-  else muonBarrel = processVolume( barrelVol,m_barrelEtaPartition,m_phiPartition,"Muon::Detectors::Barrel"); 
+  if (m_adjustStatic && m_static3d) muonBarrel = processVolume( &barrelVol,0,"Muon::Detectors::Barrel"); 
+  else if (m_adjustStatic) muonBarrel = processVolume( &barrelVol,-1,"Muon::Detectors::Barrel"); 
+  else muonBarrel = processVolume( &barrelVol,m_barrelEtaPartition,m_phiPartition,"Muon::Detectors::Barrel"); 
 // inner Endcap
    double innerEndcapZHalfSize = 0.5*(m_innerEndcapZ - m_diskShieldZ);
    negativeInnerEndcapBounds = new Trk::CylinderVolumeBounds(m_innerShieldRadius,
@@ -460,10 +460,10 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
                                                              innerEndcapZHalfSize);
    Hep3Vector negInnerEndcapPosition(0.,0.,-m_diskShieldZ-innerEndcapZHalfSize);
    HepTransform3D* negInnerEndcapTransf = new HepTransform3D(Trk::s_idRotation,negInnerEndcapPosition);
-   const Trk::Volume* negIECVol= new Trk::Volume(negInnerEndcapTransf,negativeInnerEndcapBounds);
-   if (m_adjustStatic && m_static3d) negativeMuonInnerEndcap = processVolume( negIECVol,1, "Muon::Detectors::NegativeInnerEndcap" ); 
-   else if (m_adjustStatic) negativeMuonInnerEndcap = processVolume( negIECVol,-1, "Muon::Detectors::NegativeInnerEndcap" ); 
-   else negativeMuonInnerEndcap = processVolume( negIECVol,m_innerEndcapEtaPartition,m_phiPartition,
+   Trk::Volume negIECVol(negInnerEndcapTransf,negativeInnerEndcapBounds);
+   if (m_adjustStatic && m_static3d) negativeMuonInnerEndcap = processVolume( &negIECVol,1, "Muon::Detectors::NegativeInnerEndcap" ); 
+   else if (m_adjustStatic) negativeMuonInnerEndcap = processVolume( &negIECVol,-1, "Muon::Detectors::NegativeInnerEndcap" ); 
+   else negativeMuonInnerEndcap = processVolume( &negIECVol,m_innerEndcapEtaPartition,m_phiPartition,
 					    "Muon::Detectors::NegativeInnerEndcap" ); 
 //
    positiveInnerEndcapBounds = new Trk::CylinderVolumeBounds(m_innerShieldRadius,
@@ -471,23 +471,23 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
                                                              innerEndcapZHalfSize);
    Hep3Vector posInnerEndcapPosition(0.,0.,m_diskShieldZ+innerEndcapZHalfSize);
    HepTransform3D* posInnerEndcapTransf = new HepTransform3D(Trk::s_idRotation,posInnerEndcapPosition);
-   const Trk::Volume* posIECVol= new Trk::Volume(posInnerEndcapTransf,positiveInnerEndcapBounds);
-   if (m_adjustStatic && m_static3d) positiveMuonInnerEndcap = processVolume( posIECVol,1, "Muon::Detectors::PositiveInnerEndcap" ); 
-   else if (m_adjustStatic) positiveMuonInnerEndcap = processVolume( posIECVol,-1, "Muon::Detectors::PositiveInnerEndcap" ); 
-   else positiveMuonInnerEndcap = processVolume( posIECVol,m_innerEndcapEtaPartition,m_phiPartition,
+   Trk::Volume posIECVol(posInnerEndcapTransf,positiveInnerEndcapBounds);
+   if (m_adjustStatic && m_static3d) positiveMuonInnerEndcap = processVolume( &posIECVol,1, "Muon::Detectors::PositiveInnerEndcap" ); 
+   else if (m_adjustStatic) positiveMuonInnerEndcap = processVolume( &posIECVol,-1, "Muon::Detectors::PositiveInnerEndcap" ); 
+   else positiveMuonInnerEndcap = processVolume( &posIECVol,m_innerEndcapEtaPartition,m_phiPartition,
 					    "Muon::Detectors::PositiveInnerEndcap" ); 
 // inner shields   
    negInnerShieldBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
 							m_innerShieldRadius,
 							innerEndcapZHalfSize);
-   const Trk::Volume* negisVol= new Trk::Volume(new HepTransform3D(Trk::s_idRotation,negInnerEndcapPosition),negInnerShieldBounds);
-   negInnerShield = processVolume(negisVol,1,1,"Muons::Detectors::NegativeInnerShield");
+   Trk::Volume negisVol(new HepTransform3D(Trk::s_idRotation,negInnerEndcapPosition),negInnerShieldBounds);
+   negInnerShield = processVolume(&negisVol,1,1,"Muons::Detectors::NegativeInnerShield");
 
    posInnerShieldBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
 							m_innerShieldRadius,
 							innerEndcapZHalfSize);
-   const Trk::Volume* posisVol= new Trk::Volume(new HepTransform3D(Trk::s_idRotation,posInnerEndcapPosition),posInnerShieldBounds);
-   posInnerShield = processVolume(posisVol,1,1,"Muons::Detectors::PositiveInnerShield");
+   Trk::Volume posisVol(new HepTransform3D(Trk::s_idRotation,posInnerEndcapPosition),posInnerShieldBounds);
+   posInnerShield = processVolume(&posisVol,1,1,"Muons::Detectors::PositiveInnerShield");
 
 // outer Endcap
    double outerEndcapZHalfSize = 0.5*(m_outerEndcapZ - m_innerEndcapZ);
@@ -496,10 +496,10 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
                                                              outerEndcapZHalfSize);
    Hep3Vector negOuterEndcapPosition(0.,0.,-m_innerEndcapZ-outerEndcapZHalfSize);
    HepTransform3D* negOuterEndcapTransf = new HepTransform3D(Trk::s_idRotation,negOuterEndcapPosition);
-   const Trk::Volume* negOECVol= new Trk::Volume(negOuterEndcapTransf,negativeOuterEndcapBounds);
-   if (m_adjustStatic && m_static3d) negativeMuonOuterEndcap = processVolume( negOECVol,2,"Muon::Detectors::NegativeOuterEndcap" ); 
-   else if (m_adjustStatic) negativeMuonOuterEndcap = processVolume( negOECVol,-1,"Muon::Detectors::NegativeOuterEndcap" ); 
-   else negativeMuonOuterEndcap = processVolume( negOECVol,m_outerEndcapEtaPartition,m_phiPartition,
+   Trk::Volume negOECVol(negOuterEndcapTransf,negativeOuterEndcapBounds);
+   if (m_adjustStatic && m_static3d) negativeMuonOuterEndcap = processVolume( &negOECVol,2,"Muon::Detectors::NegativeOuterEndcap" ); 
+   else if (m_adjustStatic) negativeMuonOuterEndcap = processVolume( &negOECVol,-1,"Muon::Detectors::NegativeOuterEndcap" ); 
+   else negativeMuonOuterEndcap = processVolume( &negOECVol,m_outerEndcapEtaPartition,m_phiPartition,
 						 "Muon::Detectors::NegativeOuterEndcap" ); 
 //
    positiveOuterEndcapBounds = new Trk::CylinderVolumeBounds(m_outerShieldRadius,
@@ -507,22 +507,22 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
                                                              outerEndcapZHalfSize);
    Hep3Vector posOuterEndcapPosition(0.,0., m_innerEndcapZ+outerEndcapZHalfSize);
    HepTransform3D* posOuterEndcapTransf = new HepTransform3D(Trk::s_idRotation,posOuterEndcapPosition);
-   const Trk::Volume* posOECVol= new Trk::Volume(posOuterEndcapTransf,positiveOuterEndcapBounds);
-   if (m_adjustStatic && m_static3d) positiveMuonOuterEndcap = processVolume( posOECVol,2,"Muon::Detectors::PositiveOuterEndcap" ); 
-   else if (m_adjustStatic) positiveMuonOuterEndcap = processVolume( posOECVol,-1,"Muon::Detectors::PositiveOuterEndcap" ); 
-   else positiveMuonOuterEndcap = processVolume( posOECVol,m_outerEndcapEtaPartition,m_phiPartition,
+   Trk::Volume posOECVol(posOuterEndcapTransf,positiveOuterEndcapBounds);
+   if (m_adjustStatic && m_static3d) positiveMuonOuterEndcap = processVolume( &posOECVol,2,"Muon::Detectors::PositiveOuterEndcap" ); 
+   else if (m_adjustStatic) positiveMuonOuterEndcap = processVolume( &posOECVol,-1,"Muon::Detectors::PositiveOuterEndcap" ); 
+   else positiveMuonOuterEndcap = processVolume( &posOECVol,m_outerEndcapEtaPartition,m_phiPartition,
 						 "Muon::Detectors::PositiveOuterEndcap" ); 
 // outer shields   
    negOuterShieldBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
 							m_outerShieldRadius,
 							outerEndcapZHalfSize);
-   const Trk::Volume* negosVol= new Trk::Volume(new HepTransform3D(Trk::s_idRotation,negOuterEndcapPosition),negOuterShieldBounds);
-   negOuterShield = processVolume(negosVol,1,1,"Muons::Detectors::NegativeOuterShield");
+   Trk::Volume negosVol(new HepTransform3D(Trk::s_idRotation,negOuterEndcapPosition),negOuterShieldBounds);
+   negOuterShield = processVolume(&negosVol,1,1,"Muons::Detectors::NegativeOuterShield");
    posOuterShieldBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
 							m_outerShieldRadius,
 							outerEndcapZHalfSize);
-   const Trk::Volume* pososVol= new Trk::Volume(new HepTransform3D(Trk::s_idRotation,posOuterEndcapPosition),posOuterShieldBounds);
-   posOuterShield = processVolume(pososVol,1,1,"Muons::Detectors::PositiveOuterShield");
+   Trk::Volume pososVol(new HepTransform3D(Trk::s_idRotation,posOuterEndcapPosition),posOuterShieldBounds);
+   posOuterShield = processVolume(&pososVol,1,1,"Muons::Detectors::PositiveOuterShield");
 
 // beamPipe
    negBeamPipeBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
@@ -531,10 +531,10 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
                                                   outerEndcapZHalfSize+innerEndcapZHalfSize);
    Hep3Vector posBeamPipePosition(0.,0., m_outerEndcapZ-innerEndcapZHalfSize-outerEndcapZHalfSize);
    Hep3Vector negBeamPipePosition(0.,0.,-m_outerEndcapZ+innerEndcapZHalfSize+outerEndcapZHalfSize);
-   const Trk::Volume* negbpVol= new Trk::Volume(new HepTransform3D(Trk::s_idRotation,negBeamPipePosition),negBeamPipeBounds);
-   negBeamPipe = processVolume(negbpVol,1,1,"Muons::Gaps::NegativeBeamPipe");
-   const Trk::Volume* posbpVol= new Trk::Volume(new HepTransform3D(Trk::s_idRotation,posBeamPipePosition),posBeamPipeBounds);
-   posBeamPipe = processVolume(posbpVol,1,1,"Muons::Gaps::PositiveBeamPipe");
+   Trk::Volume negbpVol(new HepTransform3D(Trk::s_idRotation,negBeamPipePosition),negBeamPipeBounds);
+   negBeamPipe = processVolume(&negbpVol,1,1,"Muons::Gaps::NegativeBeamPipe");
+   Trk::Volume posbpVol(new HepTransform3D(Trk::s_idRotation,posBeamPipePosition),posBeamPipeBounds);
+   posBeamPipe = processVolume(&posbpVol,1,1,"Muons::Gaps::PositiveBeamPipe");
 
    log << MSG::INFO  << name() <<" volumes defined " << endreq;    
 //
@@ -1278,20 +1278,20 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
   // active, use corrected rMax
   if (m_stationSpan) {
     for (unsigned int i=0; i<m_stationSpan->size() ; i++) {
-      const Muon::Span s = *((*m_stationSpan)[i]);
-      bool rLimit = !m_static3d || ( s[4] <= rMaxc && s[5] >= rMin );
+      const Muon::Span* s = (*m_stationSpan)[i];
+      bool rLimit = !m_static3d || ( (*s)[4] <= rMaxc && (*s)[5] >= rMin );
    
-      if ( rLimit && s[0] <= zMax && s[1] >= zMin && m_stations->size()>i) {
+      if ( rLimit && (*s)[0] <= zMax && (*s)[1] >= zMin && m_stations->size()>i) {
 	if (phiLim) {
 	  if (pMin>=0 && pMax<=2*M_PI) {
-	    if ( s[2]<=s[3] && s[2] <= pMax && s[3] >= pMin ) detached.push_back((*m_stations)[i]);
-	    if ( s[2]>s[3] && (s[2] <= pMax || s[3] >= pMin) ) detached.push_back((*m_stations)[i]);
+	    if ( (*s)[2]<=(*s)[3] && (*s)[2] <= pMax && (*s)[3] >= pMin ) detached.push_back((*m_stations)[i]);
+	    if ( (*s)[2]>(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin) ) detached.push_back((*m_stations)[i]);
 	  } else if (pMin < 0) {
-	    if ( s[2]<=s[3] && (s[2] <= pMax || s[3] >= pMin+2*M_PI) ) detached.push_back((*m_stations)[i]);
-	    if ( s[2]>s[3]  ) detached.push_back((*m_stations)[i]);
+	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin+2*M_PI) ) detached.push_back((*m_stations)[i]);
+	    if ( (*s)[2]>(*s)[3]  ) detached.push_back((*m_stations)[i]);
 	  } else if (pMax > 2*M_PI) {
-	    if ( s[2]<=s[3] && (s[2] <= pMax-2*M_PI || s[3] >= pMin) ) detached.push_back((*m_stations)[i]);
-	    if ( s[2]>s[3]  ) detached.push_back((*m_stations)[i]);
+	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax-2*M_PI || (*s)[3] >= pMin) ) detached.push_back((*m_stations)[i]);
+	    if ( (*s)[2]>(*s)[3]  ) detached.push_back((*m_stations)[i]);
 	  }
 	} else {
 	  detached.push_back((*m_stations)[i]);
@@ -1302,19 +1302,19 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
   // passive
   if (m_inertSpan) {
     for (unsigned int i=0; i<m_inertSpan->size() ; i++) {
-      const Muon::Span s = (*(*m_inertSpan)[i]);
-      bool rLimit = (!m_static3d || ( s[4] <= rMax && s[5] >= rMin ) ); 
-      if ( rLimit && s[0] <= zMax && s[1] >= zMin && m_inertObjs->size()>i) {
+      const Muon::Span* s = (*m_inertSpan)[i];
+      bool rLimit = (!m_static3d || ( (*s)[4] <= rMax && (*s)[5] >= rMin ) ); 
+      if ( rLimit && (*s)[0] <= zMax && (*s)[1] >= zMin && m_inertObjs->size()>i) {
 	if (phiLim) {
 	  if (pMin>=0 && pMax<=2*M_PI) {
-	    if ( s[2]<=s[3] && s[2] <= pMax && s[3] >= pMin ) detached.push_back((*m_inertObjs)[i]);
-	    if ( s[2]>s[3] && (s[2] <= pMax || s[3] >= pMin) ) detached.push_back((*m_inertObjs)[i]);
+	    if ( (*s)[2]<=(*s)[3] && (*s)[2] <= pMax && (*s)[3] >= pMin ) detached.push_back((*m_inertObjs)[i]);
+	    if ( (*s)[2]>(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin) ) detached.push_back((*m_inertObjs)[i]);
 	  } else if (pMin < 0) {
-	    if ( s[2]<=s[3] && (s[2] <= pMax || s[3] >= pMin+2*M_PI) ) detached.push_back((*m_inertObjs)[i]);
-	    if ( s[2]>s[3]  ) detached.push_back((*m_inertObjs)[i]);
+	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin+2*M_PI) ) detached.push_back((*m_inertObjs)[i]);
+	    if ( (*s)[2]>(*s)[3]  ) detached.push_back((*m_inertObjs)[i]);
 	  } else if (pMax > 2*M_PI) {
-	    if ( s[2]<=s[3] && (s[2] <= pMax-2*M_PI || s[3] >= pMin) ) detached.push_back((*m_inertObjs)[i]);
-	    if ( s[2]>s[3]  ) detached.push_back((*m_inertObjs)[i]);
+	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax-2*M_PI || (*s)[3] >= pMin) ) detached.push_back((*m_inertObjs)[i]);
+	    if ( (*s)[2]>(*s)[3]  ) detached.push_back((*m_inertObjs)[i]);
 	  }
 	} else {
 	  detached.push_back((*m_inertObjs)[i]);

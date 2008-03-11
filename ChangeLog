@@ -1,3 +1,8 @@
+2008-03-11 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix largest contribution to excessive memory consumption
+	  ( standalone tag )
+	* tagged as MuonTrackingGeometry-00-02-02
+
 2008-02-21 Sarka Todorova <sarka.todorova@cern.ch>
 	* switch to simpler default configuration (active material only, 2D partition)
 	* tagged as MuonTrackingGeometry-00-02-01

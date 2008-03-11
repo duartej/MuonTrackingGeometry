@@ -445,7 +445,7 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
 	Trk::Volume* volS = new Trk::Volume(new HepTransform3D(*transf*
                 HepRotateZ3D(2*i*phiH)*HepTranslateX3D(hlxmax+cos(phiH)*pgon->getRMaxPlane(0))),subBounds);
         Trk::SubtractedVolumeBounds* combBounds = new Trk::SubtractedVolumeBounds(volume,volS);
-        volume = new Trk::Volume(new HepTransform3D(),combBounds);
+        volume = new Trk::Volume(0,combBounds);
       }      
       return volume; 
     }
@@ -462,7 +462,7 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
     if (pgon->getNSides() == 2) {
 
       Trk::CylinderVolumeBounds* cylBounds = new Trk::CylinderVolumeBounds(0,dly+hly,hlz);
-      vol = new Trk::Volume(new HepTransform3D(), cylBounds ); 
+      vol = new Trk::Volume(0,cylBounds ); 
 
       return vol;
     }
@@ -584,7 +584,7 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
     Trk::SubtractedVolumeBounds* volBounds = new Trk::SubtractedVolumeBounds(volA, volB);
     //                                                volA->transform().inverse() * volB->transform());
     //std::cout << "volume bounds processed" << std::endl;
-    vol = new Trk::Volume(new HepTransform3D(), volBounds );
+    vol = new Trk::Volume(0, volBounds );
     //std::cout << "volume processed" << std::endl;
     return vol;
   }
@@ -601,7 +601,7 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
     //                                           volA->transform().inverse() * volB->transform());
     //std::cout << "volume bounds processed" << std::endl;
     // vol = new Trk::Volume(new HepTransform3D(volA->transform()), volBounds );
-    vol = new Trk::Volume(new HepTransform3D(), volBounds );
+    vol = new Trk::Volume(0, volBounds );
     //std::cout << "volume processed" << std::endl;
     return vol;
   }
@@ -618,7 +618,7 @@ Trk::Volume* Muon::MuonInertMaterialBuilder::translateGeoShape(const GeoShape* s
     //                                           volA->transform().inverse() * volB->transform());
     //std::cout << "volume bounds processed" << std::endl;
     //vol = new Trk::Volume(new HepTransform3D(volA->transform()), volBounds );
-    vol = new Trk::Volume(new HepTransform3D(), volBounds );
+    vol = new Trk::Volume(0, volBounds );
     //std::cout << "volume processed" << std::endl;
     return vol;
   }
@@ -999,7 +999,7 @@ double Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Lay
   if (sub) {
     if (subtrVol) {
       // here is necessary to combine subtracted volumes
-      Trk::Volume* dsub = new Trk::Volume(new HepTransform3D(),new Trk::CombinedVolumeBounds(sub->inner(),subtrVol,false));
+      Trk::Volume* dsub = new Trk::Volume(0,new Trk::CombinedVolumeBounds(sub->inner(),subtrVol,false));
       thInX0 = volumeToLayers(lays,sub->outer(),dsub,mat,mode);
     } else {
       thInX0 = volumeToLayers(lays,sub->outer(),sub->inner(),mat,mode);

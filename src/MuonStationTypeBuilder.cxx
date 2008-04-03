@@ -397,11 +397,12 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
 	    mdtBounds = new Trk::CuboidVolumeBounds(compBounds->halflengthX(),envY,envZ);
             mdtVol = new Trk::Volume(new HepTransform3D(HepTranslateZ3D(-zShift)*compVol[i]->transform()),mdtBounds);
 	  } else {
-	    log << MSG::ERROR  << "lowX,currX:" << lowX <<","<<currX << std::endl;
-	    log << MSG::ERROR  << "increase the basic Mdt volume" << std::endl;
+	    log << MSG::WARNING  << "Mdt volume size does not match the envelope:lowX,currX:" << lowX <<","<<currX << std::endl;
+	    log << MSG::WARNING  << "adjusting Mdt volume " << std::endl;
+	    mdtBounds = new Trk::CuboidVolumeBounds(compBounds->halflengthX()+0.5*(lowX-currX),envY,envZ);
+            mdtVol = new Trk::Volume(new HepTransform3D(HepTranslateX3D(0.5*(currX-lowX))
+							*HepTranslateZ3D(-zShift)*compVol[i]->transform()),mdtBounds);
           }
-	  //std::cout << "new Mdt volume:position:" << (mdtVol->transform()).getTranslation() << std::endl; 
-	  //std::cout << "new Mdt volume:dimensions:" <<compBounds->halflengthX()<<","<<envY<<","<<envZ << std::endl; 
           double shiftSign = 1.; 
           if (fabs(zShift) > 0.) {
 	    std::string stName = mv->getLogVol()->getName();
@@ -472,7 +473,7 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
 {
     MsgStream log( msgSvc(), name() );
 
-    log << MSG::DEBUG  << name() <<" processing station components" << endreq;    
+    log << MSG::DEBUG  << name() <<" processing station components for " <<mv->getLogVol()->getName() << endreq;    
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     double tolerance = 0.0001;   
@@ -688,8 +689,10 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
 	    mdtBounds = new Trk::TrapezoidVolumeBounds(envX1,envX2,envY,compTrdBounds->halflengthZ());
             mdtVol = new Trk::Volume(new HepTransform3D(compVol[i]->transform()),mdtBounds);
 	  } else {
-	    std::cout << "lowX,currX:" << lowX <<","<<currX << std::endl;
-	    std::cout << "increase the basic Mdt volume" << std::endl;
+	    log << MSG::WARNING  << "Mdt volume size does not match the envelope:lowX,currX:" << lowX <<","<<currX << std::endl;
+	    log << MSG::WARNING  << "adjusting Mdt volume " << std::endl;
+	    mdtBounds = new Trk::TrapezoidVolumeBounds(envX1,envX2,envY,compTrdBounds->halflengthZ()+0.5*(lowX-currX));
+            mdtVol = new Trk::Volume(new HepTransform3D(HepTranslateZ3D(0.5*(currX-lowX))*compVol[i]->transform()),mdtBounds);
           }
           const Trk::TrackingVolume* mdtTrkVol = processMdtTrd(mdtVol,compGeo[i],compTransf[i]);
           trkVols.push_back(mdtTrkVol); 
@@ -1131,7 +1134,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
       HepTransform3D* cTr = new HepTransform3D((*transfc[ic]) * HepRotateY3D(90*deg) * HepRotateZ3D(90*deg));
       Trk::MaterialProperties rpcMat = m_muonMaterial;               // default
       if ( (glv->getName()).substr(0,3)=="Ded" ) {
-        if (thickness == 50.0) {
+        if (fabs(thickness-50.0)<0.001) {
           if (!m_rpcDed50) {
             double vol = 8*xs*ys*zs;
             m_rpcDed50 = getAveragedLayerMaterial(gv[ic],vol,2*xs);
@@ -1140,7 +1143,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
         } else { log << MSG::WARNING << name() << " Ded thickness different from 50:" << thickness << endreq; }
       } else {
         //printChildren(gv[ic]);
-        if (thickness == 46.0) {
+        if (fabs(thickness-46.0)<0.001) {
           if (!m_rpc46) {
             double vol = 8*xs*ys*zs;
             m_rpc46 = getAveragedLayerMaterial(gv[ic],vol,2*xs);
@@ -1183,7 +1186,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
 	//std::cout << "component (layer) dimensions:" << ys1 << "," << zs << std::endl;
         Trk::MaterialProperties rpcMat = m_muonMaterial;               // default
         if ( (glv->getName()).substr(0,3)=="Ded" ) {
-          if (thickness == 50.0) {
+          if (fabs(thickness-50.0)<0.001) {
             if (!m_rpcDed50) {
               double vol = 8*xs1*ys1*zs;
 	      m_rpcDed50 = getAveragedLayerMaterial(gv[ic],vol,2*xs1);

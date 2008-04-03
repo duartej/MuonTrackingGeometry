@@ -1,3 +1,7 @@
+2008-04-03 Sarka Todorova <sarka.todorova@cern.ch>
+	* protection against envelope/components input size mismatch in MSTB
+	* tagged as MuonTrackingGeometry-00-02-04
+
 2008-03-11 Sarka Todorova <sarka.todorova@cern.ch>
 	* identical HepTransform replaced with 0 pointer in MIMB
 	* tagged as MuonTrackingGeometry-00-02-03

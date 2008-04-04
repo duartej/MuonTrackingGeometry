@@ -85,7 +85,7 @@ namespace Muon {
 	translateToLayers(const std::vector<const Trk::TrackingVolume*>* vols, int mode) const;
       std::vector<const Trk::Layer*>*  translateBoundariesToLayers(const Trk::Volume* vol, const Trk::TrackingVolume* trVol, double) const;
       double volumeToLayers(std::vector<const Trk::Layer*>& lays, const Trk::Volume* vol, 
-			  Trk::Volume* subtrVol, const Trk::MaterialProperties* mat, int mode) const;
+			  Trk::Volume* subtrVol, const Trk::MaterialProperties* mat) const;
       const bool checkVolume(const Trk::Volume*) const;
       void getVolumeFractions() const;
       void removeTV(const Trk::Volume*) const;
@@ -113,7 +113,8 @@ namespace Muon {
       Trk::GeoMaterialConverter*           m_materialConverter;          //!< material converter
 
       mutable std::vector<std::pair<std::string,std::pair<double,double> > >   m_volFractions;
-
+      
+      mutable std::vector<Trk::Volume*>    m_garbage;      
     };
 
 

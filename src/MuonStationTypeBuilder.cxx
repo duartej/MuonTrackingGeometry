@@ -877,10 +877,10 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
   if ( volBounds ) {
     double yv = volBounds->halflengthY();
     double zv = volBounds->halflengthZ();
-    Trk::RectangleBounds* bounds=0;
+    Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(yv,zv); 
+    Trk::SharedObject<const Trk::SurfaceBounds>* bounds = new Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);
     for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {
       // x-y plane -> y-z plane
-      bounds = new Trk::RectangleBounds(yv,zv); 
       thickness = x_thickness[iloop];
       Trk::MaterialProperties material=m_muonMaterial;
       if ( x_mat[iloop] ) material = *(x_mat[iloop]);      
@@ -907,10 +907,11 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
         log << MSG::ERROR << "MDT layer with no material" << endreq;
       }
     }
+    bounds->remRef();
   } 
   // create the BinnedArray
   //std::cout << "number of Mdt layers:"<<layers.size()<<std::endl;
-  std::vector<LayTr> layerOrder;
+  std::vector<Trk::SharedObject<const Trk::Layer> > layerOrder;
   std::vector<double> binSteps;
   // check if additional (navigation) layers needed
   // fix lower and upper bound of step vector to volume boundary
@@ -920,11 +921,11 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
     //minX = layers[0]->transform().getTranslation()[0]-0.5*layers[0]->thickness();
     currX = minX; 
     for (unsigned int i=0;i<layers.size();i++) { 
-      const HepTransform3D* ltransf = new HepTransform3D(layers[i]->transform());
-      layerOrder.push_back(LayTr(Trk::SharedObject<const Trk::Layer>(layers[i]), ltransf ));
+      const HepTransform3D ltransf = layers[i]->transform();
+      layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers[i]));
       if (i<layers.size()-1) { 
-	binSteps.push_back(ltransf->getTranslation()[0]+0.5*layers[i]->thickness()-currX);
-	currX = ltransf->getTranslation()[0]+0.5*layers[i]->thickness();     
+	binSteps.push_back(ltransf.getTranslation()[0]+0.5*layers[i]->thickness()-currX);
+	currX = ltransf.getTranslation()[0]+0.5*layers[i]->thickness();     
       }
     }
     binSteps.push_back(transf->getTranslation()[0]+volBounds->halflengthX()-currX);
@@ -1033,11 +1034,10 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
     double x1v = volBounds->minHalflengthX();
     double x2v = volBounds->maxHalflengthX();
     double yv = volBounds->halflengthY();
-    Trk::TrapezoidBounds* bounds=0;
-    for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {
-      // std::cout << iloop << ","<< x_array[iloop] << "," << x_mat[iloop]<<std::endl;
-      // x-y plane -> y-z plane
-      bounds = new Trk::TrapezoidBounds(x1v,x2v,yv); 
+    // x-y plane -> y-z plane
+    Trk::TrapezoidBounds* tbounds= new Trk::TrapezoidBounds(x1v,x2v,yv);
+    Trk::SharedObject<const Trk::SurfaceBounds>* bounds= new Trk::SharedObject<const Trk::SurfaceBounds>(tbounds);
+    for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {      
       thickness = x_thickness[iloop];
       Trk::MaterialProperties material = m_muonMaterial;
       if (x_mat[iloop]) material = *(x_mat[iloop]);
@@ -1067,7 +1067,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
 
   // create the BinnedArray
   //std::cout << "number of Mdt layers:"<<layers.size()<<std::endl;
-  std::vector<LayTr> layerOrder;
+  std::vector<Trk::SharedObject<const Trk::Layer> > layerOrder;
   std::vector<double> binSteps;
   // 
   // double minX = - volBounds->halflengthZ();
@@ -1076,11 +1076,11 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
     //minX = layers[0]->transform().getTranslation()[0]-0.5*layers[0]->thickness();
     currX = minX; 
     for (unsigned int i=0;i<layers.size();i++) { 
-      const HepTransform3D* ltransf = new HepTransform3D(layers[i]->transform());
-      layerOrder.push_back(LayTr(Trk::SharedObject<const Trk::Layer>(layers[i]), ltransf ));
+      const HepTransform3D ltransf = layers[i]->transform();
+      layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers[i]));
       if ( i < layers.size()-1 ) { 
-	binSteps.push_back(ltransf->getTranslation()[0]+0.5*layers[i]->thickness()-currX);
-	currX = ltransf->getTranslation()[0]+0.5*layers[i]->thickness();
+	binSteps.push_back(ltransf.getTranslation()[0]+0.5*layers[i]->thickness()-currX);
+	currX = ltransf.getTranslation()[0]+0.5*layers[i]->thickness();
       }     
     }
     binSteps.push_back( transf->getTranslation()[0] + volBounds->halflengthZ() - currX );
@@ -1195,7 +1195,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
           } else { log << MSG::WARNING << name() << "Ded thickness different from 50:" << thickness << endreq; }
           // create Ded layer
 	  Trk::HomogenousLayerMaterial rpcMaterial(rpcMat, Trk::oppositePre);
-	  layer = new Trk::PlaneLayer(cTr, bounds->clone(), rpcMaterial, thickness, od );
+	  layer = new Trk::PlaneLayer(cTr, bounds, rpcMaterial, thickness, od );
           layers.push_back(layer);
 	  layer->setLayerType(0);
         } else {
@@ -1238,7 +1238,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
                thickness = 2*gx;
 	       Trk::HomogenousLayerMaterial rpcMaterial(rpcMat, Trk::oppositePre);
 	       layer = new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(trgc.getTranslation())*(*cTr)),
-					   bounds->clone(), rpcMaterial, thickness, od );
+					   bounds, rpcMaterial, thickness, od );
 	       layers.push_back(layer);
 	       layer->setLayerType(0);
 	     } else if  ( (gclv->getName())=="Rpclayer" ) {
@@ -1254,7 +1254,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
                thickness = gx;
 	       Trk::HomogenousLayerMaterial rpcMaterial(rpcMat, Trk::oppositePre);
 	       layer = new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(trgc.getTranslation())*HepTranslateX3D(-0.5*gx)*(*cTr)),
-					   bounds->clone(), rpcMaterial, thickness, od );
+					   bounds, rpcMaterial, thickness, od );
 	       layers.push_back(layer);
 	       layer->setLayerType(1);
 	       layer = new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(trgc.getTranslation())*HepTranslateX3D(+0.5*gx)*(*cTr)
@@ -1264,7 +1264,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
                thickness = 2*gx;
 	       Trk::HomogenousLayerMaterial rpcMaterial(rpcMat, Trk::oppositePre);
 	       layer = new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(trgc.getTranslation())*(*cTr)),
-					   bounds->clone(), rpcMaterial, thickness, od );
+					   bounds, rpcMaterial, thickness, od );
 	       layers.push_back(layer);
 	       layer->setLayerType(1);               
              } else {
@@ -1273,7 +1273,6 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
 	  }
           delete cTr;
 	}
-        delete bounds;   
       } else {
          log << MSG::WARNING << name() << "RPC true trapezoid layer, not coded yet" <<endreq;
       }
@@ -1881,8 +1880,9 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(cons
   // create layers
   const Trk::PlaneLayer* layer;
   Trk::OverlapDescriptor* od=0;
+  Trk::TrapezoidBounds* tbounds= new Trk::TrapezoidBounds(minX,maxX,halfY); 
+  Trk::SharedObject<const Trk::SurfaceBounds>* bounds = new Trk::SharedObject<const Trk::SurfaceBounds>(tbounds);
   for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {
-    Trk::TrapezoidBounds* bounds= new Trk::TrapezoidBounds(minX,maxX,halfY); ;
     HepTransform3D* cTr = new HepTransform3D(  HepTranslateX3D(x_array[iloop]) * (*transf) ); // this won't work for multiple layers !!! //
     Trk::HomogenousLayerMaterial cscMaterial(*(x_mat[iloop]), Trk::oppositePre);  
     layer = new Trk::PlaneLayer(cTr,
@@ -1907,7 +1907,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(cons
 
   // create the BinnedArray
   //std::cout << "number of Csc layers:"<<layers.size()<<std::endl;
-  std::vector<LayTr> layerOrder;
+  std::vector<Trk::SharedObject<const Trk::Layer> > layerOrder;
   std::vector<double> binSteps;
   double xShift = transf->getTranslation()[0];
   double lowX = - compBounds->halflengthZ()+xShift ;
@@ -1916,14 +1916,14 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(cons
     // lowX = layers[0]->transform().getTranslation()[0]-0.5*layers[0]->thickness();
      currX = lowX; 
      for (unsigned int i=0;i<layers.size()-1;i++) { 
-       const HepTransform3D* ltransf = new HepTransform3D( HepTranslateX3D(x_array[i]));
-       layerOrder.push_back(LayTr(Trk::SharedObject<const Trk::Layer>(layers[i]), ltransf ));
-       binSteps.push_back(ltransf->getTranslation()[0]+0.5*layers[i]->thickness()-currX+xShift);
-       currX = ltransf->getTranslation()[0]+0.5*layers[i]->thickness()+xShift;     
+       const HepTransform3D ltransf = HepTranslateX3D(x_array[i]);
+       layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers[i]));
+       binSteps.push_back(ltransf.getTranslation()[0]+0.5*layers[i]->thickness()-currX+xShift);
+       currX = ltransf.getTranslation()[0]+0.5*layers[i]->thickness()+xShift;     
        //std::cout << "binstep:"<<i <<","<<binSteps[i]<<std::endl;
      }
-     const HepTransform3D* ltransf = new HepTransform3D( HepTranslateX3D(x_array.back()));
-     layerOrder.push_back(LayTr(Trk::SharedObject<const Trk::Layer>(layers.back()), ltransf ));
+     const HepTransform3D ltransf = HepTranslateX3D(x_array.back());
+     layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers.back()));
      binSteps.push_back(compBounds->halflengthZ()-currX+xShift);
      //std::cout << "binstep:"<<layers.size() <<","<<binSteps.back()<<std::endl;
   }
@@ -2024,8 +2024,9 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCDiamondComponent(
   // create layers
   const Trk::PlaneLayer* layer;
   Trk::OverlapDescriptor* od=0;
+  Trk::DiamondBounds* dbounds= new Trk::DiamondBounds(minX,medX,maxX,halfY1,halfY2); ;
+  Trk::SharedObject<const Trk::SurfaceBounds>* bounds = new Trk::SharedObject<const Trk::SurfaceBounds>(dbounds);
   for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {
-    Trk::DiamondBounds* bounds= new Trk::DiamondBounds(minX,medX,maxX,halfY1,halfY2); ;
     HepTransform3D* cTr = new HepTransform3D( HepTranslateX3D(x_array[iloop]) * (*transf) ); // this won't work for multiple layers !!! //
     Trk::HomogenousLayerMaterial cscMaterial(*(x_mat[iloop]), Trk::oppositePre);  
     layer = new Trk::PlaneLayer(cTr,
@@ -2049,7 +2050,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCDiamondComponent(
    
   // create the BinnedArray
   //std::cout << "number of Csc layers:"<<layers.size()<<std::endl;
-  std::vector<LayTr> layerOrder;
+  std::vector<Trk::SharedObject<const Trk::Layer> > layerOrder;
   std::vector<double> binSteps;
   double xShift = transf->getTranslation()[0];
   double lowX = - compBounds->halflengthZ()+xShift ;
@@ -2058,14 +2059,14 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCDiamondComponent(
     // lowX = layers[0]->transform().getTranslation()[0]-0.5*layers[0]->thickness();
      currX = lowX; 
      for (unsigned int i=0;i<layers.size()-1;i++) { 
-       const HepTransform3D* ltransf = new HepTransform3D( HepTranslateX3D(x_array[i]));
-       layerOrder.push_back(LayTr(Trk::SharedObject<const Trk::Layer>(layers[i]), ltransf ));
-       binSteps.push_back(ltransf->getTranslation()[0]+0.5*layers[i]->thickness()-currX+xShift);
-       currX = ltransf->getTranslation()[0]+0.5*layers[i]->thickness()+xShift;     
+       const HepTransform3D ltransf = HepTranslateX3D(x_array[i]);
+       layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers[i]));
+       binSteps.push_back(ltransf.getTranslation()[0]+0.5*layers[i]->thickness()-currX+xShift);
+       currX = ltransf.getTranslation()[0]+0.5*layers[i]->thickness()+xShift;     
        //std::cout << "binstep:"<<i <<","<<binSteps[i]<<std::endl;
      }
-     const HepTransform3D* ltransf = new HepTransform3D( HepTranslateX3D(x_array.back()));
-     layerOrder.push_back(LayTr(Trk::SharedObject<const Trk::Layer>(layers.back()), ltransf ));
+     const HepTransform3D ltransf = HepTranslateX3D(x_array.back());
+     layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers.back()));
      binSteps.push_back(compBounds->halflengthZ()-currX+xShift);
      //std::cout << "binstep:"<<layers.size() <<","<<binSteps.back()<<std::endl;
   }
@@ -2166,8 +2167,9 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processTGCComponent(const G
   // create layers
   const Trk::PlaneLayer* layer;
   Trk::OverlapDescriptor* od=0;
+  Trk::TrapezoidBounds* tbounds= new Trk::TrapezoidBounds(minX,maxX,halfY); ;
+  Trk::SharedObject<const Trk::SurfaceBounds>* bounds = new Trk::SharedObject<const Trk::SurfaceBounds>(tbounds);
   for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {
-    Trk::TrapezoidBounds* bounds= new Trk::TrapezoidBounds(minX,maxX,halfY); ;
     HepTransform3D* cTr = new HepTransform3D( HepTranslateX3D(x_array[iloop])*(*transf) ); // this won't work for multiple layers !!! //
     Trk::HomogenousLayerMaterial tgcMaterial(x_mat[iloop], Trk::oppositePre);  
     layer = new Trk::PlaneLayer(cTr,
@@ -2182,7 +2184,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processTGCComponent(const G
   }
   // create the BinnedArray
   //std::cout << "number of Tgc layers:"<<layers.size()<<std::endl;
-  std::vector<LayTr> layerOrder;
+  std::vector<Trk::SharedObject<const Trk::Layer> > layerOrder;
   std::vector<double> binSteps;
   // 
   double xShift = transf->getTranslation()[0]; 
@@ -2191,13 +2193,13 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processTGCComponent(const G
      //lowX = layers[0]->transform().getTranslation()[0]-0.5*layers[0]->thickness();
      currX = lowX; 
      for (unsigned int i=0;i<layers.size()-1;i++) { 
-       const HepTransform3D* ltransf = new HepTransform3D( HepTranslateX3D(x_array[i]));
-       layerOrder.push_back(LayTr(Trk::SharedObject<const Trk::Layer>(layers[i]), ltransf ));
-       binSteps.push_back(ltransf->getTranslation()[0]+0.5*layers[i]->thickness()-currX+xShift);
-       currX = ltransf->getTranslation()[0]+0.5*layers[i]->thickness()+xShift;     
+       const HepTransform3D ltransf = HepTranslateX3D(x_array[i]);
+       layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers[i]));
+       binSteps.push_back(ltransf.getTranslation()[0]+0.5*layers[i]->thickness()-currX+xShift);
+       currX = ltransf.getTranslation()[0]+0.5*layers[i]->thickness()+xShift;     
      }
-     const HepTransform3D* ltransf = new HepTransform3D( HepTranslateX3D(x_array.back()));
-     layerOrder.push_back(LayTr(Trk::SharedObject<const Trk::Layer>(layers.back()), ltransf ));
+     const HepTransform3D ltransf = HepTranslateX3D(x_array.back());
+     layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers.back()));
      binSteps.push_back( halfZ-currX+xShift);
   }
   Trk::BinUtility* binUtility = new Trk::BinUtility1DX( lowX, new std::vector<double>(binSteps));

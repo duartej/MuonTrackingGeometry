@@ -1,3 +1,7 @@
+2008-04-04 Sarka Todorova <sarka.todorova@cern.ch>
+	* merge with 'shared object' branch(-00-02-03-02) + updates
+	* tagged as MuonTrackingGeometry-00-02-05
+
 2008-04-03 Sarka Todorova <sarka.todorova@cern.ch>
 	* protection against envelope/components input size mismatch in MSTB
 	* tagged as MuonTrackingGeometry-00-02-04

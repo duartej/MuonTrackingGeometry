@@ -630,6 +630,8 @@ StatusCode Muon::MuonTrackingGeometryBuilder::finalize()
         delete (*m_inertSpan)[i];
       delete m_inertSpan;
     }
+    for (size_t i = 0; i < m_garbage.size(); i++) delete m_garbage[i];
+
     log << MSG::INFO  << name() <<" finalize() successful" << endreq;
     return StatusCode::SUCCESS;
 }
@@ -848,7 +850,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         // define subvolume
         double posZ = (vol->center())[2]+ etaSect * (2.*eta+1.-etaN) ;
         HepTransform3D* transf = new HepTransform3D( HepRotateZ3D( phiSect*(2*phi+1))*HepTranslateZ3D(posZ));
-        const Trk::Volume* subVol= new Trk::Volume(transf, subBds->clone());     
+        const Trk::Volume* subVol= new Trk::Volume(transf, subBds);     
         // enclosed muon objects ?   
 	std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) ; 
         std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol );
@@ -1012,11 +1014,11 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 							 hZ,
 							 volType);
 	  HepTransform3D* transf = new HepTransform3D(HepRotateZ3D(posPhi)*HepTranslateZ3D(posZ));
-	  const Trk::Volume* subVol= new Trk::Volume(transf, subBds);
+	  Trk::Volume subVol(transf, subBds);
        
 	  // enclosed muon objects ?   
 	  std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) +MuonGM::buildString(h,2) ; 
-	  std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol );
+	  std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( &subVol );
 
           //
 	  Trk::MaterialProperties mat = m_muonMaterial;
@@ -1025,13 +1027,13 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
             double x0i = 0.;
             double zOaTr = 0.; 
             double tot = 0.;
-            double sVol = calculateVolume(subVol);
+            double sVol = calculateVolume(&subVol);
 	    std::vector<const Trk::DetachedTrackingVolume*>::iterator vIt = detVols->begin();
 	    while ( vIt != detVols->end() ) {
 	      std::string vname = (*vIt)->trackingVolume()->volumeName();
               if ( vname=="BTStrut_resized" || vname=="BTVoussoir_resized" || vname=="HeadBTVoussoir_resized") {   
 		double vfr = calculateVolume((*vIt)->trackingVolume())/sVol;
-		if ( subVol->inside((*vIt)->trackingVolume()->center(),0.) ) {
+		if ( subVol.inside((*vIt)->trackingVolume()->center(),0.) ) {
 		  x0i += vfr*(*vIt)->trackingVolume()->x0();  
 		  zOaTr += vfr*(*vIt)->trackingVolume()->zOverAtimesRho();
 		  tot += vfr;
@@ -1047,8 +1049,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
             } 
 	  }
           //
-	 
-	  const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( *subVol,
+
+	  const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( subVol,
 								     mat,
 								     m_muonMagneticField,
 								     detVols,
@@ -1057,7 +1059,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	  //delete subVol;
 	  // reference position 
 	  HepPoint3D gp(subBds->mediumRadius(),0.,0.);
-	  subVolumesVect.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
+	  subVolumesVect.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, false),
 	                                                       new HepPoint3D((*transf)*gp)));
 	  hSubsTr.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
 	                                                       new HepPoint3D((*transf)*gp)));
@@ -1070,7 +1072,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	  if (eta==etaN-1) sVolsPos.push_back(sVol); 
           // in R/H
           if (h>0) { // glue 'manually'
-            if (volType == 1 || volType == 3 ) {  // plane surface  
+            if (volType == 1 || volType == 3 ) {  // plane surface
 	      m_trackingVolumeHelper->setOutsideTrackingVolume(*sVol, Trk::tubeSectorInnerCover,hSubs[h-1]); 
 	      m_trackingVolumeHelper->setOutsideTrackingVolume(*(hSubs[h-1]), Trk::tubeSectorOuterCover,sVol); 
             } else {  // cylinder surface
@@ -1088,7 +1090,9 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	  //
 	}
         phiSubs.push_back(hSubs); 
-        phBins.push_back(new Trk::BinnedArray1D<Trk::TrackingVolume>(hSubsTr,hBinUtil[eta][phi]) );
+	Trk::BinnedArray1D<Trk::TrackingVolume>* volBinArray = new Trk::BinnedArray1D<Trk::TrackingVolume>(hSubsTr,hBinUtil[eta][phi]->clone());
+        phBins.push_back(volBinArray);
+        m_garbage.push_back(volBinArray);
         // finish phi gluing
         if (phiN>1 && phi>0) {
 	  for (unsigned int j=0; j<phiSubs[phi-1].size(); j++) {
@@ -1145,9 +1149,9 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
     // create subvolumes & BinnedArray
     std::vector<Trk::TrackingVolumeOrderPosition> subVolumes(etaN*phiN);
-    std::vector<const Trk::TrackingVolume*> sVols;                // for gluing
-    std::vector<const Trk::TrackingVolume*> sVolsNeg;             // for gluing
-    std::vector<const Trk::TrackingVolume*> sVolsPos;             // for gluing
+    std::vector<const Trk::TrackingVolume*> sVols(etaN*phiN);                // for gluing
+    std::vector<const Trk::TrackingVolume*> sVolsNeg(phiN);             // for gluing
+    std::vector<const Trk::TrackingVolume*> sVolsPos(phiN);             // for gluing
     for (unsigned int eta = 0; eta < zSteps.size()-1; eta++) {
       double posZ = 0.5*(zSteps[eta] + zSteps[eta+1]) ;
       double   hZ = 0.5*fabs(zSteps[eta+1] - zSteps[eta]) ;
@@ -1167,11 +1171,11 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 					       phiSect, 
 					       hZ);
         HepTransform3D* transf = new HepTransform3D(HepRotateZ3D(posPhi)*HepTranslateZ3D(posZ));
-        const Trk::Volume* subVol= new Trk::Volume(transf, subBds);     
+        Trk::Volume subVol(transf, subBds);     
         // enclosed muon objects ?   
 	std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) ; 
-        std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol );
-        const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( *subVol,
+        std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( &subVol );
+        const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( subVol,
 								   m_muonMaterial,
 								   m_muonMagneticField,
 								   detVols,
@@ -1181,12 +1185,13 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	HepPoint3D gp(subBds->outerRadius(),0.,0.);
 	//subVolumes.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
         //                                                     new HepPoint3D((*transf)*gp)));
-	subVolumes[phi*etaN+eta] = Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
+	subVolumes[phi*etaN+eta] = Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, false),
                                                              new HepPoint3D((*transf)*gp));
         //glue subVolumes
-        sVols.push_back(sVol); 
-        if (eta==0)      sVolsNeg.push_back(sVol); 
-        if (eta==etaN-1) sVolsPos.push_back(sVol); 
+        //sVols[phi*etaN+eta] = sVol; 
+        sVols[phiN*eta+phi] = sVol; 
+        if (eta==0)      sVolsNeg[phi]=sVol; 
+        if (eta==etaN-1) sVolsPos[phi]=sVol; 
         // in phi        
         if ( phiN>1 && phi>0) {
           m_trackingVolumeHelper->glueTrackingVolumes(*sVol, Trk::tubeSectorNegativePhi,

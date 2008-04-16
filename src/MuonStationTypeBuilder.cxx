@@ -878,7 +878,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
     double yv = volBounds->halflengthY();
     double zv = volBounds->halflengthZ();
     Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(yv,zv); 
-    Trk::SharedObject<const Trk::SurfaceBounds>* bounds = new Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);
+    Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds);
     for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {
       // x-y plane -> y-z plane
       thickness = x_thickness[iloop];
@@ -907,7 +907,6 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
         log << MSG::ERROR << "MDT layer with no material" << endreq;
       }
     }
-    bounds->remRef();
   } 
   // create the BinnedArray
   //std::cout << "number of Mdt layers:"<<layers.size()<<std::endl;
@@ -1036,7 +1035,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
     double yv = volBounds->halflengthY();
     // x-y plane -> y-z plane
     Trk::TrapezoidBounds* tbounds= new Trk::TrapezoidBounds(x1v,x2v,yv);
-    Trk::SharedObject<const Trk::SurfaceBounds>* bounds= new Trk::SharedObject<const Trk::SurfaceBounds>(tbounds);
+    Trk::SharedObject<const Trk::SurfaceBounds> bounds(tbounds);
     for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {      
       thickness = x_thickness[iloop];
       Trk::MaterialProperties material = m_muonMaterial;
@@ -1881,7 +1880,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(cons
   const Trk::PlaneLayer* layer;
   Trk::OverlapDescriptor* od=0;
   Trk::TrapezoidBounds* tbounds= new Trk::TrapezoidBounds(minX,maxX,halfY); 
-  Trk::SharedObject<const Trk::SurfaceBounds>* bounds = new Trk::SharedObject<const Trk::SurfaceBounds>(tbounds);
+  Trk::SharedObject<const Trk::SurfaceBounds> bounds(tbounds);
   for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {
     HepTransform3D* cTr = new HepTransform3D(  HepTranslateX3D(x_array[iloop]) * (*transf) ); // this won't work for multiple layers !!! //
     Trk::HomogenousLayerMaterial cscMaterial(*(x_mat[iloop]), Trk::oppositePre);  
@@ -2025,7 +2024,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCDiamondComponent(
   const Trk::PlaneLayer* layer;
   Trk::OverlapDescriptor* od=0;
   Trk::DiamondBounds* dbounds= new Trk::DiamondBounds(minX,medX,maxX,halfY1,halfY2); ;
-  Trk::SharedObject<const Trk::SurfaceBounds>* bounds = new Trk::SharedObject<const Trk::SurfaceBounds>(dbounds);
+  Trk::SharedObject<const Trk::SurfaceBounds> bounds(dbounds);
   for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {
     HepTransform3D* cTr = new HepTransform3D( HepTranslateX3D(x_array[iloop]) * (*transf) ); // this won't work for multiple layers !!! //
     Trk::HomogenousLayerMaterial cscMaterial(*(x_mat[iloop]), Trk::oppositePre);  
@@ -2168,7 +2167,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processTGCComponent(const G
   const Trk::PlaneLayer* layer;
   Trk::OverlapDescriptor* od=0;
   Trk::TrapezoidBounds* tbounds= new Trk::TrapezoidBounds(minX,maxX,halfY); ;
-  Trk::SharedObject<const Trk::SurfaceBounds>* bounds = new Trk::SharedObject<const Trk::SurfaceBounds>(tbounds);
+  Trk::SharedObject<const Trk::SurfaceBounds> bounds(tbounds);
   for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {
     HepTransform3D* cTr = new HepTransform3D( HepTranslateX3D(x_array[iloop])*(*transf) ); // this won't work for multiple layers !!! //
     Trk::HomogenousLayerMaterial tgcMaterial(x_mat[iloop], Trk::oppositePre);  

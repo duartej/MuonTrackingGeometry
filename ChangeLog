@@ -1,3 +1,7 @@
+2008-04-16 Andreas.Salzburger@cern.ch < Andreas.Salzburger@cern.ch >
+	* change of the way how SharedObject is handled
+	* tagged as MuonTrackingGeometry-00-03-00
+
 2008-04-04 Sarka Todorova <sarka.todorova@cern.ch>
 	* merge with 'shared object' branch(-00-02-03-02) + updates
 	* tagged as MuonTrackingGeometry-00-02-05

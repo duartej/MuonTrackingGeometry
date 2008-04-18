@@ -1,4 +1,8 @@
 2008-04-18 Sarka Todorova <sarka.todorova@cern.ch>
+	* merge with MTG-00-02-06-01 to prevent problems with active material
+	* tagged as MuonTrackingGeometry-00-03-03
+
+2008-04-18 Sarka Todorova <sarka.todorova@cern.ch>
 	* implement diluted inert material (hardcoded)
 	* tagged as MuonTrackingGeometry-00-03-02
 

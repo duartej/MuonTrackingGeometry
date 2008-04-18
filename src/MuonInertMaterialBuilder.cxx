@@ -92,7 +92,7 @@ Muon::MuonInertMaterialBuilder::MuonInertMaterialBuilder(const std::string& t, c
   m_buildBT(true),
   m_buildECT(true),
   m_buildFeets(true),
-  m_buildRails(true),
+  m_buildRails(1),
   m_buildShields(true),
   m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool")
 {
@@ -251,7 +251,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
 	  if (  vname.substr(0,2)=="BT" || vname.substr(0,6) == "EdgeBT" || vname.substr(0,6) == "HeadBT" ) accepted = m_buildBT ? true : false;
 	  else if ( vname.substr(0,3)=="ECT" ) accepted = m_buildECT ? true : false; 
 	  else if ( vname.size()>7 && (vname.substr(3,4)=="Feet" || vname.substr(4,4)=="Feet" ) ) accepted = m_buildFeets ? true : false; 
-	  else if ( vname.substr(0,4)=="Rail" ) accepted = m_buildRails ? true : false; 
+	  else if ( vname.substr(0,4)=="Rail" ) accepted = m_buildRails>0 ? true : false; 
 	  else accepted = m_buildShields ? true : false;
 
           if ( vname=="EdgeBTVoussoir" && accepted && m_simplify ) accepted = false;
@@ -272,7 +272,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
 	    
 	    std::vector<const GeoShape*> input_shapes;
 	    // 
-	    if (!m_simplify && vname == "Rail") splitShape(clv->getShape(),input_shapes);
+	    if ( m_buildRails>1 && vname == "Rail") splitShape(clv->getShape(),input_shapes);
 	    else input_shapes.push_back(clv->getShape());
 	    
 	    for (unsigned int ish=0; ish < input_shapes.size(); ish++) { 
@@ -700,7 +700,7 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
 
     envelope = new Trk::Volume(*(constituents->front()));
 
-    if ( m_simplify ) { 
+    if ( m_simplify || (trVol->volumeName().substr(0,4)=="Rail" && m_buildRails<2) ) { 
       if ( subtractions->size()==0 || trVol->volumeName().substr(0,4)=="ECTC" ) {
         simpleMode = 2;
       } else {
@@ -799,7 +799,7 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
       }
       envelope = new Trk::Volume(new HepTransform3D(trVol->transform()),new Trk::CylinderVolumeBounds(rSize,zSize));
     } else { 
-      if ( m_simplify && fraction > 0.1 ) {
+      if ( (m_simplify || (trVol->volumeName().substr(0,4)=="Rail" && m_buildRails<2))  && fraction > 0.1 ) {
         simpleMode = 3;
         if (m_resizeEnvelope) {
 	  if (xSize<=ySize && xSize<=zSize) xSize *= fraction;

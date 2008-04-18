@@ -101,7 +101,7 @@ namespace Muon {
       bool                                m_buildBT;                    // build barrel toroids 
       bool                                m_buildECT;                   // build endcap toroids 
       bool                                m_buildFeets;                 // build feets 
-      bool                                m_buildRails;                 // build rails 
+      int                                 m_buildRails;                 // build rails 
       bool                                m_buildShields;               // build shieldings 
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system

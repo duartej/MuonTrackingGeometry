@@ -1,4 +1,8 @@
 2008-04-18 Sarka Todorova <sarka.todorova@cern.ch>
+	* implement diluted inert material (hardcoded)
+	* tagged as MuonTrackingGeometry-00-03-02
+
+2008-04-18 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix MSTB (Rpc shared bounds)
 	* tagged as MuonTrackingGeometry-00-03-01
 

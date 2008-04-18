@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
 // MuonTrackingGeometryBuilder.cxx, (c) ATLAS Detector software
 ///////////////////////////////////////////////////////////////////
 
@@ -88,7 +88,7 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_outerEndcapEtaPartition(3),
   m_phiPartition(16),
   m_adjustStatic(true),
-  m_static3d(false),
+  m_static3d(true),
   m_blendInertMaterial(false),
   m_alignTolerance(0.)
 {
@@ -206,9 +206,22 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
   
   log << MSG::INFO  << name() <<" building tracking geometry" << endreq;    
   ///////////////////////////////////////////////////////////////////////////////////////////////////
+  // check setup
+  if (m_muonInert && m_blendInertMaterial) {
+    if (!m_adjustStatic || !m_static3d) {
+      log << MSG::INFO  << name() <<" diluted inert material hardcoded for 3D volume frame, adjusting setup" << endreq;
+      m_adjustStatic = true;
+      m_static3d = true;
+    }
+  }
   // process muon material objects
   if (m_muonActive && m_stationBuilder) m_stations = m_stationBuilder->buildDetachedTrackingVolumes();
   if (m_muonInert && m_inertBuilder) m_inertObjs = m_inertBuilder->buildDetachedTrackingVolumes();
+  if (m_inertObjs && m_blendInertMaterial) {
+    //m_inertBlend.resize(m_inertObjs->size());
+    //getVolumeFractions();    
+    getDilutingFactors();    
+  }
   
   // find object's span with tolerance for the alignment 
   m_stationSpan = findVolumesSpan(m_stations, 100.*m_alignTolerance, m_alignTolerance*deg);
@@ -597,6 +610,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 											  "All::Container::CompleteDetector");
 //
    Trk::TrackingGeometry* trackingGeometry = new Trk::TrackingGeometry(detector,Trk::globalSearch);
+
+   //if (m_blendInertMaterial) blendMaterial();
    //log << MSG::INFO << name() << " print volume hierarchy" << endreq;
    //trackingGeometry->printVolumeHierarchy(log);
 
@@ -853,9 +868,10 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         const Trk::Volume* subVol= new Trk::Volume(transf, subBds);     
         // enclosed muon objects ?   
 	std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) ; 
-        std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol );
+	Trk::MaterialProperties mat=m_muonMaterial;
+        std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol, mat );
         const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( *subVol,
-								   m_muonMaterial,
+								   mat,
 								   m_muonMagneticField,
 								   detVols,
 								   volName );
@@ -900,10 +916,11 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
   } else {
     // enclosed muon objects ? 
-    std::vector<const Trk::DetachedTrackingVolume*>* muonObjs = getDetachedObjects( vol );
+    Trk::MaterialProperties mat=m_muonMaterial;
+    std::vector<const Trk::DetachedTrackingVolume*>* muonObjs = getDetachedObjects( vol, mat );
 
     tVol = new Trk::TrackingVolume( *vol,
-                                    m_muonMaterial,
+                                    mat,
 				    m_muonMagneticField,
 				    muonObjs,
 				    volumeName);
@@ -1015,40 +1032,11 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 							 volType);
 	  HepTransform3D* transf = new HepTransform3D(HepRotateZ3D(posPhi)*HepTranslateZ3D(posZ));
 	  Trk::Volume subVol(transf, subBds);
+	  Trk::MaterialProperties mat(m_muonMaterial);
        
-	  // enclosed muon objects ?   
+	  // enclosed muon objects ? also adjusts material properties in case of material blend  
 	  std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) +MuonGM::buildString(h,2) ; 
-	  std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( &subVol );
-
-          //
-	  Trk::MaterialProperties mat = m_muonMaterial;
-          if (detVols && m_static3d && m_blendInertMaterial ) {
-            // blend material if appropriate
-            double x0i = 0.;
-            double zOaTr = 0.; 
-            double tot = 0.;
-            double sVol = calculateVolume(&subVol);
-	    std::vector<const Trk::DetachedTrackingVolume*>::iterator vIt = detVols->begin();
-	    while ( vIt != detVols->end() ) {
-	      std::string vname = (*vIt)->trackingVolume()->volumeName();
-              if ( vname=="BTStrut_resized" || vname=="BTVoussoir_resized" || vname=="HeadBTVoussoir_resized") {   
-		double vfr = calculateVolume((*vIt)->trackingVolume())/sVol;
-		if ( subVol.inside((*vIt)->trackingVolume()->center(),0.) ) {
-		  x0i += vfr*(*vIt)->trackingVolume()->x0();  
-		  zOaTr += vfr*(*vIt)->trackingVolume()->zOverAtimesRho();
-		  tot += vfr;
-		}  
-		detVols->erase(vIt);
-              } else {
-                vIt++;
-	      }
-	    }
-	    double lScale = pow(tot,0.33);
-            if ( tot > 0. )  { 
-	      mat = Trk::MaterialProperties(1.,x0i/tot/lScale,zOaTr);
-            } 
-	  }
-          //
+	  std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( &subVol, mat );
 
 	  const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( subVol,
 								     mat,
@@ -1056,7 +1044,6 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 								     detVols,
 								     volName );
                                                                                                                           
-	  //delete subVol;
 	  // reference position 
 	  HepPoint3D gp(subBds->mediumRadius(),0.,0.);
 	  subVolumesVect.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, false),
@@ -1174,9 +1161,11 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         Trk::Volume subVol(transf, subBds);     
         // enclosed muon objects ?   
 	std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) ; 
-        std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( &subVol );
+
+	Trk::MaterialProperties mat=m_muonMaterial;
+        std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( &subVol, mat );
         const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( subVol,
-								   m_muonMaterial,
+								   mat,
 								   m_muonMagneticField,
 								   detVols,
 								   volName );
@@ -1224,10 +1213,11 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
   } else {
     // enclosed muon objects ? 
-    std::vector<const Trk::DetachedTrackingVolume*>* muonObjs = getDetachedObjects( vol );
+    Trk::MaterialProperties mat=m_muonMaterial;
+    std::vector<const Trk::DetachedTrackingVolume*>* muonObjs = getDetachedObjects( vol, mat );
 
     tVol = new Trk::TrackingVolume( *vol,
-                                    m_muonMaterial,
+                                    mat,
 				    m_muonMagneticField,
 				    muonObjs,
 				    volumeName);
@@ -1236,7 +1226,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
   return tVol;
 } 
 
-std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuilder::getDetachedObjects(const Trk::Volume* vol ) const
+std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuilder::getDetachedObjects(const Trk::Volume* vol, Trk::MaterialProperties& mat ) const
 {
 
   std::vector<const Trk::DetachedTrackingVolume*>* detTVs = 0;
@@ -1305,24 +1295,53 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
     }
   }
   // passive
+  double dilFactor = 0.;
   if (m_inertSpan) {
     for (unsigned int i=0; i<m_inertSpan->size() ; i++) {
       const Muon::Span* s = (*m_inertSpan)[i];
+      bool rail = ( (*m_inertObjs)[i]->name() == "Rail" ) ? true : false;  
+      if (m_blendInertMaterial) dilFactor = getDilFactor( (*m_inertObjs)[i]->name() );
       bool rLimit = (!m_static3d || ( (*s)[4] <= rMax && (*s)[5] >= rMin ) ); 
       if ( rLimit && (*s)[0] <= zMax && (*s)[1] >= zMin && m_inertObjs->size()>i) {
 	if (phiLim) {
 	  if (pMin>=0 && pMax<=2*M_PI) {
-	    if ( (*s)[2]<=(*s)[3] && (*s)[2] <= pMax && (*s)[3] >= pMin ) detached.push_back((*m_inertObjs)[i]);
-	    if ( (*s)[2]>(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin) ) detached.push_back((*m_inertObjs)[i]);
+	    if ( (*s)[2]<=(*s)[3] && (*s)[2] <= pMax && (*s)[3] >= pMin ) {
+	      if (!m_blendInertMaterial || dilFactor<=0. || rail) detached.push_back((*m_inertObjs)[i]);
+              else updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
+	    }
+	    if ( (*s)[2]>(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin) ) {
+	      if (!m_blendInertMaterial || dilFactor<=0. || rail) detached.push_back((*m_inertObjs)[i]);
+              else updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
+	    }
 	  } else if (pMin < 0) {
-	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin+2*M_PI) ) detached.push_back((*m_inertObjs)[i]);
-	    if ( (*s)[2]>(*s)[3]  ) detached.push_back((*m_inertObjs)[i]);
+	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin+2*M_PI) ) {
+	      if  (!m_blendInertMaterial || dilFactor<=0. || rail) detached.push_back((*m_inertObjs)[i]);
+              else updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
+	    }
+	    if ( (*s)[2]>(*s)[3]  ) {
+	      if (!m_blendInertMaterial || dilFactor<=0. || rail) detached.push_back((*m_inertObjs)[i]);
+              else updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
+	    }
 	  } else if (pMax > 2*M_PI) {
-	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax-2*M_PI || (*s)[3] >= pMin) ) detached.push_back((*m_inertObjs)[i]);
-	    if ( (*s)[2]>(*s)[3]  ) detached.push_back((*m_inertObjs)[i]);
+	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax-2*M_PI || (*s)[3] >= pMin) ) {
+	      if (!m_blendInertMaterial || dilFactor<=0. || rail) detached.push_back((*m_inertObjs)[i]);
+              else updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
+	    }
+	    if ( (*s)[2]>(*s)[3]  ) {
+	      if (!m_blendInertMaterial || dilFactor<=0. || rail) detached.push_back((*m_inertObjs)[i]);
+              else updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
+	    }
 	  }
 	} else {
-	  detached.push_back((*m_inertObjs)[i]);
+	  if (!m_blendInertMaterial || dilFactor<=0.|| rail) detached.push_back((*m_inertObjs)[i]);
+	  else updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+	  //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
 	}
       } 
     }
@@ -1521,3 +1540,117 @@ double  Muon::MuonTrackingGeometryBuilder::calculateVolume( const Trk::Volume* e
   
   return envVol;
 }
+
+void  Muon::MuonTrackingGeometryBuilder::getDilutingFactors( ) const
+{
+  m_dilFact.clear();
+  m_dilFact.push_back(std::pair<std::string,double > ("BTBevelledLongTubeIn", 0.0318 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("BTBevelledLongTubeOut", 0.0185 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("BTVoussoirAttWing", 0.0006 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("BTBevelledShortTube", 0.0076 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("BTBevelledCornerTube", 0.0014 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("BTRibEnvelope", 0.0047 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("BTWingRib", 0.0018 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("BTVoussoirAttachment", 0.0007 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("BTColdLongSegment", 0.1323 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("BTColdShortSegment", 0.0589 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("BTColdCornerSegment", 0.0154 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("BTColdRib", 0.0150 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("BTVoussoir", 0.0446 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("EdgeBTVoussoir", 0.0056  ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("HeadBTVoussoir", 0.0609 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("BTStrut", 0.0107 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("BTWingStrut", 0.0081 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("BTCryoring", 0.0013 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("Rail", 0.1814 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTEndplateStdSegment", 0.0191 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTEndplateRailSegment6", 0.0188 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTEndplateRailSegment8", 0.0187 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTWallStdSegment", 0.00001 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTWallRailSegment", 0.00001 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTCentralTube", 0.0049 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTStaytube", 0.0029 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTConductorBox", 0.1258 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTKeystoneBox", 0.0138 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTTower", 0.0070 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTBottomTower", 0.0022 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTBackTowerWall", 0.0136 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTServiceTurretTower", 0.0007 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetSidePlate", 0.0032 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetLargePlate", 0.0010 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetCoverPlate", 0.0069 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetInnerPlate", 0.0005 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetBottomPlate", 0.0010 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetSidePlate", 0.0034 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetLargePlate", 0.0015 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetInclinedPlate", 0.0075 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetCoverPlate", 0.0122 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetInnerPlate", 0.0011 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetInnerTopVoussPlate", 0.0008  ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetBottomPlate", 0.0020 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetGirder01", 0.0097 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetGirder02", 0.0087 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetGirder03", 0.0074 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetRailSupport", 0.0027 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetMinusRailSupport", 0.0034 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetPlusRailSupport", 0.0034 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetVoussoir", 0.0050 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ConnFeetVoussoir", 0.0010 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingFrontDisk", 0.0033 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingBackDisk", 0.0025 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingPlugsExtension", 0.00001 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingPlugs", 0.0423 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingTubeBackDisk", 0.0029 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingMainTube", 0.0257 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingBrassCone", 0.0012 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingPolyCone", 0.0010 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingLeadCone", 0.0004 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingHubBrassCone", 0.0315 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingPolyCladding", 0.0103 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingLeadCladding", 0.0004 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ToroidShieldingOuterPlugs", 0.0466 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ToroidShieldingInnerPlugs", 0.0305 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ToroidShieldingPolyRingsTube", 0.0097 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ToroidShieldingPolyRingsCone", 0.0008 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingPlug", 0.0015 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingMainCylinder", 0.2164 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingOctogon", 0.0046 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingTX1STMTube", 0.0002 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingTX1STMCone", 0.0076 ) );
+  return;
+}
+
+double Muon::MuonTrackingGeometryBuilder::getDilFactor(std::string name) const
+{
+  double dil = -1.;
+  for (unsigned int i=0; i<m_dilFact.size();i++) {
+    if (m_dilFact[i].first==name) {
+      dil = m_dilFact[i].second;
+      break;
+    }
+  }  
+  return dil;
+}
+
+void Muon::MuonTrackingGeometryBuilder::updateMatProps(Trk::MaterialProperties& mat, const Trk::TrackingVolume* trVol, double fact) const
+{
+  // find material source
+  const std::vector<const Trk::TrackingVolume*>* dense = trVol->confinedDenseVolumes();
+  Trk::MaterialProperties addMat;
+  if (!dense || !dense->size()) addMat = *trVol;
+  else addMat = *(dense->front());
+  //add density
+  double rho1 = mat.zOverAtimesRho();
+  double rho2 = fact*addMat.zOverAtimesRho();
+  double rho = rho1+rho2;  
+  //x0
+  double x1 = mat.x0();
+  double x2 = addMat.x0()/fact;
+  double x0 = x1*x2/(x1+x2);  
+  //
+  double d = mat.thickness();
+  mat = Trk::MaterialProperties(d,x0,rho);
+  //
+  return;
+}
+

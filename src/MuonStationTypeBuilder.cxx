@@ -1129,7 +1129,8 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
       const Trk::PlaneLayer* layer;
       double thickness=2*xs;
       Trk::OverlapDescriptor* od=0;
-      Trk::RectangleBounds* bounds = new Trk::RectangleBounds(ys,zs); 
+      Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(ys,zs);
+      Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds); 
       HepTransform3D* cTr = new HepTransform3D((*transfc[ic]) * HepRotateY3D(90*deg) * HepRotateZ3D(90*deg));
       Trk::MaterialProperties rpcMat = m_muonMaterial;               // default
       if ( (glv->getName()).substr(0,3)=="Ded" ) {
@@ -1177,7 +1178,8 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
         const Trk::PlaneLayer* layer;
         double thickness=2*xs1;
         Trk::OverlapDescriptor* od=0;
-        Trk::RectangleBounds* bounds = new Trk::RectangleBounds(ys1,zs); 
+        Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(ys1,zs); 
+        Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds);
         //Trk::RectangleBounds* boundsEta = new Trk::RectangleBounds(zs,ys1); 
         HepTransform3D* cTr = new HepTransform3D((*transfc[ic]) * HepRotateY3D(90*deg) * HepRotateZ3D(90*deg));
 	//std::cout << "component rotation:" << (*cTr)[0][0] <<"," << (*cTr)[1][1] <<"," << (*cTr)[2][2] << std::endl; 

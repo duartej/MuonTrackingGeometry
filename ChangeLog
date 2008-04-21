@@ -1,3 +1,7 @@
+2008-04-21 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix invalid read in simplified inert material
+	* tagged as MuonTrackingGeometry-00-03-04
+
 2008-04-18 Sarka Todorova <sarka.todorova@cern.ch>
 	* merge with MTG-00-02-06-01 to prevent problems with active material
 	* tagged as MuonTrackingGeometry-00-03-03

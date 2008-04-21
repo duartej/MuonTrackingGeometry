@@ -969,14 +969,14 @@ std::pair<std::vector<const Trk::Layer*>*,std::vector<const Trk::TrackingVolume*
 	  }
 	}
       }
-      delete (*vols)[i];
+      //delete (*vols)[i];
     } else {
       std::vector<const Trk::Layer*>* temp_layers= new std::vector<const Trk::Layer*>;
       double thick = volumeToLayers(*temp_layers,(*vols)[i],0,(*vols)[i]);
       if ( m_layerThicknessLimit<0. || thick<m_layerThicknessLimit ) {
 	if (!lays && temp_layers->size()) lays = new std::vector<const Trk::Layer*>;
 	for (unsigned int il=0;il<temp_layers->size();il++) { (*temp_layers)[il]->setLayerType(0); lays->push_back((*temp_layers)[il]);}
-	delete (*vols)[i];
+	//delete (*vols)[i];
       } else {
         if (!dVols) dVols = new std::vector<const Trk::TrackingVolume*>;
 	dVols->push_back((*vols)[i]);

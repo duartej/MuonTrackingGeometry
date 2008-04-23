@@ -1,3 +1,7 @@
+2008-04-23 Sarka Todorova <sarka.todorova@cern.ch>
+	* 3d frame adjusted to better confine shields
+	* tagged as MuonTrackingGeometry-00-03-05 
+
 2008-04-21 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix invalid read in simplified inert material
 	* tagged as MuonTrackingGeometry-00-03-04

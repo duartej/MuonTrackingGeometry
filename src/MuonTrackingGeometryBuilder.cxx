@@ -80,8 +80,8 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_innerEndcapZ(12900.),
   m_outerEndcapZ(25000.),
   m_beamPipeRadius(70.),
-  m_innerShieldRadius(895.),
-  m_outerShieldRadius(1475.),
+  m_innerShieldRadius(908.),
+  m_outerShieldRadius(1476.),
   m_diskShieldZ(6910.),
   m_barrelEtaPartition(9),
   m_innerEndcapEtaPartition(3),
@@ -686,6 +686,7 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
   std::vector<Trk::GlobalPosition> edges;
   Muon::Span span;  
   
+  double cylZcorr = 0.; 
   if (box) {
     edges.push_back( Trk::GlobalPosition(box->halflengthX(),box->halflengthY(),box->halflengthZ()) );
     edges.push_back( Trk::GlobalPosition(-box->halflengthX(),box->halflengthY(),box->halflengthZ()) );
@@ -738,12 +739,16 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
   }
   if (bcyl) {
     edges.push_back( Trk::GlobalPosition(0.,0., bcyl->halflengthZ()) );
+    Trk::GlobalPosition gp = transform.getRotation()*edges.back();
+    cylZcorr = bcyl->outerRadius()*gp.perp()/bcyl->halflengthZ(); 
     edges.push_back( Trk::GlobalPosition(0.,0.,-bcyl->halflengthZ()) );
     edges.push_back( Trk::GlobalPosition(bcyl->innerRadius(),0.,0.) );
     edges.push_back( Trk::GlobalPosition(bcyl->outerRadius(),0.,0.) );
   }
   if (cyl) {
     edges.push_back( Trk::GlobalPosition(0.,0., cyl->halflengthZ()) );
+    Trk::GlobalPosition gp = transform.getRotation()*edges.back();
+    cylZcorr = cyl->outerRadius()*gp.perp()/cyl->halflengthZ();
     edges.push_back( Trk::GlobalPosition(0.,0.,-cyl->halflengthZ()) );
     edges.push_back( Trk::GlobalPosition(cyl->innerRadius(),0.,0.) );
     edges.push_back( Trk::GlobalPosition(cyl->outerRadius(),0.,0.) );
@@ -783,21 +788,21 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     span.push_back( maxZ + zTol );  
     span.push_back( minPhi - phiTol );  
     span.push_back( maxPhi + phiTol );  
-    span.push_back( fmax(0., minR - zTol) );  
+    span.push_back( fmax(m_beamPipeRadius+0.001, minR - zTol) );  
     span.push_back( maxR + zTol );  
   } else if (bcyl) {
-    span.push_back( minZ - bcyl->outerRadius()-zTol );
-    span.push_back( maxZ + bcyl->outerRadius()+zTol );
+    span.push_back( minZ - cylZcorr -zTol );
+    span.push_back( maxZ + cylZcorr +zTol );
     span.push_back( minPhi - phiTol );
     span.push_back( maxPhi + phiTol );
-    span.push_back( fmax(0., minR - zTol) );  
+    span.push_back( fmax(m_beamPipeRadius+0.001, minR - zTol) );  
     span.push_back( maxR + zTol );  
   } else if (cyl) {
-    span.push_back( minZ - cyl->outerRadius()-zTol );
-    span.push_back( maxZ + cyl->outerRadius()+zTol );
+    span.push_back( minZ - cylZcorr -zTol );
+    span.push_back( maxZ + cylZcorr +zTol );
     span.push_back( minPhi - phiTol );
     span.push_back( maxPhi + phiTol );
-    span.push_back( fmax(0., minR - zTol) );  
+    span.push_back( fmax(m_beamPipeRadius+0.001, minR - zTol) );  
     span.push_back( maxR + zTol );  
   } else {
     log << MSG::ERROR  << name() <<" volume shape not recognized: "<< endreq;
@@ -1244,6 +1249,7 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
     hz = cyl->halflengthZ();
     rMin = cyl->innerRadius();
     rMax = cyl->outerRadius();
+    rMaxc = rMax;
   } else if (bcyl) {
     rmed = bcyl->mediumRadius();
     dphi = bcyl->halfPhiSector();
@@ -1423,6 +1429,7 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   // barrel 2x2
   std::vector<std::pair<int,double> >  barrelZ0F0;
   barrelZ0F0.push_back( std::pair<int,double>(0,m_innerBarrelRadius) );
+  barrelZ0F0.push_back( std::pair<int,double>(0,4450.) );                // for DiskShieldingBackDisk
   barrelZ0F0.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
 
   std::vector<std::pair<int,double> >  barrelZ0F1;
@@ -1497,6 +1504,7 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   // outer 1x1
   std::vector<std::pair<int,double> >  outerZ0F0;
   outerZ0F0.push_back( std::pair<int,double>(0,m_outerShieldRadius) );
+  outerZ0F0.push_back( std::pair<int,double>(0,2275.) );
   outerZ0F0.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
 
   std::vector<std::vector<std::vector<std::pair<int,double> > > >  outerZF(2);
@@ -1562,15 +1570,15 @@ void  Muon::MuonTrackingGeometryBuilder::getDilutingFactors( ) const
   m_dilFact.push_back(std::pair<std::string,double > ("BTStrut", 0.0107 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("BTWingStrut", 0.0081 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("BTCryoring", 0.0013 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("Rail", 0.1814 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTEndplateStdSegment", 0.0191 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTEndplateRailSegment6", 0.0188 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTEndplateRailSegment8", 0.0187 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("Rail", 0.0040 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTEndplateStdSegment", 0.0188 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTEndplateRailSegment6", 0.0185 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTEndplateRailSegment8", 0.0185 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("ECTWallStdSegment", 0.00001 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("ECTWallRailSegment", 0.00001 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTCentralTube", 0.0049 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTStaytube", 0.0029 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTConductorBox", 0.1258 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTCentralTube", 0.0068 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTStaytube", 0.0047 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ECTConductorBox", 0.1260 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("ECTKeystoneBox", 0.0138 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("ECTTower", 0.0070 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("ECTBottomTower", 0.0022 ) );
@@ -1596,26 +1604,26 @@ void  Muon::MuonTrackingGeometryBuilder::getDilutingFactors( ) const
   m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetPlusRailSupport", 0.0034 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("StdFeetVoussoir", 0.0050 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("ConnFeetVoussoir", 0.0010 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingFrontDisk", 0.0033 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingBackDisk", 0.0025 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingFrontDisk", 0.1070 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingBackDisk", 0.2649 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingPlugsExtension", 0.00001 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingPlugs", 0.0423 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingTubeBackDisk", 0.0029 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingMainTube", 0.0257 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingPlugs", 0.0420 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingTubeBackDisk", 0.0073 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingMainTube", 0.0255 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingBrassCone", 0.0012 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingPolyCone", 0.0010 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingLeadCone", 0.0004 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingHubBrassCone", 0.0315 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingPolyCladding", 0.0103 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingLeadCladding", 0.0004 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ToroidShieldingOuterPlugs", 0.0466 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ToroidShieldingInnerPlugs", 0.0305 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ToroidShieldingPolyRingsTube", 0.0097 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingHubBrassCone", 0.0513 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingPolyCladding", 0.0168 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingLeadCladding", 0.0076 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ToroidShieldingOuterPlugs", 0.2956 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ToroidShieldingInnerPlugs", 0.1933 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ToroidShieldingPolyRingsTube", 0.0616 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("ToroidShieldingPolyRingsCone", 0.0008 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingPlug", 0.0015 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingMainCylinder", 0.2164 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingOctogon", 0.0046 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingTX1STMTube", 0.0002 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingMainCylinder", 0.6214 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingOctogon", 0.1703 ) );
+  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingTX1STMTube", 0.0105 ) );
   m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingTX1STMCone", 0.0076 ) );
   return;
 }

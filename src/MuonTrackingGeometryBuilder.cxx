@@ -670,6 +670,7 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     const Muon::Span* s1 = findVolumeSpan(&(comb->first()->volumeBounds()),transform,zTol,phiTol);     
     const Muon::Span* s2 = findVolumeSpan(&(comb->second()->volumeBounds()),comb->second()->transform(),zTol,phiTol);     
     Muon::Span scomb;
+    scomb.reserve(6); 
     scomb.push_back(fmin((*s1)[0],(*s2)[0]));
     scomb.push_back(fmax((*s1)[1],(*s2)[1]));
     scomb.push_back(fmin((*s1)[2],(*s2)[2]));
@@ -684,7 +685,9 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
   double minPhi = 2*M_PI; double maxPhi = 0.;
   double minR = m_outerBarrelRadius; double maxR = 0.;
   std::vector<Trk::GlobalPosition> edges;
+  edges.reserve(16);
   Muon::Span span;  
+  span.reserve(6); 
   
   double cylZcorr = 0.; 
   if (box) {
@@ -1275,7 +1278,7 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
     phiLim = true;
   } 
    
-  std::vector<const Trk::DetachedTrackingVolume*> detached;
+  std::list<const Trk::DetachedTrackingVolume*> detached;
   // active, use corrected rMax
   if (m_stationSpan) {
     for (unsigned int i=0; i<m_stationSpan->size() ; i++) {
@@ -1352,7 +1355,8 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
       } 
     }
   }
-  if (detached.size()>0) detTVs = new std::vector<const Trk::DetachedTrackingVolume*>(detached); 
+  //if (detached.size()>0) detTVs = new std::vector<const Trk::DetachedTrackingVolume*>(detached); 
+  if (!detached.empty()) detTVs = new std::vector<const Trk::DetachedTrackingVolume*>(detached.begin(), detached.end()); 
   return detTVs;
 }
 

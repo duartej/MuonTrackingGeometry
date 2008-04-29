@@ -1,3 +1,7 @@
+2008-04-29 Sarka Todorova <sarka.todorova@cern.ch>
+	* limit vector size for push_back
+	* tagged as MuonTrackingGeometry-00-03-06 
+
 2008-04-23 Sarka Todorova <sarka.todorova@cern.ch>
 	* 3d frame adjusted to better confine shields
 	* tagged as MuonTrackingGeometry-00-03-05 

@@ -89,7 +89,7 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_phiPartition(16),
   m_adjustStatic(true),
   m_static3d(true),
-  m_blendInertMaterial(false),
+  m_blendInertMaterial(true),
   m_alignTolerance(0.)
 {
   m_stationSpan = 0;
@@ -1315,41 +1315,41 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
 	if (phiLim) {
 	  if (pMin>=0 && pMax<=2*M_PI) {
 	    if ( (*s)[2]<=(*s)[3] && (*s)[2] <= pMax && (*s)[3] >= pMin ) {
-	      if (!m_blendInertMaterial || dilFactor<=0. || rail) detached.push_back((*m_inertObjs)[i]);
-              else updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+	      detached.push_back((*m_inertObjs)[i]);
+              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
 	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
 	    }
 	    if ( (*s)[2]>(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin) ) {
-	      if (!m_blendInertMaterial || dilFactor<=0. || rail) detached.push_back((*m_inertObjs)[i]);
-              else updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+	      detached.push_back((*m_inertObjs)[i]);
+              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
 	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
 	    }
 	  } else if (pMin < 0) {
 	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin+2*M_PI) ) {
-	      if  (!m_blendInertMaterial || dilFactor<=0. || rail) detached.push_back((*m_inertObjs)[i]);
-              else updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+	      detached.push_back((*m_inertObjs)[i]);
+              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
 	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
 	    }
 	    if ( (*s)[2]>(*s)[3]  ) {
-	      if (!m_blendInertMaterial || dilFactor<=0. || rail) detached.push_back((*m_inertObjs)[i]);
-              else updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+	      detached.push_back((*m_inertObjs)[i]);
+              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
 	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
 	    }
 	  } else if (pMax > 2*M_PI) {
 	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax-2*M_PI || (*s)[3] >= pMin) ) {
-	      if (!m_blendInertMaterial || dilFactor<=0. || rail) detached.push_back((*m_inertObjs)[i]);
-              else updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+	      detached.push_back((*m_inertObjs)[i]);
+              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
 	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
 	    }
 	    if ( (*s)[2]>(*s)[3]  ) {
-	      if (!m_blendInertMaterial || dilFactor<=0. || rail) detached.push_back((*m_inertObjs)[i]);
-              else updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+	      detached.push_back((*m_inertObjs)[i]);
+              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
 	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
 	    }
 	  }
 	} else {
-	  if (!m_blendInertMaterial || dilFactor<=0.|| rail) detached.push_back((*m_inertObjs)[i]);
-	  else updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+	  detached.push_back((*m_inertObjs)[i]);
+	  if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
 	  //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
 	}
       } 

@@ -302,9 +302,6 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
 StatusCode Muon::MuonInertMaterialBuilder::finalize()
 {
     MsgStream log(msgSvc(), name());
-    for (unsigned int i=0; i<m_garbage.size(); i++) delete m_garbage[i];
-    m_garbage.clear();
-
     log << MSG::INFO  << name() <<" finalize() successful" << endreq;
     return StatusCode::SUCCESS;
 }
@@ -682,15 +679,11 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
       constituents->insert(sIter,comb->first());
       constituents->insert(sIter,comb->second());
       sIter=constituents->begin();
-      m_garbage.push_back(comb->first());
-      m_garbage.push_back(comb->second());
     } else if (sub) {
       sIter = constituents->erase(sIter);
       constituents->insert(sIter,sub->outer());
       subtractions->push_back(sub->inner());
       sIter = constituents->begin();
-      m_garbage.push_back(sub->outer());
-      m_garbage.push_back(sub->inner());
     } else {
       sIter++; 
     }    

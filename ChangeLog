@@ -1,3 +1,7 @@
+2008-05-11 Sarka Todorova <sarka.todorova@cern.ch>
+	* update (part of memory leak fix)
+	* tagged as MuonTrackingGeometry-00-03-07 
+
 2008-04-29 Sarka Todorova <sarka.todorova@cern.ch>
 	* limit vector size for push_back
 	* tagged as MuonTrackingGeometry-00-03-06 

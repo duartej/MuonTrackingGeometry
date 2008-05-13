@@ -135,7 +135,6 @@ namespace Muon {
       mutable std::vector<int>                                    m_adjustedPhiType;
       mutable std::vector<std::vector<std::vector<std::vector<std::pair<int,double> > > > > m_hPartitions;
       mutable std::vector<std::pair<std::string,double > >   m_dilFact;
-      mutable std::vector< Trk::BinnedArray<Trk::TrackingVolume>* > m_garbage;
  };
 
 

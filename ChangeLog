@@ -1,3 +1,7 @@
+2008-05-13 Sarka Todorova <sarka.todorova@cern.ch>
+	* MTGB: remove garbage, update gluing
+	* tagged as MuonTrackingGeometry-00-03-09 
+
 2008-05-12 Sarka Todorova <sarka.todorova@cern.ch>
 	* realistic and blended inert material coded in parallel
 	* tagged as MuonTrackingGeometry-00-03-08 

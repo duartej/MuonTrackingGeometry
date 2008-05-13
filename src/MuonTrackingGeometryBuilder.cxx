@@ -645,7 +645,6 @@ StatusCode Muon::MuonTrackingGeometryBuilder::finalize()
         delete (*m_inertSpan)[i];
       delete m_inertSpan;
     }
-    for (size_t i = 0; i < m_garbage.size(); i++) delete m_garbage[i];
 
     log << MSG::INFO  << name() <<" finalize() successful" << endreq;
     return StatusCode::SUCCESS;
@@ -1004,7 +1003,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     // create subvolumes & BinnedArray
     std::vector<Trk::TrackingVolumeOrderPosition>  subVolumesVect;
     std::vector<std::vector<std::vector<const Trk::TrackingVolume*> > > subVolumes;
-    std::vector<std::vector<Trk::BinnedArray1D<Trk::TrackingVolume>* > > hBins;
+    std::vector<std::vector<Trk::SharedObject<Trk::BinnedArray<Trk::TrackingVolume> > > > hBins;
     std::vector<const Trk::TrackingVolume*> sVolsInn;             // for gluing
     std::vector<const Trk::TrackingVolume*> sVolsOut;             // for gluing
     std::vector<const Trk::TrackingVolume*> sVolsNeg;             // for gluing
@@ -1013,7 +1012,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
       double posZ = 0.5*(zSteps[eta] + zSteps[eta+1]) ;
       double   hZ = 0.5*fabs(zSteps[eta+1] - zSteps[eta]) ;
       std::vector<std::vector<const Trk::TrackingVolume*> > phiSubs;
-      std::vector<Trk::BinnedArray1D<Trk::TrackingVolume>* >  phBins;
+      std::vector<Trk::SharedObject<Trk::BinnedArray<Trk::TrackingVolume> > >  phBins;
       for (unsigned int phi = 0; phi < phiN; phi++) {
 	double posPhi = 0.5*m_adjustedPhi[phi];
 	double phiSect = 0.;
@@ -1086,8 +1085,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	}
         phiSubs.push_back(hSubs); 
 	Trk::BinnedArray1D<Trk::TrackingVolume>* volBinArray = new Trk::BinnedArray1D<Trk::TrackingVolume>(hSubsTr,hBinUtil[eta][phi]->clone());
-        phBins.push_back(volBinArray);
-        m_garbage.push_back(volBinArray);
+        phBins.push_back(Trk::SharedObject<Trk::BinnedArray<Trk::TrackingVolume> >(volBinArray));
+
         // finish phi gluing
         if (phiN>1 && phi>0) {
 	  for (unsigned int j=0; j<phiSubs[phi-1].size(); j++) {

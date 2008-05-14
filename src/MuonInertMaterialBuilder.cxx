@@ -88,7 +88,6 @@ Muon::MuonInertMaterialBuilder::MuonInertMaterialBuilder(const std::string& t, c
   m_simplifyToLayers(false),
   m_layerThicknessLimit(2.),
   m_debugMode(false),
-  m_resizeEnvelope(true),
   m_buildBT(true),
   m_buildECT(true),
   m_buildFeets(true),
@@ -665,8 +664,12 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
   const Trk::Volume* envelope = 0;
   int simpleMode = 0;
   double maxD    = 45.;
+  // retrieve fraction of material in the envelope
   double fraction = 0.;
-   
+  for (unsigned int ivol=0; ivol<m_volFractions.size(); ivol++) {
+    if (m_volFractions[ivol].first == trVol->volumeName() ) { fraction = m_volFractions[ivol].second.second ; break; }
+  }         
+  // 
   std::vector<const Trk::Volume*>* constituents = new std::vector<const Trk::Volume*>;
   std::vector<const Trk::Volume*>* subtractions = new std::vector<const Trk::Volume*>;
   constituents->push_back(trVol);
@@ -695,17 +698,11 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
 
     if ( m_simplify || (trVol->volumeName().substr(0,4)=="Rail" && m_buildRails<2) ) { 
       if ( subtractions->size()==0 || trVol->volumeName().substr(0,4)=="ECTC" ) {
-        simpleMode = 2;
+        simpleMode = 2;                         // keep original volume
       } else {
-	for (unsigned int ivol=0; ivol<m_volFractions.size(); ivol++) {
-	  if (m_volFractions[ivol].first == trVol->volumeName() ) { fraction = m_volFractions[ivol].second.second ; break; }
-	}         
-	//double test = thinDim(envelope,maxD,fraction);
-        if ( fraction > 0.4 ) {   // layers or resize envelope
-	  double thin = thinDim(envelope,maxD,fraction);
-          if ( thin < maxD ) simpleMode = 1;      // layers
-          else if (thin>0.)  simpleMode = 3;      // resized envelope 
-	}
+	double thin = thinDim(envelope);
+	if ( thin < maxD ) simpleMode = 1;      // layers
+	else simpleMode = 3;                    // envelope with diluted material 
       }
     }
 
@@ -777,43 +774,22 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
       sIter++;
     }
 
-    //std::cout << " processing volume " << trVol->volumeName() << std::endl;
-    //std::cout << "envelope dimension:" << xSize <<"," << ySize << "," << zSize <<":" << rSize << std::endl;
-
-    for (unsigned int ivol=0; ivol<m_volFractions.size(); ivol++) {
-      if (m_volFractions[ivol].first == trVol->volumeName() ) { fraction = m_volFractions[ivol].second.second ; break; }
-    }
-
     if (rSize>0. && xSize <=rSize && ySize <=rSize ) {
-      if ( m_simplify && m_resizeEnvelope && fraction > 0.1 ) {
-        simpleMode = 3;
-        if (rSize<=zSize ) rSize *= sqrt(fraction);
-        if (zSize<=rSize ) zSize *= fraction;
+      if ( m_simplify && fraction > 0.1 ) {
+        simpleMode = 3;            // envelope with diluted material
       }
       envelope = new Trk::Volume(new HepTransform3D(trVol->transform()),new Trk::CylinderVolumeBounds(rSize,zSize));
     } else { 
       if ( (m_simplify || (trVol->volumeName().substr(0,4)=="Rail" && m_buildRails<2))  && fraction > 0.1 ) {
-        simpleMode = 3;
-        if (m_resizeEnvelope) {
-	  if (xSize<=ySize && xSize<=zSize) xSize *= fraction;
-	  if (ySize<=xSize && ySize<=zSize) ySize *= fraction;
-	  if (zSize<=ySize && zSize<=xSize) zSize *= fraction;
-	}
+        simpleMode = 3;           // envelope with diluted material 
       }
       if (m_simplify && trVol->volumeName()=="BTVoussoir" ) { // merge with EdgeBTVoussoir
 	std::pair<double,double> fedge;
 	for (unsigned int ivol=0; ivol<m_volFractions.size(); ivol++) {
 	  if (m_volFractions[ivol].first == "EdgeBTVoussoir" ) { fedge = m_volFractions[ivol].second ; break; }
 	}
-        if (m_resizeEnvelope) {
-	  //double xAdj =  (fedge.first*fedge.second+8*xSize*ySize*zSize)/ySize/zSize/8;
-	  //envelope = new Trk::Volume(new HepTransform3D(trVol->transform()),new Trk::CuboidVolumeBounds( xAdj,ySize,zSize));
-	  double zAdj =  (fedge.first*fedge.second+8*xSize*ySize*zSize)/ySize/2148./8;
-	  envelope = new Trk::Volume(new HepTransform3D(trVol->transform()),new Trk::TrapezoidVolumeBounds(2026.,2270.,ySize,zAdj));
-	} else { 
-	  envelope = new Trk::Volume(new HepTransform3D(trVol->transform()),new Trk::TrapezoidVolumeBounds(2026.,2270.,ySize,zSize));
-          fraction = ( 8*fraction*xSize*ySize*zSize + fedge.first*fedge.second )/8/2148/ySize/zSize;
-	}
+	envelope = new Trk::Volume(new HepTransform3D(trVol->transform()),new Trk::TrapezoidVolumeBounds(2026.,2270.,ySize,zSize));
+	fraction = ( 8*fraction*xSize*ySize*zSize + fedge.first*fedge.second )/8/2148/ySize/zSize;
       } else {
 	envelope = new Trk::Volume(new HepTransform3D(trVol->transform()),new Trk::CuboidVolumeBounds(xSize,ySize,zSize));
       }
@@ -825,7 +801,8 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
   const Trk::TrackingVolume* newVol;
   std::vector<const Trk::TrackingVolume*>* confinedVols = new std::vector<const Trk::TrackingVolume*>;
 
-  if ( m_simplifyToLayers && !simpleMode ) simpleMode = 1;
+  //if ( m_simplifyToLayers && !simpleMode ) simpleMode = 1;
+  if ( m_simplifyToLayers ) simpleMode = 1;
 
   if ( m_simplify  && !simpleMode ) {
     if (trVol->volumeName().substr(0,6)=="ECTWal" || trVol->volumeName().substr(0,6)=="ECTKey" ||
@@ -846,18 +823,17 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
     newVol = trVol;
     delete confinedVols;    
   } else if ( simpleMode==3 ) {
-    std::string envName=trVol->volumeName()+"_resized";
-    Trk::MaterialProperties mat(*trVol);
-    if (!m_resizeEnvelope) {
-      double lScale = pow(fraction,0.33);
-      mat = Trk::MaterialProperties(1.,trVol->x0()/lScale,fraction*trVol->zOverAtimesRho());
-    }
-    newVol = new Trk::TrackingVolume( *envelope, mat, m_muonMagneticField, confinedVols, envName);    
+    std::string envName=trVol->volumeName();
+    Trk::MaterialProperties mat(1.,trVol->x0()/fraction,fraction*trVol->zOverAtimesRho());
+    newVol = new Trk::TrackingVolume( *envelope, mat, m_muonMagneticField, 0, 0, envName);  
+    delete trVol;  
+    delete confinedVols;
   } else if ( simpleMode==4 ) {
     std::vector<const Trk::Layer*>* confinedLays = translateBoundariesToLayers(envelope,trVol,fraction);
     std::string envName=trVol->volumeName()+"_envelope";
     newVol = new Trk::TrackingVolume( *envelope, m_muonMaterial, m_muonMagneticField, confinedLays, envName);    
     delete trVol;
+    delete confinedVols;
   } else if ( simpleMode==5 ) {
     confinedVols->push_back(trVol);
     std::pair<std::vector<const Trk::Layer*>*,std::vector<const Trk::TrackingVolume*>* >  confinedObjs = translateToLayers(confinedVols, simpleMode-1 );
@@ -1432,9 +1408,10 @@ void Muon::MuonInertMaterialBuilder::removeTV( const Trk::Volume* vol ) const
   return;
 }
 
-double Muon::MuonInertMaterialBuilder::thinDim( const Trk::Volume*& vol, double maxD, double fraction ) const
+double Muon::MuonInertMaterialBuilder::thinDim( const Trk::Volume* vol) const
 { 
-  double dim = -1.;
+  // returns thinnest dimension
+  double dim = 50;
  
   const Trk::CylinderVolumeBounds* cylBounds = dynamic_cast<const Trk::CylinderVolumeBounds*> (&(vol->volumeBounds()));
   const Trk::CuboidVolumeBounds*   cubBounds = dynamic_cast<const Trk::CuboidVolumeBounds*>   (&(vol->volumeBounds()));
@@ -1444,27 +1421,8 @@ double Muon::MuonInertMaterialBuilder::thinDim( const Trk::Volume*& vol, double 
     double z = cylBounds->halflengthZ(); 
     double ri = cylBounds->innerRadius(); 
     double ro = cylBounds->outerRadius(); 
-    if ( z <= (ro-ri) ) {
-      if ( z < maxD ) return z;
-      else {
-        if (m_resizeEnvelope) {
-	  HepTransform3D* transf = new HepTransform3D(vol->transform());
-	  delete vol;
-	  vol = new Trk::Volume(transf,new Trk::CylinderVolumeBounds(ri,ro,fraction*z));
-	}
-        return z;
-      }
-    } else {
-      if ( ro-ri < maxD ) return (ro-ri);
-      else  {
-        if (m_resizeEnvelope) {
-	  HepTransform3D* transf = new HepTransform3D(vol->transform());
-	  delete vol;
-	  vol = new Trk::Volume(transf,new Trk::CylinderVolumeBounds(ri,ri+fraction*(ro-ri),z));
-        }
-        return (ro-ri);
-      } 
-    }
+    if ( z <= (ro-ri) ) return z;
+    else return (ro-ri);
   }
 
   if (cubBounds ) {
@@ -1472,39 +1430,9 @@ double Muon::MuonInertMaterialBuilder::thinDim( const Trk::Volume*& vol, double 
     double y =  cubBounds->halflengthY(); 
     double z = 	cubBounds->halflengthZ();
 
-    if ( z<=x && z<=y ) {
-      if ( z < maxD ) return z;
-      else {
-        if (m_resizeEnvelope) {
-	  HepTransform3D* transf = new HepTransform3D(vol->transform());
-	  delete vol;
-	  vol = new Trk::Volume(transf,new Trk::CuboidVolumeBounds(x,y,fraction*z));
-	}
-        return z;
-      }
-    } 
-
-    if ( y<=x && y<=z ) {
-      if ( y < maxD ) return y;
-      else {
-        if (m_resizeEnvelope) {
-	  HepTransform3D* transf = new HepTransform3D(vol->transform());
-	  delete vol;
-	  vol = new Trk::Volume(transf,new Trk::CuboidVolumeBounds(x,fraction*y,z));
-	}
-        return y;
-      }
-    }
- 
-    if ( x < maxD ) return x;
-    else {
-      if (m_resizeEnvelope) {
-	HepTransform3D* transf = new HepTransform3D(vol->transform());
-	delete vol;
-	vol = new Trk::Volume(transf,new Trk::CuboidVolumeBounds(fraction*x,y,z));
-      }
-      return x;
-    }
+    if ( z<=x && z<=y ) return z;
+    else if ( y<=x && y<=z ) return y;
+    else return x;
   }
 
   if (trdBounds ) {
@@ -1513,30 +1441,37 @@ double Muon::MuonInertMaterialBuilder::thinDim( const Trk::Volume*& vol, double 
     double minX = trdBounds->minHalflengthX();
     double maxX = trdBounds->maxHalflengthX();
 
-    if ( z<=y ) {
-      if ( z < maxD ) return z;
-      else {
-        if (m_resizeEnvelope) {
-	  HepTransform3D* transf = new HepTransform3D(vol->transform());
-	  delete vol;
-	  vol = new Trk::Volume(transf,new Trk::TrapezoidVolumeBounds( minX, maxX, y, fraction*z));
-	}
-        return z;
-      }
-    } 
-
-    if ( y<z ) {
-      if ( y < maxD ) return y;
-      else {
-        if (m_resizeEnvelope) {
-	  HepTransform3D* transf = new HepTransform3D(vol->transform());
-	  delete vol;
-	  vol = new Trk::Volume(transf,new Trk::TrapezoidVolumeBounds( minX, maxX, fraction*y, z));
-	}
-        return y;
-      }
-    }
+    if ( z<=y ) return z;
+    else return y;
   }
    
   return dim;
+}
+
+double  Muon::MuonInertMaterialBuilder::calculateVolume( const Trk::Volume* envelope) const
+{
+  double envVol = 0.;
+  
+  if (!envelope) return 0.;
+  
+  const Trk::CylinderVolumeBounds*  cyl = dynamic_cast<const Trk::CylinderVolumeBounds*> (&(envelope->volumeBounds()));
+  const Trk::CuboidVolumeBounds*    box = dynamic_cast<const Trk::CuboidVolumeBounds*> (&(envelope->volumeBounds()));
+  const Trk::TrapezoidVolumeBounds* trd = dynamic_cast<const Trk::TrapezoidVolumeBounds*> (&(envelope->volumeBounds()));
+  const Trk::BevelledCylinderVolumeBounds*  bcyl = dynamic_cast<const Trk::BevelledCylinderVolumeBounds*> (&(envelope->volumeBounds()));
+  
+  if ( cyl ) envVol = 2*cyl->halfPhiSector()*(cyl->outerRadius()*cyl->outerRadius()-cyl->innerRadius()*cyl->innerRadius())*cyl->halflengthZ();
+  if ( box ) envVol = (8*box->halflengthX()*box->halflengthY()*box->halflengthZ());
+  if ( trd ) envVol = (4*(trd->minHalflengthX()+trd->maxHalflengthX())*trd->halflengthY()*trd->halflengthZ());
+  if ( bcyl ) {
+    int type = bcyl->type();
+    if ( type<1 ) envVol = 2*bcyl->halfPhiSector()*(bcyl->outerRadius()*bcyl->outerRadius()-bcyl->innerRadius()*bcyl->innerRadius())*bcyl->halflengthZ(); 
+    if ( type==1 ) envVol = 2*bcyl->halflengthZ()*( bcyl->halfPhiSector()*bcyl->outerRadius()*bcyl->outerRadius()
+						    -bcyl->innerRadius()*bcyl->innerRadius()*tan(bcyl->halfPhiSector()) ); 
+    if ( type==2 ) envVol = 2*bcyl->halflengthZ()*( -bcyl->halfPhiSector()*bcyl->innerRadius()*bcyl->innerRadius()
+						    +bcyl->outerRadius()*bcyl->outerRadius()*tan(bcyl->halfPhiSector()) ); 
+    if ( type==3 ) envVol = 2*bcyl->halflengthZ()*tan(bcyl->halfPhiSector())*( bcyl->outerRadius()*bcyl->outerRadius() 
+									       -bcyl->innerRadius()*bcyl->innerRadius()); 
+  }
+  
+  return envVol;
 }

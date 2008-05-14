@@ -89,7 +89,8 @@ namespace Muon {
       const bool checkVolume(const Trk::Volume*) const;
       void getVolumeFractions() const;
       void removeTV(const Trk::Volume*) const;
-      double thinDim( const Trk::Volume*& vol, double maxD, double fraction ) const;
+      double thinDim( const Trk::Volume* vol) const;
+      double calculateVolume( const Trk::Volume* envelope) const;
 
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
@@ -97,7 +98,6 @@ namespace Muon {
       bool                                m_simplifyToLayers;              // switch geometry simplification on/off 
       double                              m_layerThicknessLimit;      // maximal thickness (in X0)   
       bool                                m_debugMode;                   // build layers & dense volumes in parallel - double counting material !!! 
-      bool                                m_resizeEnvelope;             // resize envelope or dilute material 
       bool                                m_buildBT;                    // build barrel toroids 
       bool                                m_buildECT;                   // build endcap toroids 
       bool                                m_buildFeets;                 // build feets 

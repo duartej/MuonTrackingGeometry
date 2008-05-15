@@ -1,3 +1,7 @@
+2008-05-15 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix TGC station identification
+	* tagged as MuonTrackingGeometry-00-03-11 
+
 2008-05-14 Sarka Todorova <sarka.todorova@cern.ch>
 	* MIMB: fix memory leak from rails
 	* tagged as MuonTrackingGeometry-00-03-10 

@@ -292,6 +292,12 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
               if (stName.substr(0,1)=="T") {
 		int etaSt = eta - 4;
 		if (eta < 5) etaSt = eta - 5; 
+		double phic = transf.getTranslation().phi(); 
+		if (msTypeName.substr(2,1)=="E" && msTypeName.substr(0,3)!="T4E")
+		  phi = static_cast<int> (phic<0 ? 24*phic/M_PI+48 : 24*phic/M_PI);
+		else
+                  phi = static_cast<int> (phic<0 ? 12*phic/M_PI+24 : 12*phic/M_PI);
+                phi++;
                 stId = m_tgcIdHelper->elementID(vname.substr(0,3),etaSt,phi);
               } else if (stName.substr(0,3)=="BML") {
 		stId = m_rpcIdHelper->elementID(vname.substr(0,3),eta,phi,1);
@@ -307,15 +313,6 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	      // glue components
 	      glueComponents(newStat);
 	      // identify layers
-	      if (msTypeName.substr(0,1)=="T") {
-		double phic = transf.getTranslation().phi();
-		if (msTypeName.substr(2,1)=="E" && msTypeName.substr(0,3)!="T4E")
-		  phi = static_cast<int> (phic<0 ? 24*phic/M_PI+48 : 24*phic/M_PI);
-		else
-                  phi = static_cast<int> (phic<0 ? 12*phic/M_PI+24 : 12*phic/M_PI);
-                //if ( phi==0 ) phi=1;
-                phi++;
-              }
 	      if (m_identifyActive) identifyLayers(newStat,eta,phi);  
 	      mStations.push_back(newStat);
             }
@@ -642,13 +639,20 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
   
     const MuonGM::TgcReadoutElement* tgc = m_muonMgr->getTgcReadoutElement(st,eta,phi-1);
     
-    if (!tgc || !(station->trackingVolume()->inside(tgc->center(),0.)) ) {
+    if (!tgc || !(station->trackingVolume()->inside(tgc->center(),0.)) || 
+        (station->trackingVolume()->center()-tgc->center()).mag()>0.1 ) {
       unsigned int phit=0;
       while ( phit<48 ) {
 	const MuonGM::TgcReadoutElement* tgct = m_muonMgr->getTgcReadoutElement(st,eta,phit);
         if (tgct && station->trackingVolume()->inside(tgct->center(),0.)) {
           tgc = tgct;
           phi = phit;
+          // update station identity
+          Identifier oldId(station->layerRepresentation()->layerType());
+          int stationName = m_tgcIdHelper->stationName(oldId);
+          int stationEta  = m_tgcIdHelper->stationEta(oldId);
+          Identifier stId = m_tgcIdHelper->elementID(stationName,stationEta,phi);
+          station->layerRepresentation()->setLayerType(stId);
           break;
         }
 	phit++;  

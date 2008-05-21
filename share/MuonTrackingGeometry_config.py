@@ -20,9 +20,5 @@ from MuonTrackingGeometry.MuonTrackingGeometryConf import Muon__MuonTrackingGeom
 MuonTrackingGeometryBuilder= Muon__MuonTrackingGeometryBuilder(name = 'MuonTrackingGeometryBuilder')
 
 ToolSvc += MuonTrackingGeometryBuilder
-ToolSvc.MuonTrackingGeometryBuilder.BuildActiveMaterial = True
-ToolSvc.MuonTrackingGeometryBuilder.BuildInertMaterial = False
-ToolSvc.MuonTrackingGeometryBuilder.AdjustStatic = True
-ToolSvc.MuonTrackingGeometryBuilder.StaticPartition3D = False
 
 print MuonTrackingGeometryBuilder

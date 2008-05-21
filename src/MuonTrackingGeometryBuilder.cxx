@@ -72,8 +72,8 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_tvSvc("Trk::TrackingVolumesSvc/TrackingVolumesSvc",n),
   m_muonSimple(false),
   m_loadMSentry(false),
-  m_muonActive(false),
-  m_muonInert(false),
+  m_muonActive(true),
+  m_muonInert(true),
   m_innerBarrelRadius(4300.),
   m_outerBarrelRadius(13000.),
   m_barrelZ(6740.),
@@ -840,6 +840,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
   const Trk::TrackingVolume* tVol = 0;
 
+  unsigned int colorCode = 12;
+
   // partitions ? include protection against wrong setup
   if (etaN < 1 || phiN < 1) {
     log << MSG::ERROR << name() << "wrong partition setup" << endreq;
@@ -853,14 +855,13 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
       return 0; 
     }
     // subvolume boundaries
-    Trk::CylinderVolumeBounds* subBds=0;
+    Trk::CylinderVolumeBounds* subBds = 0;
+
     double phiSect = M_PI/phiN;
     double etaSect = (cyl->halflengthZ())/etaN;
 
-    subBds = new Trk::CylinderVolumeBounds(cyl->innerRadius(),
-					   cyl->outerRadius(),
-					   phiSect, 
-					   etaSect);
+    subBds = new Trk::CylinderVolumeBounds(cyl->innerRadius(), cyl->outerRadius(), phiSect,etaSect);
+    const Trk::Volume* protVol= new Trk::Volume(0, subBds);     
 
     // create subvolumes & BinnedArray
     std::vector<Trk::TrackingVolumeOrderPosition> subVolumes;
@@ -868,11 +869,13 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     std::vector<const Trk::TrackingVolume*> sVolsNeg;             // for gluing
     std::vector<const Trk::TrackingVolume*> sVolsPos;             // for gluing
     for (int eta = 0; eta < etaN; eta++) {
+      colorCode = 26 - colorCode;
       for (int phi = 0; phi < phiN; phi++) {
+	colorCode = 26 - colorCode;
         // define subvolume
         double posZ = (vol->center())[2]+ etaSect * (2.*eta+1.-etaN) ;
-        HepTransform3D* transf = new HepTransform3D( HepRotateZ3D( phiSect*(2*phi+1))*HepTranslateZ3D(posZ));
-        const Trk::Volume* subVol= new Trk::Volume(transf, subBds);     
+        HepTransform3D  transf( HepRotateZ3D( phiSect*(2*phi+1))*HepTranslateZ3D(posZ));
+        const Trk::Volume* subVol= new Trk::Volume(*protVol, transf);     
         // enclosed muon objects ?   
 	std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) ; 
 	Trk::MaterialProperties mat=m_muonMaterial;
@@ -883,10 +886,11 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 								   detVols,
 								   volName );
         //delete subVol;
-        // reference position 
+        sVol->registerColorCode(colorCode); 
+	// reference position 
 	HepPoint3D gp(subBds->outerRadius(),0.,0.);
 	subVolumes.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
-                                                             new HepPoint3D((*transf)*gp)));
+                                                             new HepPoint3D(transf*gp)));
         //glue subVolumes
         sVols.push_back(sVol); 
         if (eta==0)      sVolsNeg.push_back(sVol); 
@@ -906,7 +910,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     }
 
     Trk::BinUtility2DPhiZ* volBinUtil=new Trk::BinUtility2DPhiZ(phiN,etaN,subBds->outerRadius(),cyl->halflengthZ(),M_PI, new HepTransform3D(vol->transform()));
-    delete subBds;
+    delete protVol;
     Trk::BinnedArray2D<Trk::TrackingVolume>* subVols=new Trk::BinnedArray2D<Trk::TrackingVolume>(subVolumes,volBinUtil);
 
     tVol = new Trk::TrackingVolume( *vol,
@@ -947,6 +951,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
   //         0 ( -"- plus outer endcap H binning )            
 
   const Trk::TrackingVolume* tVol = 0;
+
+  unsigned int colorCode = 12;
 
   // retrieve cylinder
   const Trk::CylinderVolumeBounds* cyl=dynamic_cast<const Trk::CylinderVolumeBounds*> (&(vol->volumeBounds()));
@@ -1009,11 +1015,13 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     std::vector<const Trk::TrackingVolume*> sVolsNeg;             // for gluing
     std::vector<const Trk::TrackingVolume*> sVolsPos;             // for gluing
     for (unsigned int eta = 0; eta < zSteps.size()-1; eta++) {
+      colorCode = 26 -colorCode;
       double posZ = 0.5*(zSteps[eta] + zSteps[eta+1]) ;
       double   hZ = 0.5*fabs(zSteps[eta+1] - zSteps[eta]) ;
       std::vector<std::vector<const Trk::TrackingVolume*> > phiSubs;
       std::vector<Trk::SharedObject<Trk::BinnedArray<Trk::TrackingVolume> > >  phBins;
       for (unsigned int phi = 0; phi < phiN; phi++) {
+	colorCode = 26 -colorCode;
 	double posPhi = 0.5*m_adjustedPhi[phi];
 	double phiSect = 0.;
         if (phi<phiN-1) {
@@ -1026,7 +1034,9 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	std::vector<std::pair<int,double> > hSteps =  m_hPartitions[mode][zTypes[eta]][m_adjustedPhiType[phi]];
 	std::vector<const Trk::TrackingVolume*> hSubs;
 	std::vector<Trk::TrackingVolumeOrderPosition> hSubsTr;
+        unsigned int hCode = 1; 
         for (unsigned int h = 0; h < hSteps.size()-1; h++) {
+	  hCode = 1 - hCode; 
           int volType = 0;     // cylinder 
           if ( hSteps[h].first == 1 && hSteps[h+1].first == 0 ) volType = 1;  
           if ( hSteps[h].first == 0 && hSteps[h+1].first == 1 ) volType = 2;  
@@ -1051,6 +1061,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 								     detVols,
 								     volName );
                                                                                                                           
+          sVol->registerColorCode(colorCode+hCode);
 	  // reference position 
 	  HepPoint3D gp(subBds->mediumRadius(),0.,0.);
 	  subVolumesVect.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, false),
@@ -1149,7 +1160,9 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     for (unsigned int eta = 0; eta < zSteps.size()-1; eta++) {
       double posZ = 0.5*(zSteps[eta] + zSteps[eta+1]) ;
       double   hZ = 0.5*fabs(zSteps[eta+1] - zSteps[eta]) ;
+      colorCode = 26 -colorCode;
       for (unsigned int phi = 0; phi < phiN; phi++) {
+	colorCode = 26 -colorCode;
 	double posPhi = 0.5*m_adjustedPhi[phi];
 	double phiSect = 0.;
         if (phi<phiN-1) {
@@ -1177,6 +1190,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 								   detVols,
 								   volName );
         //delete subVol;
+        sVol->registerColorCode(colorCode); 
         // reference position 
 	HepPoint3D gp(subBds->outerRadius(),0.,0.);
 	//subVolumes.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),

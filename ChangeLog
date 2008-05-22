@@ -1,3 +1,8 @@
+2008-05-22 Sarka Todorova <sarka.todorova@cern.ch>
+	* change default inert setup to exact 
+          (temporarily to avoid problems with blended material)
+	* tagged as MuonTrackingGeometry-00-03-13 
+
 2008-05-21 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix simple partition 
 	* add color codes for the frame 

@@ -11,7 +11,7 @@ ToolSvc += MuonStationBuilder
 
 from MuonTrackingGeometry.MuonTrackingGeometryConf import Muon__MuonInertMaterialBuilder
 MuonInertMaterialBuilder= Muon__MuonInertMaterialBuilder(name = 'MuonInertMaterialBuilder',
-                                                         SimplifyGeometry = True,
+                                                         SimplifyGeometry = False,
                                                          SimplifyGeometryToLayers = False )
 ToolSvc += MuonInertMaterialBuilder 
 

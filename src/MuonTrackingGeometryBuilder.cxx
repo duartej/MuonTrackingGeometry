@@ -1318,51 +1318,56 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
   }
   // passive
   double dilFactor = 0.;
+  unsigned int matType = 0; 
   if (m_inertSpan) {
     for (unsigned int i=0; i<m_inertSpan->size() ; i++) {
       const Muon::Span* s = (*m_inertSpan)[i];
       bool rail = ( (*m_inertObjs)[i]->name() == "Rail" ) ? true : false;  
-      if (m_blendInertMaterial) dilFactor = getDilFactor( (*m_inertObjs)[i]->name() );
+      if (m_blendInertMaterial) {
+	std::pair<double, unsigned int> dilMat = getDilFactor( (*m_inertObjs)[i]->name() );
+        dilFactor = dilMat.first;
+        matType   = dilMat.second;
+      }
       bool rLimit = (!m_static3d || ( (*s)[4] <= rMax && (*s)[5] >= rMin ) ); 
       if ( rLimit && (*s)[0] <= zMax && (*s)[1] >= zMin && m_inertObjs->size()>i) {
 	if (phiLim) {
 	  if (pMin>=0 && pMax<=2*M_PI) {
 	    if ( (*s)[2]<=(*s)[3] && (*s)[2] <= pMax && (*s)[3] >= pMin ) {
 	      detached.push_back((*m_inertObjs)[i]);
-              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,matType,dilFactor);
 	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
 	    }
 	    if ( (*s)[2]>(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin) ) {
 	      detached.push_back((*m_inertObjs)[i]);
-              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,matType,dilFactor);
 	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
 	    }
 	  } else if (pMin < 0) {
 	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin+2*M_PI) ) {
 	      detached.push_back((*m_inertObjs)[i]);
-              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,matType,dilFactor);
 	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
 	    }
 	    if ( (*s)[2]>(*s)[3]  ) {
 	      detached.push_back((*m_inertObjs)[i]);
-              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,matType,dilFactor);
 	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
 	    }
 	  } else if (pMax > 2*M_PI) {
 	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax-2*M_PI || (*s)[3] >= pMin) ) {
 	      detached.push_back((*m_inertObjs)[i]);
-              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,matType,dilFactor);
 	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
 	    }
 	    if ( (*s)[2]>(*s)[3]  ) {
 	      detached.push_back((*m_inertObjs)[i]);
-              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+              if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,matType,dilFactor);
 	      //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
 	    }
 	  }
 	} else {
 	  detached.push_back((*m_inertObjs)[i]);
-	  if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,(*m_inertObjs)[i]->trackingVolume(),dilFactor);
+	  if (m_blendInertMaterial && dilFactor>0. && !rail ) updateMatProps(mat,matType,dilFactor);
 	  //else m_inertBlend[i].push_back(std::pair<const Trk::Volume*,double>(vol,calculateVolume(vol)));
 	}
       } 
@@ -1569,85 +1574,96 @@ double  Muon::MuonTrackingGeometryBuilder::calculateVolume( const Trk::Volume* e
 void  Muon::MuonTrackingGeometryBuilder::getDilutingFactors( ) const
 {
   m_dilFact.clear();
-  m_dilFact.push_back(std::pair<std::string,double > ("BTBevelledLongTubeIn", 0.0318 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("BTBevelledLongTubeOut", 0.0185 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("BTVoussoirAttWing", 0.0006 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("BTBevelledShortTube", 0.0076 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("BTBevelledCornerTube", 0.0014 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("BTRibEnvelope", 0.0047 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("BTWingRib", 0.0018 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("BTVoussoirAttachment", 0.0007 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("BTColdLongSegment", 0.1323 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("BTColdShortSegment", 0.0589 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("BTColdCornerSegment", 0.0154 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("BTColdRib", 0.0150 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("BTVoussoir", 0.0446 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("EdgeBTVoussoir", 0.0056  ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("HeadBTVoussoir", 0.0609 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("BTStrut", 0.0107 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("BTWingStrut", 0.0081 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("BTCryoring", 0.0013 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("Rail", 0.0040 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTEndplateStdSegment", 0.0188 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTEndplateRailSegment6", 0.0185 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTEndplateRailSegment8", 0.0185 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTWallStdSegment", 0.00001 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTWallRailSegment", 0.00001 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTCentralTube", 0.0068 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTStaytube", 0.0047 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTConductorBox", 0.1260 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTKeystoneBox", 0.0138 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTTower", 0.0070 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTBottomTower", 0.0022 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTBackTowerWall", 0.0136 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ECTServiceTurretTower", 0.0007 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetSidePlate", 0.0032 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetLargePlate", 0.0010 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetCoverPlate", 0.0069 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetInnerPlate", 0.0005 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetBottomPlate", 0.0010 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetSidePlate", 0.0034 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetLargePlate", 0.0015 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetInclinedPlate", 0.0075 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetCoverPlate", 0.0122 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetInnerPlate", 0.0011 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetInnerTopVoussPlate", 0.0008  ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetBottomPlate", 0.0020 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetGirder01", 0.0097 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetGirder02", 0.0087 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetGirder03", 0.0074 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetRailSupport", 0.0027 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetMinusRailSupport", 0.0034 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ExtrFeetPlusRailSupport", 0.0034 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("StdFeetVoussoir", 0.0050 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ConnFeetVoussoir", 0.0010 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingFrontDisk", 0.1070 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingBackDisk", 0.2649 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingPlugsExtension", 0.00001 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingPlugs", 0.0420 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingTubeBackDisk", 0.0073 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingMainTube", 0.0255 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingBrassCone", 0.0012 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingPolyCone", 0.0010 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingLeadCone", 0.0004 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingHubBrassCone", 0.0513 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingPolyCladding", 0.0168 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("DiskShieldingLeadCladding", 0.0076 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ToroidShieldingOuterPlugs", 0.2956 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ToroidShieldingInnerPlugs", 0.1933 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ToroidShieldingPolyRingsTube", 0.0616 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ToroidShieldingPolyRingsCone", 0.0008 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingPlug", 0.0015 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingMainCylinder", 0.6214 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingOctogon", 0.1703 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingTX1STMTube", 0.0105 ) );
-  m_dilFact.push_back(std::pair<std::string,double > ("ForwardShieldingTX1STMCone", 0.0076 ) );
+  typedef std::pair<double,unsigned int> DM;
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTBevelledLongTubeIn",  DM( 0.0318, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTBevelledLongTubeOut", DM( 0.0185, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTVoussoirAttWing",     DM( 0.0006, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTBevelledShortTube",   DM( 0.0076, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTBevelledCornerTube",  DM( 0.0014, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTRibEnvelope",         DM( 0.0047, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTWingRib",             DM( 0.0018, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTVoussoirAttachment",  DM( 0.0007, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTColdLongSegment",     DM( 0.1323, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTColdShortSegment",    DM( 0.0589, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTColdCornerSegment",   DM( 0.0154, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTColdRib",             DM( 0.0150, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTVoussoir",            DM( 0.0446, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("EdgeBTVoussoir",        DM( 0.0056, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("HeadBTVoussoir",        DM( 0.0609, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTStrut",               DM( 0.0107, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTWingStrut",           DM( 0.0081, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("BTCryoring",            DM( 0.0013, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("Rail",                  DM( 0.0040, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ECTEndplateStdSegment", DM( 0.0188, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ECTEndplateRailSegment6", DM( 0.0185, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ECTEndplateRailSegment8", DM( 0.0185, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ECTWallStdSegment",       DM(0.00001, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ECTWallRailSegment",      DM(0.00001, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ECTCentralTube",          DM( 0.0068, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ECTStaytube",             DM( 0.0047, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ECTConductorBox",         DM( 0.1260, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ECTKeystoneBox",          DM( 0.0138, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ECTTower",                DM( 0.0070, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ECTBottomTower",          DM( 0.0022, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ECTBackTowerWall",        DM( 0.0136, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ECTServiceTurretTower",   DM( 0.0007, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("StdFeetSidePlate",        DM( 0.0032, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("StdFeetLargePlate",       DM( 0.0010, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("StdFeetCoverPlate",       DM( 0.0069, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("StdFeetInnerPlate",       DM( 0.0005, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("StdFeetBottomPlate",      DM( 0.0010, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ExtrFeetSidePlate",       DM( 0.0034, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ExtrFeetLargePlate",      DM( 0.0015, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ExtrFeetInclinedPlate",   DM( 0.0075, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ExtrFeetCoverPlate",      DM( 0.0122, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ExtrFeetInnerPlate",      DM( 0.0011, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ExtrFeetInnerTopVoussPlate", DM( 0.0008, 0)  ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ExtrFeetBottomPlate",        DM( 0.0020, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("StdFeetGirder01",            DM( 0.0097, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("StdFeetGirder02",            DM( 0.0087, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("StdFeetGirder03",            DM( 0.0074, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("StdFeetRailSupport",         DM( 0.0027, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ExtrFeetMinusRailSupport",   DM( 0.0034, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ExtrFeetPlusRailSupport",    DM( 0.0034, 0) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("StdFeetVoussoir",            DM( 0.0050, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ConnFeetVoussoir",           DM( 0.0010, 1) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("DiskShieldingFrontDisk",     DM( 0.1070, 2) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("DiskShieldingBackDisk",      DM( 0.2649, 2) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("DiskShieldingPlugsExtension",DM(0.00001, 3) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("DiskShieldingPlugs",         DM( 0.0420, 3) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("DiskShieldingTubeBackDisk",  DM( 0.0073, 2) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("DiskShieldingMainTube",      DM( 0.0255, 2) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("DiskShieldingBrassCone",     DM( 0.0012, 3) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("DiskShieldingPolyCone",      DM( 0.0010, 4) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("DiskShieldingLeadCone",      DM( 0.0004, 5) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("DiskShieldingHubBrassCone",  DM( 0.0513, 3) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("DiskShieldingPolyCladding",  DM( 0.0168, 4) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("DiskShieldingLeadCladding",  DM( 0.0076, 5) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ToroidShieldingOuterPlugs",  DM( 0.2956, 3) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ToroidShieldingInnerPlugs",  DM( 0.1933, 3) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ToroidShieldingPolyRingsTube",DM( 0.0616, 4) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ToroidShieldingPolyRingsCone",DM( 0.0008, 4) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ForwardShieldingPlug",        DM( 0.0015, 6) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ForwardShieldingMainCylinder",DM( 0.6214, 6) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ForwardShieldingOctogon",     DM( 0.1703, 6) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ForwardShieldingTX1STMTube",  DM( 0.0105, 6) ) );
+  m_dilFact.push_back(std::pair<std::string,DM > ("ForwardShieldingTX1STMCone",  DM( 0.0076, 6) ) );
+
+  m_matProp.clear();
+  m_matProp.push_back(Trk::MaterialProperties(0.,17.9677,0.0037));   // Iron
+  m_matProp.push_back(Trk::MaterialProperties(0.,89.8689,0.0013));   // Aluminium
+  m_matProp.push_back(Trk::MaterialProperties(0.,17.7491,0.0037));   // ShieldSteel
+  m_matProp.push_back(Trk::MaterialProperties(0.,14.5296,0.0038));   // ShieldBrass
+  m_matProp.push_back(Trk::MaterialProperties(0.,196.952,0.0011));   // Polyboron
+  m_matProp.push_back(Trk::MaterialProperties(0., 5.5596,0.0045));   // Lead
+  m_matProp.push_back(Trk::MaterialProperties(0.,19.9671,0.0034));   // ShieldIron
+
   return;
 }
 
-double Muon::MuonTrackingGeometryBuilder::getDilFactor(std::string name) const
+std::pair<double,unsigned int> Muon::MuonTrackingGeometryBuilder::getDilFactor(std::string name) const
 {
-  double dil = -1.;
+  std::pair<double, unsigned int> dil(-1., 0);
   for (unsigned int i=0; i<m_dilFact.size();i++) {
     if (m_dilFact[i].first==name) {
       dil = m_dilFact[i].second;
@@ -1657,13 +1673,10 @@ double Muon::MuonTrackingGeometryBuilder::getDilFactor(std::string name) const
   return dil;
 }
 
-void Muon::MuonTrackingGeometryBuilder::updateMatProps(Trk::MaterialProperties& mat, const Trk::TrackingVolume* trVol, double fact) const
+void Muon::MuonTrackingGeometryBuilder::updateMatProps(Trk::MaterialProperties& mat, unsigned int matType, double fact) const
 {
   // find material source
-  const std::vector<const Trk::TrackingVolume*>* dense = trVol->confinedDenseVolumes();
-  Trk::MaterialProperties addMat;
-  if (!dense || !dense->size()) addMat = *trVol;
-  else addMat = *(dense->front());
+  Trk::MaterialProperties addMat = m_matProp[matType] ;
   //add density
   double rho1 = mat.zOverAtimesRho();
   double rho2 = fact*addMat.zOverAtimesRho();

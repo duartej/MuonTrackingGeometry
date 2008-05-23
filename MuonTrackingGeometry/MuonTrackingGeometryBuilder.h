@@ -77,8 +77,8 @@ namespace Muon {
       void getHParts() const;
       double calculateVolume(const Trk::Volume*) const;
       void getDilutingFactors() const;
-      double getDilFactor(std::string) const;
-      void updateMatProps(Trk::MaterialProperties& mat, const Trk::TrackingVolume* trVol, double fact) const;
+      std::pair<double, unsigned int> getDilFactor(std::string) const;
+      void updateMatProps(Trk::MaterialProperties& mat, unsigned int , double fact) const;
      
       ToolHandle<Trk::IMagneticFieldTool>                  m_magFieldTool;                  //!< Tracking Interface to Magnetic Field
 
@@ -134,7 +134,8 @@ namespace Muon {
       mutable std::vector<double>                                 m_adjustedPhi;
       mutable std::vector<int>                                    m_adjustedPhiType;
       mutable std::vector<std::vector<std::vector<std::vector<std::pair<int,double> > > > > m_hPartitions;
-      mutable std::vector<std::pair<std::string,double > >   m_dilFact;
+      mutable std::vector<std::pair<std::string,std::pair<double, unsigned int> > >   m_dilFact;
+      mutable std::vector<Trk::MaterialProperties>               m_matProp;
  };
 
 

@@ -25,13 +25,17 @@
 #include "TrkVolumes/TrapezoidVolumeBounds.h"
 #include "TrkVolumes/DoubleTrapezoidVolumeBounds.h"
 #include "TrkVolumes/BoundarySurface.h"
+#include "TrkVolumes/CombinedVolumeBounds.h"
+#include "TrkVolumes/VolumeExcluder.h"
 #include "TrkSurfaces/DiscBounds.h"
 #include "TrkSurfaces/RectangleBounds.h"
 #include "TrkSurfaces/TrapezoidBounds.h"
 #include "TrkSurfaces/DiamondBounds.h"
+#include "TrkGeometrySurfaces/SubtractedPlaneSurface.h"
 #include "TrkGeometry/CylinderLayer.h"
 #include "TrkGeometry/DiscLayer.h"
 #include "TrkGeometry/PlaneLayer.h"
+#include "TrkGeometry/SubtractedPlaneLayer.h"
 #include "TrkGeometry/MaterialProperties.h"
 #include "TrkGeometry/LayerMaterialProperties.h"
 #include "TrkGeometry/HomogenousLayerMaterial.h"
@@ -202,7 +206,7 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
       std::vector<Trk::Volume*> compVol;
       std::vector<std::string> compName;
       std::vector<const GeoVPhysVol*> compGeo;
-      std::vector<HepTransform3D*> compTransf;
+      std::vector<HepTransform3D> compTransf;
       double halfZ=0.;   
       double halfX1=0.;
       double halfX2=0.;
@@ -260,17 +264,17 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
           compVol.push_back(vol);
           compName.push_back(cname);
           compGeo.push_back(cv);
-          compTransf.push_back(new HepTransform3D(transf));
+          compTransf.push_back(transf);
         } else {
 	  std::vector<Trk::Volume*>::iterator volIter=compVol.begin();
 	  std::vector<std::string>::iterator  nameIter=compName.begin();
 	  std::vector<const GeoVPhysVol*>::iterator  geoIter=compGeo.begin();
-	  std::vector<HepTransform3D*>::iterator  transfIter=compTransf.begin();
+	  std::vector<HepTransform3D>::iterator  transfIter=compTransf.begin();
           while ( vol->center()[0]>= (*volIter)->center()[0]) {volIter++;nameIter++;geoIter++;transfIter++;}
           compVol.insert(volIter,vol);
           compName.insert(nameIter,cname);
           compGeo.insert(geoIter,cv);
-          compTransf.insert(transfIter,new HepTransform3D(transf));
+          compTransf.insert(transfIter,transf);
         } 
       } // loop over components
       /* 
@@ -290,8 +294,8 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
       bool openRpc = false;
       std::vector<const GeoVPhysVol*> geoSpacer;
       std::vector<const GeoVPhysVol*> geoRpc;
-      std::vector<HepTransform3D*> transfSpacer;
-      std::vector<HepTransform3D*> transfRpc;
+      std::vector<HepTransform3D> transfSpacer;
+      std::vector<HepTransform3D> transfRpc;
       double spacerlowXsize=0; 
       double spaceruppXsize=0; 
       double rpclowXsize=0; 
@@ -408,7 +412,8 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
 	    std::string stName = mv->getLogVol()->getName();
 	    if ( stName.substr(0,4)=="BIR3" || stName.substr(0,4)=="BIR5" || stName.substr(0,4)=="BIR7" || stName.substr(0,5)=="BIR10" ) shiftSign = -1.;
           }
-          const Trk::TrackingVolume* mdtTrkVol = processMdtBox(mdtVol,compGeo[i],new HepTransform3D(HepTranslateZ3D(-zShift)*(*compTransf[i])),
+          const Trk::TrackingVolume* mdtTrkVol = processMdtBox(mdtVol,compGeo[i],
+					  new HepTransform3D(HepTranslateZ3D(-zShift)*compTransf[i]),
 							       shiftSign*fabs(zShift));
           trkVols.push_back(mdtTrkVol); 
           volSteps->push_back(2.*mdtBounds->halflengthX()); 
@@ -462,7 +467,6 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
       if (m_trackingVolumeArrayCreator)  components = m_trackingVolumeArrayCreator->cuboidVolumesArrayNav( trkVols, binUtility, false);
       // std::cout << "tracking volume array created" << std::endl;
 
-      for (size_t i=0; i<compTransf.size(); i++) delete compTransf[i];
       for (size_t i=0; i<compVol.size(); i++) delete compVol[i];
 
      
@@ -483,7 +487,7 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
       std::vector<Trk::Volume*> compVol;
       std::vector<std::string> compName;
       std::vector<const GeoVPhysVol*> compGeo;
-      std::vector<HepTransform3D*> compTransf;
+      std::vector<HepTransform3D> compTransf;
       double halfZ=0.;   
       double halfX1=0.;
       double halfX2=0.;
@@ -547,17 +551,17 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
           compVol.push_back(vol);
           compName.push_back(cname);
           compGeo.push_back(cv);
-          compTransf.push_back(new HepTransform3D(transf));
+          compTransf.push_back(transf);
         } else {
 	  std::vector<Trk::Volume*>::iterator volIter=compVol.begin();
 	  std::vector<std::string>::iterator  nameIter=compName.begin();
 	  std::vector<const GeoVPhysVol*>::iterator  geoIter=compGeo.begin();
-	  std::vector<HepTransform3D*>::iterator  transfIter=compTransf.begin();
+	  std::vector<HepTransform3D>::iterator  transfIter=compTransf.begin();
           while ( vol->center()[0]>= (*volIter)->center()[0]) {volIter++;nameIter++;geoIter++;transfIter++;}
           compVol.insert(volIter,vol);
           compName.insert(nameIter,cname);
           compGeo.insert(geoIter,cv);
-          compTransf.insert(transfIter,new HepTransform3D(transf));
+          compTransf.insert(transfIter,transf);
         } 
       } // loop over components
       /*
@@ -580,8 +584,8 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
       bool openRpc = false;
       std::vector<const GeoVPhysVol*> geoSpacer;
       std::vector<const GeoVPhysVol*> geoRpc;
-      std::vector<HepTransform3D*> transfSpacer;
-      std::vector<HepTransform3D*> transfRpc;
+      std::vector<HepTransform3D> transfSpacer;
+      std::vector<HepTransform3D> transfRpc;
       double spacerlowXsize=0; 
       double spaceruppXsize=0; 
       double rpclowXsize=0; 
@@ -694,7 +698,7 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
 	    mdtBounds = new Trk::TrapezoidVolumeBounds(envX1,envX2,envY,compTrdBounds->halflengthZ()+0.5*(lowX-currX));
             mdtVol = new Trk::Volume(new HepTransform3D(HepTranslateZ3D(0.5*(currX-lowX))*compVol[i]->transform()),mdtBounds);
           }
-          const Trk::TrackingVolume* mdtTrkVol = processMdtTrd(mdtVol,compGeo[i],compTransf[i]);
+          const Trk::TrackingVolume* mdtTrkVol = processMdtTrd(mdtVol,compGeo[i],&compTransf[i]);
           trkVols.push_back(mdtTrkVol); 
           volSteps->push_back(2*mdtBounds->halflengthZ());
           currX += 2.*mdtBounds->halflengthZ();
@@ -747,7 +751,6 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
       if (m_trackingVolumeArrayCreator)  components = m_trackingVolumeArrayCreator->trapezoidVolumesArrayNav( trkVols, binUtility, false);
       // std::cout << "tracking volume array created" << std::endl;
 
-      for (size_t i=0; i<compTransf.size(); i++) delete compTransf[i];
       for (size_t i=0; i<compVol.size(); i++) delete compVol[i];
      
    return components;  
@@ -1110,7 +1113,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
   return mdt;
 }
 //
-const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*& vol,std::vector<const GeoVPhysVol*> gv, std::vector<HepTransform3D*> transfc) const
+const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*& vol,std::vector<const GeoVPhysVol*> gv, std::vector<HepTransform3D> transfc) const
 {
   MsgStream log(msgSvc(), name());
   // layers correspond to DedModules and RpcModules; all substructures averaged in material properties
@@ -1131,7 +1134,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
       Trk::OverlapDescriptor* od=0;
       Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(ys,zs);
       Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds); 
-      HepTransform3D* cTr = new HepTransform3D((*transfc[ic]) * HepRotateY3D(90*deg) * HepRotateZ3D(90*deg));
+      HepTransform3D* cTr = new HepTransform3D( transfc[ic] * HepRotateY3D(90*deg) * HepRotateZ3D(90*deg));
       Trk::MaterialProperties rpcMat = m_muonMaterial;               // default
       if ( (glv->getName()).substr(0,3)=="Ded" ) {
         if (fabs(thickness-50.0)<0.001) {
@@ -1181,7 +1184,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
         Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(ys1,zs); 
         Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds);
         //Trk::RectangleBounds* boundsEta = new Trk::RectangleBounds(zs,ys1); 
-        HepTransform3D* cTr = new HepTransform3D((*transfc[ic]) * HepRotateY3D(90*deg) * HepRotateZ3D(90*deg));
+        HepTransform3D* cTr = new HepTransform3D( transfc[ic] * HepRotateY3D(90*deg) * HepRotateZ3D(90*deg));
 	//std::cout << "component rotation:" << (*cTr)[0][0] <<"," << (*cTr)[1][1] <<"," << (*cTr)[2][2] << std::endl; 
 	//std::cout << "component translation:" << (*cTr).getTranslation() << std::endl; 
 	//std::cout << "component (layer) dimensions:" << ys1 << "," << zs << std::endl;
@@ -1205,7 +1208,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
           unsigned int ngc = gv[ic]->getNChildVols();
           for (unsigned int igc=0; igc<ngc; igc++) {
 	    HepTransform3D trgc;
-             if (transfc[ic]->getTranslation()[0]>vol->center()[0]) {
+             if (transfc[ic].getTranslation()[0]>vol->center()[0]) {
 	       //std::cout << "rotating RPC module" << std::endl;
                trgc = HepRotateZ3D(180*deg)*(gv[ic]->getXToChildVol(igc)); 
              } else {
@@ -1299,60 +1302,158 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
 }
 //
 
-const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volume*& vol,std::vector<const GeoVPhysVol*> gv, std::vector<HepTransform3D*> transf) const
+const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volume*& vol,std::vector<const GeoVPhysVol*> gv, std::vector<HepTransform3D> transf) const
 {
   // spacers: one level below, assumed boxes
   std::vector<const Trk::Layer*> layers;
-  for (unsigned int ic=0; ic<gv.size(); ++ic) {
-    // std::cout << "processing spacer, number of children volumes:"<< gv[ic]->getNChildVols() <<std::endl; 
-    for (unsigned int ich =0; ich< gv[ic]->getNChildVols(); ++ich) {
-      const GeoVPhysVol* cv = &(*(gv[ic]->getChildVol(ich))); 
-      const GeoLogVol* clv = cv->getLogVol();
-      HepTransform3D transform = gv[ic]->getXToChildVol(ich);        
-      // std::cout << "Spacer component:"<<ich<<":" << clv->getName() <<", made of "<<clv->getMaterial()->getName()<<","<<clv->getShape()->type()<<","<<transf[ic]->getTranslation()<<","<<transform.getTranslation()<<std::endl;
-      // std::cout << "combined transform:" << ((*transf[ic])*transform).getTranslation()<<std::endl; 
-      if (clv->getShape()->type()=="Box") {
-         const GeoBox* box = dynamic_cast<const GeoBox*> (clv->getShape());
-         double xs = box->getXHalfLength();
-         double ys = box->getYHalfLength();
-         double zs = box->getZHalfLength();
-         // std::cout << "dimensions:"<<box->getXHalfLength() << ","<<box->getYHalfLength() << ","<<box->getZHalfLength() << std::endl;
-         // translating into layer; find minimal size
-	 const Trk::PlaneLayer* layer;
-	 Trk::RectangleBounds* bounds;
-         double thickness=0.;
-         Trk::OverlapDescriptor* od=0;
-         HepTransform3D* cTr = new HepTransform3D((*transf[ic])*transform);
-         if (zs <= xs && zs <= ys ) { // x-y plane
-	   bounds = new Trk::RectangleBounds(xs,ys); 
-           thickness = zs;
-         } else {
-           if (xs <= ys && xs <= zs ) { // x-y plane -> y-z plane
-	     bounds = new Trk::RectangleBounds(ys,zs); 
-             thickness = xs;
-             HepTransform3D* tmp = cTr; 
-             cTr = new HepTransform3D((*cTr) * HepRotateY3D(90*deg) * HepRotateZ3D(90*deg));
-             delete tmp; 
-           } else {  // x-y plane -> x-z plane
-	     bounds = new Trk::RectangleBounds(xs,zs); 
-             thickness = ys;
-             HepTransform3D* tmp = cTr; 
-             cTr = new HepTransform3D((*cTr) * HepRotateX3D(90*deg));
-             delete tmp; 
-           }
-         } 
-	 Trk::MaterialProperties cmat = m_materialConverter->convert(clv->getMaterial());
-         Trk::MaterialProperties material(thickness,cmat.x0(),cmat.zOverAtimesRho(),cmat.averageZ(),cmat.dEdX());  
-	 Trk::HomogenousLayerMaterial spacerMaterial(material, Trk::oppositePre);
-
-         layer = new Trk::PlaneLayer(cTr,
-                                     bounds,
-                                     spacerMaterial,
-                                     thickness,
-                                     od );
-         layers.push_back(layer);
-         layer->setLayerType(0);
+  // resolve child volumes
+  std::vector<const GeoVPhysVol*>::iterator vIter = gv.begin();
+  std::vector<HepTransform3D>::iterator tIter = transf.begin();
+  while (vIter != gv.end() ) {
+    if ((*vIter)->getNChildVols()) {
+      for (unsigned int ich=0; ich<(*vIter)->getNChildVols();++ich) {
+	gv.push_back(&(*((*vIter)->getChildVol(ich))));
+        transf.push_back(HepTransform3D( (*tIter)*(*vIter)->getXToChildVol(ich)));  
+        gv.erase(vIter); transf.erase(tIter);
       }
+    } else { vIter++; tIter++; }
+  } 
+  // translate into layers
+  for (unsigned int ic=0; ic<gv.size(); ++ic) {
+    const GeoLogVol* clv = gv[ic]->getLogVol();        
+    // std::cout << "Spacer component:"<<ic<<":" << clv->getName() <<", made of "<<clv->getMaterial()->getName()<<","<<clv->getShape()->type()<<","<<transf[ic].getTranslation()<<","<<transform.getTranslation()<<std::endl; 
+    Trk::MaterialProperties cmat = m_materialConverter->convert(clv->getMaterial());
+    Trk::OverlapDescriptor* od=0;
+    if (clv->getShape()->type()=="Box") {
+      const GeoBox* box = dynamic_cast<const GeoBox*> (clv->getShape());
+      double xs = box->getXHalfLength();
+      double ys = box->getYHalfLength();
+      double zs = box->getZHalfLength();
+      // translating into layer; find minimal size
+      const Trk::PlaneLayer* layer;
+      Trk::RectangleBounds* rbounds=0;
+      double thickness=0.;
+      HepTransform3D* cTr = 0;
+      if (zs <= xs && zs <= ys ) { // x-y plane
+	rbounds = new Trk::RectangleBounds(xs,ys); 
+	thickness = zs;
+        cTr = new HepTransform3D(transf[ic]);
+      } else if (xs <= ys && xs <= zs ) { // x-y plane -> y-z plane
+	rbounds = new Trk::RectangleBounds(ys,zs); 
+	thickness = xs; 
+	cTr = new HepTransform3D( transf[ic] * HepRotateY3D(90*deg) * HepRotateZ3D(90*deg));
+      } else {  // x-y plane -> x-z plane
+	rbounds = new Trk::RectangleBounds(xs,zs); 
+	thickness = ys; 
+	cTr = new HepTransform3D( transf[ic] * HepRotateX3D(90*deg));
+      } 
+      Trk::MaterialProperties material(thickness,cmat.x0(),cmat.zOverAtimesRho(),cmat.averageZ(),cmat.dEdX());  
+      Trk::HomogenousLayerMaterial spacerMaterial(material, Trk::oppositePre);
+      Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds);
+      
+      layer = new Trk::PlaneLayer(cTr,
+				  bounds,
+				  spacerMaterial,
+				  thickness,
+				  od,0 );
+      layers.push_back(layer);
+    } else if ( clv->getShape()->type()=="Subtraction") {
+      const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction*> (clv->getShape());
+      if (sub && sub->getOpA()->type()=="Box" && sub->getOpB()->type()=="Box") {
+        // LB
+        const GeoBox* boxA = dynamic_cast<const GeoBox*> (sub->getOpA());
+        const GeoBox* boxB = dynamic_cast<const GeoBox*> (sub->getOpB());
+	Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(boxA->getYHalfLength(),boxA->getZHalfLength());
+        double thickness = 0.5*(boxA->getXHalfLength()-boxB->getXHalfLength());
+        double shift     = 0.5*(boxA->getXHalfLength()+boxB->getXHalfLength());
+	Trk::MaterialProperties material(thickness,cmat.x0(),cmat.zOverAtimesRho(),cmat.averageZ(),cmat.dEdX());  
+	Trk::HomogenousLayerMaterial spacerMaterial(material, Trk::oppositePre);
+	Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds);
+	Trk::PlaneLayer* layx = new Trk::PlaneLayer(new HepTransform3D( transf[ic]*HepTranslateX3D(shift)*HepRotateY3D(90*deg)*HepRotateZ3D(90*deg) ), bounds, spacerMaterial, thickness, od, 0 );
+	Trk::PlaneLayer* layxx = new Trk::PlaneLayer(*layx,HepTranslateX3D(-2*shift));
+        layers.push_back(layx)  ; 
+        layers.push_back(layxx) ; layxx->setLayerType(0);
+	rbounds = new Trk::RectangleBounds(boxB->getXHalfLength(),boxA->getZHalfLength());
+        thickness = 0.5*(boxA->getYHalfLength()-boxB->getYHalfLength());
+	material = Trk::MaterialProperties(thickness,cmat.x0(),cmat.zOverAtimesRho(),cmat.averageZ(),cmat.dEdX());  
+	spacerMaterial = Trk::HomogenousLayerMaterial(material, Trk::oppositePre);
+        shift     = 0.5*(boxA->getYHalfLength()+boxB->getYHalfLength());
+	bounds = Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);
+	Trk::PlaneLayer* lay = new Trk::PlaneLayer(new HepTransform3D( transf[ic]*HepTranslateY3D(shift)*HepRotateX3D(90*deg)), bounds, spacerMaterial, thickness, od, 0 );
+	Trk::PlaneLayer* layy = new Trk::PlaneLayer(*lay,HepTranslateY3D(-2*shift));
+        layers.push_back(lay)  ; 
+        layers.push_back(layy) ; layy->setLayerType(0);
+	rbounds = new Trk::RectangleBounds(boxB->getXHalfLength(),boxB->getYHalfLength());
+        thickness = 0.5*(boxA->getZHalfLength()-boxB->getZHalfLength());
+	material = Trk::MaterialProperties(thickness,cmat.x0(),cmat.zOverAtimesRho(),cmat.averageZ(),cmat.dEdX());  
+	spacerMaterial = Trk::HomogenousLayerMaterial(material, Trk::oppositePre);
+        shift     = 0.5*(boxA->getZHalfLength()+boxB->getZHalfLength());
+	bounds = Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);
+	Trk::PlaneLayer* layz = new Trk::PlaneLayer(new HepTransform3D( transf[ic]*HepTranslateZ3D(shift)), bounds, spacerMaterial, thickness, od, 0 );
+	Trk::PlaneLayer* layzz = new Trk::PlaneLayer(*layz,HepTranslateZ3D(-2*shift));
+        layers.push_back(layz)  ;
+        layers.push_back(layzz) ; layzz->setLayerType(0);
+      } else if (sub) {
+	std::vector<std::pair<const GeoShape*,HepTransform3D> > subVs;
+	const GeoShapeShift* shift = dynamic_cast<const GeoShapeShift*> (sub->getOpB());
+	if (shift) subVs.push_back(std::pair<const GeoShape*,HepTransform3D>(shift->getOp(),shift->getX()));
+        const GeoShape* shape = sub->getOpA();
+        while (shape->type()=="Subtraction") {
+          const GeoShapeSubtraction* subtr = dynamic_cast<const GeoShapeSubtraction*> (shape);
+          const GeoShapeShift* shift = dynamic_cast<const GeoShapeShift*> (subtr->getOpB());
+          if (shift) subVs.push_back(std::pair<const GeoShape*,HepTransform3D>(shift->getOp(),shift->getX()));
+          shape = subtr->getOpA();  
+	}
+        const GeoBox* box = dynamic_cast<const GeoBox*> (shape);
+        if (box && subVs.size()==4) {
+	  Trk::Volume* v1 = 0; Trk::Volume* v2 = 0; Trk::VolumeExcluder* volExcl=0; 
+          const GeoBox* sb1 = dynamic_cast<const GeoBox*> (subVs[0].first);
+          if (sb1) v1 = new Trk::Volume(new HepTransform3D(subVs[0].second),
+					new Trk::CuboidVolumeBounds(sb1->getXHalfLength(),
+								    sb1->getYHalfLength(),
+								    sb1->getZHalfLength()));
+          const GeoBox* sb2 = dynamic_cast<const GeoBox*> (subVs[1].first);
+          if (sb2) v2 = new Trk::Volume(new HepTransform3D(subVs[1].second),
+					new Trk::CuboidVolumeBounds(sb2->getXHalfLength(),
+								    sb2->getYHalfLength(),
+								    sb2->getZHalfLength()));
+           
+          const GeoBox* boxB = dynamic_cast<const GeoBox*> (subVs[2].first);
+          if (boxB && v1 && v2) {
+	    Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(box->getYHalfLength(),box->getZHalfLength());
+	    double thickness = 0.5*(box->getXHalfLength()-boxB->getXHalfLength());
+	    double shift     = 0.5*(box->getXHalfLength()+boxB->getXHalfLength());
+	    Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds);
+	    Trk::Volume* cVol = new Trk::Volume(new HepTranslateX3D(-shift),
+						new Trk::CombinedVolumeBounds(v1,v2,false));
+            volExcl=new Trk::VolumeExcluder(cVol);
+	    Trk::SubtractedPlaneSurface* subPlane=new Trk::SubtractedPlaneSurface(Trk::PlaneSurface(new HepTransform3D(transf[ic]*HepTranslateX3D(shift)*HepRotateY3D(90*deg)*HepRotateZ3D(90*deg)), bounds), volExcl, false);
+	    Trk::MaterialProperties material(thickness,cmat.x0(),cmat.zOverAtimesRho(),cmat.averageZ(),cmat.dEdX());  
+	    Trk::HomogenousLayerMaterial spacerMaterial(material, Trk::oppositePre);
+	    Trk::SubtractedPlaneLayer* layx = new Trk::SubtractedPlaneLayer(subPlane,spacerMaterial, thickness, od, 0 );
+            delete subPlane;
+	    Trk::SubtractedPlaneLayer* layxx = new Trk::SubtractedPlaneLayer(*layx,HepTranslateX3D(-2*shift));
+	    layers.push_back(layx) ; 
+	    layers.push_back(layxx) ; layxx->setLayerType(0);
+
+	    rbounds = new Trk::RectangleBounds(boxB->getXHalfLength(),box->getZHalfLength());
+	    thickness = subVs[2].second.getTranslation().mag();
+	    Trk::VolumeExcluder* volEx=new Trk::VolumeExcluder(new Trk::Volume(*cVol, 
+									       HepTranslateX3D(2*shift)));
+	    bounds = Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);
+	    subPlane = new Trk::SubtractedPlaneSurface(Trk::PlaneSurface(new HepTransform3D(transf[ic]*HepRotateX3D(90*deg)), bounds), volEx, false);
+	    material = Trk::MaterialProperties(thickness,cmat.x0(),cmat.zOverAtimesRho(),cmat.averageZ(),cmat.dEdX());  
+	    spacerMaterial = Trk::HomogenousLayerMaterial(material, Trk::oppositePre);
+	    Trk::SubtractedPlaneLayer* lay = new Trk::SubtractedPlaneLayer(subPlane,spacerMaterial, thickness, od, 0 );
+            delete subPlane;
+	    layers.push_back(lay) ; 
+	  }          
+	}
+      } else {
+	std::cout << "unresolved spacer component "<< clv->getName() << std::endl; 
+      }    
+    } else {
+      std::cout << "unresolved spacer component "<< clv->getName() << std::endl; 
     }
   }
 

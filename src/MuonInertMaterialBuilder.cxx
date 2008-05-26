@@ -1017,6 +1017,7 @@ double Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Lay
       Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*plane,
 									       new Trk::VolumeExcluder(subVol), false );
       lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf, some_mat,thickness));
+      delete subtrSurf;
     } else {
       lays.push_back(new Trk::PlaneLayer(plane,some_mat, thickness));
     }
@@ -1058,6 +1059,7 @@ double Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Lay
       Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*plane,
 									       new Trk::VolumeExcluder(subVol), false );
       lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf, some_mat,thickness));
+      delete subtrSurf;
     } else {
       lays.push_back(new Trk::PlaneLayer(plane, some_mat, thickness));
     }
@@ -1085,6 +1087,7 @@ double Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Lay
 	  Trk::Volume* subVol = createSubtractedVolume(pl->transform(), subtrVol);
 	  Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*pl, new Trk::VolumeExcluder(subVol), false );
 	  lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf,some_mat,hz));
+          delete subtrSurf;
 	} else {
 	  lays.push_back(new Trk::PlaneLayer(pl,some_mat,hz));
 	} 
@@ -1098,6 +1101,7 @@ double Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Lay
 	  Trk::Volume* subVol = createSubtractedVolume(di->transform(), subtrVol);
 	  Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*di, new Trk::VolumeExcluder(subVol), false );
 	  lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf,some_mat,hz));
+          delete subtrSurf;
 	} else {
 	  lays.push_back(new Trk::PlaneLayer(di,some_mat,hz));
 	}
@@ -1120,6 +1124,7 @@ double Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Lay
 	    Trk::Volume* subVol = createSubtractedVolume(pl->transform(), subtrVol);
 	    Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*pl, new Trk::VolumeExcluder(subVol), false );
 	    lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf,some_mat,2*hz/numSlice));
+            delete subtrSurf;
 	  } else {
 	    lays.push_back(new Trk::PlaneLayer(pl,some_mat,2*hz/numSlice));
 	  } 
@@ -1133,6 +1138,7 @@ double Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Lay
 	    Trk::Volume* subVol = createSubtractedVolume(di->transform(), subtrVol);
 	    Trk::SubtractedPlaneSurface* subtrSurf = new Trk::SubtractedPlaneSurface(*di, new Trk::VolumeExcluder(subVol), false );
 	    lays.push_back(new Trk::SubtractedPlaneLayer(subtrSurf,some_mat,2*hz/numSlice));
+            delete subtrSurf; 
 	  } else {
 	    lays.push_back(new Trk::PlaneLayer(di,some_mat,2*hz/numSlice));
 	  } 
@@ -1152,6 +1158,7 @@ double Muon::MuonInertMaterialBuilder::volumeToLayers(std::vector<const Trk::Lay
 	Trk::SubtractedCylinderSurface* subtrSurf = new Trk::SubtractedCylinderSurface(*pSurf, new Trk::VolumeExcluder(subVol),
 										       false );
 	lays.push_back(new Trk::SubtractedCylinderLayer(subtrSurf,some_mat,drad));
+        delete subtrSurf;
       } else {
 	lays.push_back(new Trk::CylinderLayer(pSurf,some_mat,drad));
       }

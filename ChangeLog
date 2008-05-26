@@ -1,3 +1,8 @@
+2008-05-26 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix building of MDT supports (change in MuonGeoModel)
+	* couple of small memory leaks fixed 
+	* tagged as MuonTrackingGeometry-00-03-15
+
 2008-05-24 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix parallel building of simplified and blended material 
 	* tagged as MuonTrackingGeometry-00-03-14

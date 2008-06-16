@@ -764,10 +764,13 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
               }
 	      if (assocLay) assocLay->setLayerType(iD); 
 	      if (assocLay) {
-		const Trk::LocalPosition* locPos = (assocLay->surfaceRepresentation()).globalToLocal(gp,0.001);
-		if (fabs(assocLay->getRef()-(*locPos)[Trk::locY])>0.01) 
-		  std::cout << "ERROR REFERENCE:"<< stationName<<","<<assocLay->getRef()<<","<<(*locPos)[Trk::locY]<<std::endl;
-		if (locPos) assocLay->setRef((*locPos)[Trk::locY]);
+		//const Trk::LocalPosition* locPos = (assocLay->surfaceRepresentation()).globalToLocal(gp,0.001);
+                Trk::GlobalPosition locPos = assocLay->surfaceRepresentation().transform().inverse()*gp;
+		if (fabs(assocLay->getRef()-locPos[1])>0.01) 
+		  std::cout << "ERROR REFERENCE:"<< stationName<<","<<assocLay->getRef()<<","<<locPos[1]<<std::endl;
+		if (fabs(locPos[2])>0.01) 
+		  std::cout << "ERROR Alignment:"<< stationName<<","<<assocLay->getRef()<<","<<locPos[2]<<std::endl;
+		assocLay->setRef(locPos[1]);
 	      }
 	    } 
           }
@@ -923,16 +926,14 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
 		if (1/*m_rpcIdHelper->valid(etaId)*/){
 		  for (unsigned int il=0;il<layers->size();il++) {
 		    if ((*layers)[il]->layerType() != 0 && (*layers)[il]->isOnLayer(transf.inverse()*rpc->stripPos(etaId)) ) {
-                      const Trk::LocalPosition* locPos1 = (*layers)[il]->surfaceRepresentation().globalToLocal(transf.inverse()*rpc->stripPos(etaId));
-                      const Trk::LocalPosition* locPos2 = rpc->surface(etaId).globalToLocal(rpc->stripPos(etaId));
-                      double swap = ( fabs( (*locPos1)[Trk::locY] - (*locPos2)[Trk::locX] ) > 0.001 ) ? 20000. : 0. ;
-                      delete locPos1;
-                      delete locPos2; 
+                      const Trk::GlobalPosition locPos1 = (*layers)[il]->surfaceRepresentation().transform().inverse()*transf.inverse()*rpc->stripPos(etaId);
+                      const Trk::GlobalPosition locPos2 = rpc->surface(etaId).transform().inverse()*rpc->stripPos(etaId);
+                      double swap = ( fabs( locPos1[1] - locPos2[0] ) > 0.001 ) ? 20000. : 0. ;
 		      unsigned int id = etaId;
 		      (*layers)[il]->setLayerType(id);
-                      const Trk::LocalPosition* locPos = (*layers)[il]->surfaceRepresentation().globalToLocal(transf.inverse()*rpc->surface(etaId).center(),0.005); 
-		      (*layers)[il]->setRef(swap + (*locPos)[Trk::locX]);
-		      delete locPos; 
+                      const Trk::GlobalPosition locPos = (*layers)[il]->surfaceRepresentation().transform().inverse()
+			*transf.inverse()*rpc->surface(etaId).center(); 
+		      (*layers)[il]->setRef(swap + locPos[0]);
 		      //std::cout <<"identifying RPC:"<<stationName<<","<<iv<<","<<il<<":"<<id <<std::endl;
                       //turn eta position into integer to truncate
 		      //HepPoint3D locPosEta = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(etaId));

@@ -7,13 +7,15 @@
 
 //Trk
 #include "TrkGeometry/MagneticFieldProperties.h"
-#include "TrkGeometry/MaterialProperties.h"
+//#include "TrkGeometry/ExtendedMaterialProperties.h"
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkDetDescrUtils/SharedObject.h"
 #include "TrkDetDescrGeoModelCnv/GeoMaterialConverter.h"
 // Gaudi
 #include "GaudiKernel/AlgTool.h"
 #include "GaudiKernel/ToolHandle.h"
+#include "GaudiKernel/MsgStream.h"
+
 
 #include "GeoModelKernel/GeoVPhysVol.h"
 #include "GeoModelKernel/GeoMaterial.h"
@@ -24,7 +26,7 @@ namespace Trk {
  class TrackingGeometry;
  class TrackingVolume;
  class DetachedTrackingVolume;
- class MaterialProperties;
+ class ExtendedMaterialProperties;
  class LayerMaterialProperties;
  class Volume;
  class Layer;
@@ -85,9 +87,9 @@ namespace Muon {
       const double get_x_size(const GeoVPhysVol*) const ;
       const double decodeX(const GeoShape*) const ;
       const double getVolume(const GeoShape*) const;
-      Trk::MaterialProperties* getAveragedLayerMaterial(const GeoVPhysVol*,double,double) const;
-      Trk::MaterialProperties collectMaterial(const GeoVPhysVol*,Trk::MaterialProperties ,double) const;
-      Trk::MaterialProperties collectStationMaterial(const Trk::TrackingVolume* trVol,double) const; 
+      Trk::ExtendedMaterialProperties* getAveragedLayerMaterial(const GeoVPhysVol*,double,double) const;
+      void collectMaterial(const GeoVPhysVol*,Trk::ExtendedMaterialProperties*& ,double) const;
+      Trk::ExtendedMaterialProperties collectStationMaterial(const Trk::TrackingVolume* trVol,double) const; 
      /** Private method to fill default material */
       //void fillDefaultServiceMaterial();
 
@@ -97,24 +99,25 @@ namespace Muon {
       ToolHandle<Trk::ITrackingVolumeArrayCreator>   m_trackingVolumeArrayCreator;  //!< Helper Tool to create TrackingVolume Arrays
       ToolHandle<Trk::IMagneticFieldTool>            m_magFieldTool;                //!< Tracking Interface to Magnetic Field
 
-      mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
+      mutable Trk::MaterialProperties*     m_muonMaterial;               //!< the material
       mutable Trk::MagneticFieldProperties m_muonMagneticField;          //!< the magnetic Field
-      mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
-      mutable Trk::MaterialProperties*    m_mdtTubeMat;                  //
-      mutable Trk::MaterialProperties*    m_mdtFoamMat;                  //
-      mutable Trk::MaterialProperties*    m_rpc46;                  
-      mutable Trk::MaterialProperties*    m_rpcDed50;                
-      mutable Trk::MaterialProperties*    m_rpcLayer;                  
-      mutable Trk::MaterialProperties*    m_rpcExtPanel;                  
-      mutable Trk::MaterialProperties*    m_rpcMidPanel;                  
-      mutable Trk::MaterialProperties*    m_matCSC01;                  //
-      mutable Trk::MaterialProperties*    m_matCSCspacer1;                  //
-      mutable Trk::MaterialProperties*    m_matCSC02;                  //
-      mutable Trk::MaterialProperties*    m_matCSCspacer2;                  //
-      mutable Trk::MaterialProperties*    m_matTGC01;                  //
-      mutable Trk::MaterialProperties*    m_matTGC06;                  //
-      Trk::GeoMaterialConverter*          m_materialConverter;
+ 
+      mutable Trk::ExtendedMaterialProperties*    m_mdtTubeMat;                  //
+      mutable Trk::ExtendedMaterialProperties*    m_mdtFoamMat;                  //
+      mutable Trk::ExtendedMaterialProperties*    m_rpc46;                  
+      mutable Trk::ExtendedMaterialProperties*    m_rpcDed50;                
+      mutable Trk::ExtendedMaterialProperties*    m_rpcLayer;                  
+      mutable Trk::ExtendedMaterialProperties*    m_rpcExtPanel;                  
+      mutable Trk::ExtendedMaterialProperties*    m_rpcMidPanel;                  
+      mutable Trk::ExtendedMaterialProperties*    m_matCSC01;                  //
+      mutable Trk::ExtendedMaterialProperties*    m_matCSCspacer1;                  //
+      mutable Trk::ExtendedMaterialProperties*    m_matCSC02;                  //
+      mutable Trk::ExtendedMaterialProperties*    m_matCSCspacer2;                  //
+      mutable Trk::ExtendedMaterialProperties*    m_matTGC01;                  //
+      mutable Trk::ExtendedMaterialProperties*    m_matTGC06;                  //
+      Trk::GeoMaterialConverter*                  m_materialConverter;
 
+      MsgStream* m_log;  
     };
 
 

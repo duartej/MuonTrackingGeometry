@@ -1772,6 +1772,7 @@ Trk::ExtendedMaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerM
   // scaled material properties to the actual layer thickness
   if (total->thickness() > 0 ) { 
     double scale = thickness/total->thickness();
+    //std::cout << "scaling factor:"<<scale<<std::endl;
     Trk::ExtendedMaterialProperties* scaled =
       new Trk::ExtendedMaterialProperties(scale*total->thickness(),
 					  scale*total->x0(),
@@ -1780,6 +1781,8 @@ Trk::ExtendedMaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerM
 					  total->averageZ(),
 					  total->averageRho()/scale);
     delete total;    
+    *m_log<< MSG::DEBUG << "averaged material:d,x0,dInX0:"<<scaled->thickness()<<","<<scaled->x0()<<","<<scaled->thicknessInX0()<<endreq;
+
     return scaled;
   }  
   *m_log << MSG::DEBUG << name() << "::getAverageLayerMaterial returns 0 " << std::endl; 
@@ -1813,16 +1816,20 @@ Trk::ExtendedMaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerM
     double totalThickness = d + matProp->thickness();
     double fold = matProp->thickness()/totalThickness;
     double fnew = d/totalThickness; 
+  
+    //std::cout << "old material:f,d,x0:"<< fold<<","<<matProp->thickness()<<","<<matProp->x0()<<std::endl;
+    //std::cout << "new material:f,d,x0:"<< fnew<<","<<newMP.thickness()<<","<<newMP.x0()<<std::endl;
  
     Trk::ExtendedMaterialProperties* newUpdate=new Trk::ExtendedMaterialProperties(totalThickness,
-                                              fnew*newMP.x0()+fold*matProp->x0(),
-                                              fnew*newMP.l0()+fold*matProp->l0(),
+                                              1./(fnew/newMP.x0()+fold/matProp->x0()),
+                                              1./(fnew/newMP.l0()+fold/matProp->l0()),
                                               fnew*newMP.averageA()+fold*matProp->averageA(),
                                               fnew*newMP.averageZ()+fold*matProp->averageZ(),
                                               fnew*newMP.averageRho()+fold*matProp->averageRho());  
 
     delete matProp;
     matProp = newUpdate;
+    //std::cout << "sum material:d,x0:"<<matProp->thickness()<<","<<matProp->x0()<<std::endl;
   } 
   // subcomponents
   // skip children volume if we deal with G10 ( not correctly described )
@@ -2425,8 +2432,10 @@ Trk::ExtendedMaterialProperties Muon::MuonStationTypeBuilder::collectStationMate
       if (mLay) {
 	double totalD = mat.thickness()+mLay->thickness();
 	double f1 = mat.thickness()/totalD; double f2 = mLay->thickness()/totalD;  
-	mat = Trk::ExtendedMaterialProperties(totalD, f1*mat.x0()+f2*mLay->x0(), f1*mat.l0()+f2*mLay->l0(),
-					      f1*mat.averageA()+f2*mLay->averageA(),f1*mat.averageZ()+f2*mLay->averageZ(),
+	mat = Trk::ExtendedMaterialProperties(totalD, 1./(f1/mat.x0()+f2/mLay->x0()),
+					      1./(f1/mat.l0()+f2/mLay->l0()),
+					      f1*mat.averageA()+f2*mLay->averageA(),
+					      f1*mat.averageZ()+f2*mLay->averageZ(),
 					      f1*mat.averageRho()+f2*mLay->averageRho());
       }
     }
@@ -2442,9 +2451,11 @@ Trk::ExtendedMaterialProperties Muon::MuonStationTypeBuilder::collectStationMate
 	double scale = 4*rect->halflengthX()*rect->halflengthY()/sf;
 	double totalD = mat.thickness()+scale*mLay->thickness();
 	double f1 = mat.thickness()/totalD; double f2 = scale*mLay->thickness()/totalD;  
-	mat = Trk::ExtendedMaterialProperties(totalD, f1*mat.x0()+f2*mLay->x0(), f1*mat.l0()+f2*mLay->l0(),
-                                            f1*mat.averageA()+f2*mLay->averageA(),f1*mat.averageZ()+f2*mLay->averageZ(),
-                                            f1*mat.averageRho()+f2*mLay->averageRho());
+	mat = Trk::ExtendedMaterialProperties(totalD,1./(f1/mat.x0()+f2/mLay->x0()),
+					      1./(f1/mat.l0()+f2/mLay->l0()),
+					      f1*mat.averageA()+f2*mLay->averageA(),
+					      f1*mat.averageZ()+f2*mLay->averageZ(),
+					      f1*mat.averageRho()+f2*mLay->averageRho());
       }
     }
   } 

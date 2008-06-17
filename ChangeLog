@@ -1,7 +1,8 @@
 2008-06-17 Sarka Todorova <sarka.todorova@cern.ch>
 	* move active material to ExtendedMaterialProperties
 	* avoid use of ::globalToLocal to prevent crashes
-	* tagged as MuonTrackingGeometry-00-03-16
+	* tagged as MuonTrackingGeometry-00-03-16,
+	* bugfix (average x0,l0)        -00-03-17
 
 2008-05-26 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix building of MDT supports (change in MuonGeoModel)

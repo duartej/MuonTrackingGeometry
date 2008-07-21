@@ -1103,7 +1103,11 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
             m_rpcDed50 = getAveragedLayerMaterial(gv[ic],vol,2*xs);
           }
           rpcMat=*m_rpcDed50;  
-        } else { *m_log << MSG::WARNING << name() << " Ded thickness different from 50:" << thickness << endreq; }
+        } else { 
+	  *m_log << MSG::WARNING << name() << " Ded thickness different from 50:" << thickness <<",recalculating"<< endreq;
+	  double vol = 8*xs*ys*zs;
+          rpcMat = *(getAveragedLayerMaterial(gv[ic],vol,2*xs));
+        }
       } else {
         //printChildren(gv[ic]);
         if (fabs(thickness-46.0)<0.001) {
@@ -1156,7 +1160,11 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
 	      m_rpcDed50 = getAveragedLayerMaterial(gv[ic],vol,2*xs1);
             }
             rpcMat=*m_rpcDed50;  
-          } else { *m_log << MSG::WARNING << name() << "Ded thickness different from 50:" << thickness << endreq; }
+          } else { 
+	    *m_log << MSG::WARNING << name() << "Ded thickness different from 50:" << thickness << endreq;
+	    double vol = 8*xs1*ys1*zs;
+	    rpcMat = *(getAveragedLayerMaterial(gv[ic],vol,2*xs1));
+	  }
           // create Ded layer
 	  Trk::HomogenousLayerMaterial rpcMaterial(rpcMat);
 	  layer = new Trk::PlaneLayer(cTr, bounds, rpcMaterial, thickness, od );

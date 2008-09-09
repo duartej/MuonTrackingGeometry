@@ -1,3 +1,7 @@
+2008-09-09 Sarka Todorova <sarka.todorova@cern.ch>
+	* minor updates (use statement, Ded material, Mdt mismatch warning)
+	* tagged as MuonTrackingGeometry-00-03-20
+
 2008-08-06 Sarka Todorova <sarka.todorova@cern.ch>
 	* default MuonSpectrometerEntrance resized (R=4251,z=6750)
 	* tagged as MuonTrackingGeometry-00-03-19

@@ -105,7 +105,7 @@ namespace Muon {
       mutable Trk::ExtendedMaterialProperties*    m_mdtTubeMat;                  //
       mutable Trk::ExtendedMaterialProperties*    m_mdtFoamMat;                  //
       mutable Trk::ExtendedMaterialProperties*    m_rpc46;                  
-      mutable Trk::ExtendedMaterialProperties*    m_rpcDed50;                
+      mutable std::vector<Trk::ExtendedMaterialProperties*>    m_rpcDed;                
       mutable Trk::ExtendedMaterialProperties*    m_rpcLayer;                  
       mutable Trk::ExtendedMaterialProperties*    m_rpcExtPanel;                  
       mutable Trk::ExtendedMaterialProperties*    m_rpcMidPanel;                  

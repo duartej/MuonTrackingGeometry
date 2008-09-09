@@ -87,7 +87,7 @@ Muon::MuonStationTypeBuilder::MuonStationTypeBuilder(const std::string& t, const
   m_mdtTubeMat(0),
   m_mdtFoamMat(0),
   m_rpc46(0),
-  m_rpcDed50(0),
+  m_rpcDed(),
   m_rpcLayer(0),
   m_rpcExtPanel(0),
   m_rpcMidPanel(0),
@@ -372,8 +372,10 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
 	    mdtBounds = new Trk::CuboidVolumeBounds(compBounds->halflengthX(),envY,envZ);
             mdtVol = new Trk::Volume(new HepTransform3D(HepTranslateZ3D(-zShift)*compVol[i]->transform()),mdtBounds);
 	  } else {
-	    *m_log << MSG::WARNING  << "Mdt volume size does not match the envelope:lowX,currX:" << lowX <<","<<currX << std::endl;
-	    *m_log << MSG::WARNING  << "adjusting Mdt volume " << std::endl;
+            if ( fabs(lowX-currX)>0.002 ) { 
+	      *m_log << MSG::WARNING  << "Mdt volume size does not match the envelope:lowX,currX:" << lowX <<","<<currX << std::endl;
+	      *m_log << MSG::WARNING  << "adjusting Mdt volume " << std::endl;
+	    }
 	    mdtBounds = new Trk::CuboidVolumeBounds(compBounds->halflengthX()+0.5*(lowX-currX),envY,envZ);
             mdtVol = new Trk::Volume(new HepTransform3D(HepTranslateX3D(0.5*(currX-lowX))
 							*HepTranslateZ3D(-zShift)*compVol[i]->transform()),mdtBounds);
@@ -662,8 +664,10 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
 	    mdtBounds = new Trk::TrapezoidVolumeBounds(envX1,envX2,envY,compTrdBounds->halflengthZ());
             mdtVol = new Trk::Volume(new HepTransform3D(compVol[i]->transform()),mdtBounds);
 	  } else {
-	    *m_log << MSG::WARNING  << "Mdt volume size does not match the envelope:lowX,currX:" << lowX <<","<<currX << std::endl;
-	    *m_log << MSG::WARNING  << "adjusting Mdt volume " << std::endl;
+            if (fabs(lowX-currX)>0.002 ) {
+	      *m_log << MSG::WARNING  << "Mdt volume size does not match the envelope:lowX,currX:" << lowX <<","<<currX << std::endl;
+	      *m_log << MSG::WARNING  << "adjusting Mdt volume " << std::endl;
+	    }
 	    mdtBounds = new Trk::TrapezoidVolumeBounds(envX1,envX2,envY,compTrdBounds->halflengthZ()+0.5*(lowX-currX));
             mdtVol = new Trk::Volume(new HepTransform3D(HepTranslateZ3D(0.5*(currX-lowX))*compVol[i]->transform()),mdtBounds);
           }
@@ -741,7 +745,7 @@ StatusCode Muon::MuonStationTypeBuilder::finalize()
     delete m_rpcLayer;
     delete m_rpcMidPanel;
     delete m_rpcExtPanel;
-    delete m_rpcDed50;
+    for (unsigned int i=0;i<m_rpcDed.size();i++) delete m_rpcDed[i];
 
     *m_log << MSG::INFO  << name() <<" finalize() successful" << endreq;
     return StatusCode::SUCCESS;
@@ -1097,17 +1101,17 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
       HepTransform3D* cTr = new HepTransform3D( transfc[ic] * HepRotateY3D(90*deg) * HepRotateZ3D(90*deg));
       Trk::ExtendedMaterialProperties rpcMat(0.,10e8,10e8,0.,0.,0.);               // default
       if ( (glv->getName()).substr(0,3)=="Ded" ) {
-        if (fabs(thickness-50.0)<0.001) {
-          if (!m_rpcDed50) {
-            double vol = 8*xs*ys*zs;
-            m_rpcDed50 = getAveragedLayerMaterial(gv[ic],vol,2*xs);
-          }
-          rpcMat=*m_rpcDed50;  
-        } else { 
-	  *m_log << MSG::WARNING << name() << " Ded thickness different from 50:" << thickness <<",recalculating"<< endreq;
+        // find if material exists already
+        bool found = false;
+        for (unsigned int i=0;i<m_rpcDed.size();i++) {
+	  if (fabs(thickness-m_rpcDed[i]->thickness())<0.001) { rpcMat = *(m_rpcDed[i]); found = true; break; }
+        } 
+	if (!found) {
 	  double vol = 8*xs*ys*zs;
-          rpcMat = *(getAveragedLayerMaterial(gv[ic],vol,2*xs));
-        }
+	  Trk::ExtendedMaterialProperties* rpcDed = getAveragedLayerMaterial(gv[ic],vol,2*xs);
+	  m_rpcDed.push_back(rpcDed);
+	  rpcMat = *rpcDed;
+	}
       } else {
         //printChildren(gv[ic]);
         if (fabs(thickness-46.0)<0.001) {
@@ -1154,16 +1158,16 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
 	//std::cout << "component (layer) dimensions:" << ys1 << "," << zs << std::endl;
         Trk::ExtendedMaterialProperties rpcMat(0.,10e8,10e8,0.,0.,0.);               // default
         if ( (glv->getName()).substr(0,3)=="Ded" ) {
-          if (fabs(thickness-50.0)<0.001) {
-            if (!m_rpcDed50) {
-              double vol = 8*xs1*ys1*zs;
-	      m_rpcDed50 = getAveragedLayerMaterial(gv[ic],vol,2*xs1);
-            }
-            rpcMat=*m_rpcDed50;  
-          } else { 
-	    *m_log << MSG::WARNING << name() << "Ded thickness different from 50:" << thickness << endreq;
+	  // find if material exists already
+	  bool found = false;
+	  for (unsigned int i=0;i<m_rpcDed.size();i++) {
+	    if (fabs(thickness-m_rpcDed[i]->thickness())<0.001) { rpcMat = *(m_rpcDed[i]); found = true; break; }
+	  } 
+	  if (!found) {
 	    double vol = 8*xs1*ys1*zs;
-	    rpcMat = *(getAveragedLayerMaterial(gv[ic],vol,2*xs1));
+	    Trk::ExtendedMaterialProperties* rpcDed = getAveragedLayerMaterial(gv[ic],vol,2*xs1);
+	    m_rpcDed.push_back(rpcDed);
+	    rpcMat = *rpcDed;
 	  }
           // create Ded layer
 	  Trk::HomogenousLayerMaterial rpcMaterial(rpcMat);

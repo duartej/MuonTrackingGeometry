@@ -33,6 +33,7 @@
 #include "TrkVolumes/CuboidVolumeBounds.h"
 #include "TrkVolumes/SubtractedVolumeBounds.h"
 #include "TrkVolumes/CombinedVolumeBounds.h"
+#include "TrkVolumes/SimplePolygonBrepVolumeBounds.h"
 #include "TrkVolumes/BoundarySurface.h"
 //#include "TrkGeometry/SimplifiedMaterialProperties.h"
 #include "TrkMagFieldInterfaces/IMagneticFieldTool.h"
@@ -662,6 +663,7 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
   const Trk::CylinderVolumeBounds* cyl = dynamic_cast<const Trk::CylinderVolumeBounds*> (volBounds);
   const Trk::SubtractedVolumeBounds* sub = dynamic_cast<const Trk::SubtractedVolumeBounds*> (volBounds);
   const Trk::CombinedVolumeBounds* comb = dynamic_cast<const Trk::CombinedVolumeBounds*> (volBounds);
+  const Trk::SimplePolygonBrepVolumeBounds* spb = dynamic_cast<const Trk::SimplePolygonBrepVolumeBounds*> (volBounds);
 
   if (sub) return findVolumeSpan(&(sub->outer()->volumeBounds()),transform,zTol,phiTol);
 
@@ -755,6 +757,13 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     edges.push_back( Trk::GlobalPosition(cyl->innerRadius(),0.,0.) );
     edges.push_back( Trk::GlobalPosition(cyl->outerRadius(),0.,0.) );
   }
+  if (spb) {
+    const std::vector<std::pair<double, double> > vtcs = spb->xyVertices();
+    for (unsigned int i=0;i<vtcs.size();i++) {
+      edges.push_back( Trk::GlobalPosition(vtcs[i].first,vtcs[i].second, spb->halflengthZ()) );
+      edges.push_back( Trk::GlobalPosition(vtcs[i].first,vtcs[i].second, -spb->halflengthZ()) );
+    }
+  }
   // apply transform and get span
   for (unsigned int ie=0; ie < edges.size() ; ie++) {
     Trk::GlobalPosition gp = transform*edges[ie];
@@ -785,7 +794,7 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     minPhi = maxPhi;
     maxPhi = medPhi;
   }
-  if ( box || trd || dtrd ) {
+  if ( box || trd || dtrd || spb ) {
     span.push_back( minZ - zTol );  
     span.push_back( maxZ + zTol );  
     span.push_back( minPhi - phiTol );  

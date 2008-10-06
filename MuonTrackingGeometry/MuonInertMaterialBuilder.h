@@ -12,6 +12,7 @@
 #include "TrkGeometry/DetachedTrackingVolume.h"
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkGeometry/TrackingVolumeManipulator.h"
+#include "TrkDetDescrGeoModelCnv/GeoShapeConverter.h"
 // Gaudi
 #include "GaudiKernel/AlgTool.h"
 #include "GaudiKernel/ToolHandle.h"
@@ -67,16 +68,21 @@ namespace Muon {
       /** AlgTool finalize method */
       StatusCode finalize();
 
+      /** Method returning cloned and positioned material objects */
       const std::vector<const Trk::DetachedTrackingVolume*>* buildDetachedTrackingVolumes() const; 
-      const std::vector<const Trk::DetachedTrackingVolume*>* buildDetachedTrackingVolumeTypes() const; 
 
     private:
 
+      /** Method creating material object prototypes */
+      const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* buildDetachedTrackingVolumeTypes() const; 
+      /** Method extracting material objects from GeoModel tree */
+      void getObjsForTranslation(const GeoVPhysVol* pv,HepTransform3D , std::vector<std::pair<const GeoLogVol*,std::vector<HepTransform3D> > >& vols ) const;
+      /** Dump from GeoModel tree  */
       const void printInfo(const GeoVPhysVol* pv) const;
       const void printChildren(const GeoVPhysVol* pv) const;
-      const void decodeShape(const GeoShape* sh) const;
-      Trk::Volume* translateGeoShape(const GeoShape* sh, HepTransform3D* tr) const;
+      /** Simplification of GeoModel object + envelope */
       const Trk::TrackingVolume* simplifyShape(const Trk::TrackingVolume* tr) const;
+      
       const Trk::Layer* boundarySurfaceToLayer(const Trk::Surface&, const Trk::MaterialProperties*, double) const;
       Trk::Volume* createSubtractedVolume(const HepTransform3D& tr, Trk::Volume* subtrVol) const;
       void  splitShape(const GeoShape* sh, std::vector<const GeoShape*>& shapes) const;
@@ -95,9 +101,9 @@ namespace Muon {
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
       bool                                m_simplify;              // switch geometry simplification on/off 
-      bool                                m_simplifyToLayers;              // switch geometry simplification on/off 
-      double                              m_layerThicknessLimit;      // maximal thickness (in X0)   
-      bool                                m_debugMode;                   // build layers & dense volumes in parallel - double counting material !!! 
+      bool                                m_simplifyToLayers;      // switch geometry simplification to layers on/off 
+      double                              m_layerThicknessLimit;   // maximal thickness of layer allowed (in X0)   
+      bool                                m_debugMode;             // build layers & dense volumes in parallel - double counting material !!! 
       bool                                m_buildBT;                    // build barrel toroids 
       bool                                m_buildECT;                   // build endcap toroids 
       bool                                m_buildFeets;                 // build feets 
@@ -108,9 +114,9 @@ namespace Muon {
  
       ToolHandle<Trk::IMagneticFieldTool> m_magFieldTool;                //!< Tracking Interface to Magnetic Field
       mutable Trk::MagneticFieldProperties m_muonMagneticField;          //!< the magnetic Field
-
 //mw
       Trk::GeoMaterialConverter*           m_materialConverter;          //!< material converter
+      Trk::GeoShapeConverter*              m_geoShapeConverter;          //!< shape converter
 
       mutable std::vector<std::pair<std::string,std::pair<double,double> > >   m_volFractions;
       

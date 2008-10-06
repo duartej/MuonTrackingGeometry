@@ -1,6 +1,6 @@
 2008-10-06 Sarka Todorova <sarka.todorova@cern.ch>
 	* minor updates (MdtMultiFoam material, dealing with TGC cutouts)
-	* tagged as MuonTrackingGeometry-00-03-21
+	* tagged as MuonTrackingGeometry-00-03-21,-00-03-22
 
 2008-09-09 Sarka Todorova <sarka.todorova@cern.ch>
 	* minor updates (use statement, Ded material, Mdt mismatch warning)

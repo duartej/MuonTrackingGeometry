@@ -794,7 +794,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
       if (mdtMat.thickness()<0.001) {
         //std::cout << "adding new box MDT:foam thickness:"<< xv << std::endl;
         const Trk::CuboidVolumeBounds* cub =  dynamic_cast<const Trk::CuboidVolumeBounds*> (&(vol->volumeBounds()));
-	double volume = 8*(cub->halflengthX())*(cub->halflengthY())*xv;
+	double volume = 8*(cub->halflengthY())*(cub->halflengthZ())*xv;
 	m_mdtFoamMat.push_back(getAveragedLayerMaterial(cv,volume,2*xv)); 
         mdtMat = *(m_mdtFoamMat.back());
       }

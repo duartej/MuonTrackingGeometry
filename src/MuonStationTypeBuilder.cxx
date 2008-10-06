@@ -85,7 +85,7 @@ Muon::MuonStationTypeBuilder::MuonStationTypeBuilder(const std::string& t, const
   m_trackingVolumeArrayCreator("Trk::TrackingVolumeArrayCreator/TrackingVolumeArrayCreator"),
   m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
   m_mdtTubeMat(0),
-  m_mdtFoamMat(0),
+  m_mdtFoamMat(),
   m_rpc46(0),
   m_rpcDed(),
   m_rpcLayer(0),
@@ -740,12 +740,12 @@ StatusCode Muon::MuonStationTypeBuilder::finalize()
     delete m_matCSC02;
     delete m_matTGC01;
     delete m_matTGC06;
-    delete m_mdtFoamMat;
     delete m_mdtTubeMat;
     delete m_rpcLayer;
     delete m_rpcMidPanel;
     delete m_rpcExtPanel;
     for (unsigned int i=0;i<m_rpcDed.size();i++) delete m_rpcDed[i];
+    for (unsigned int i=0;i<m_mdtFoamMat.size();i++) delete m_mdtFoamMat[i];
 
     *m_log << MSG::INFO  << name() <<" finalize() successful" << endreq;
     return StatusCode::SUCCESS;
@@ -784,29 +784,20 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
     }
     if ( (clv->getName())=="MultiLayerFoam") {
       //std::cout << "processing MultiLayerFoam" << std::endl;  
-      const GeoTrd* trd =  dynamic_cast<const GeoTrd*> (clv->getShape());
-      const GeoShapeSubtraction* sub =  dynamic_cast<const GeoShapeSubtraction*> (clv->getShape());
-      if (trd){
-	xv = trd->getXHalfLength1();
+      xv = decodeX(clv->getShape());
+      for (unsigned int i=0;i<m_mdtFoamMat.size();i++) {
+        if ( fabs(xv-0.5*m_mdtFoamMat[i]->thickness())<0.001 ) {
+	  mdtMat = *(m_mdtFoamMat[i]);
+          break;
+	}
       }
-      if (sub){
-	//std::cout << "foam components:" << sub->getOpA()->type() << "," <<sub->getOpB()->type() << std::endl;
-	trd =  dynamic_cast<const GeoTrd*> (sub->getOpA());
-	if (trd) xv = trd->getXHalfLength1();
+      if (mdtMat.thickness()<0.001) {
+        //std::cout << "adding new box MDT:foam thickness:"<< xv << std::endl;
+        const Trk::CuboidVolumeBounds* cub =  dynamic_cast<const Trk::CuboidVolumeBounds*> (&(vol->volumeBounds()));
+	double volume = 8*(cub->halflengthX())*(cub->halflengthY())*xv;
+	m_mdtFoamMat.push_back(getAveragedLayerMaterial(cv,volume,2*xv)); 
+        mdtMat = *(m_mdtFoamMat.back());
       }
-      if (!trd ) {
-	*m_log << MSG::DEBUG << "MDT MultiFoam shape not recognized in MDT box chamber" << endreq;
-	*m_log << MSG::DEBUG << clv->getShape()->type() << endreq;
-      }
-      if (!m_mdtFoamMat && trd ) {
-	double volume = 8*(trd->getXHalfLength1())*(trd->getYHalfLength1())*(trd->getZHalfLength());
-	//std::cout << "mdt foam parms:"<<volume<<","<<2*xv<<std::endl;
-	m_mdtFoamMat = getAveragedLayerMaterial(cv,volume,2*xv); 
-      }
-      if (!trd && m_mdtFoamMat) {
-	xv = 0.5*m_mdtFoamMat->thickness();
-      }
-      if (m_mdtFoamMat) mdtMat = *m_mdtFoamMat;        
     }
     if (  transfc.getTranslation()[0] != currX ) {
       if (x_array.size() == 0 || transfc.getTranslation()[0] > x_array.back() ) {
@@ -950,29 +941,20 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
     }
     if ( (clv->getName())=="MultiLayerFoam") {
       //std::cout << "processing MultiLayerFoam" << std::endl;  
-      const GeoTrd* trd =  dynamic_cast<const GeoTrd*> (clv->getShape());
-      const GeoShapeSubtraction* sub =  dynamic_cast<const GeoShapeSubtraction*> (clv->getShape());
-      if (trd){
-	xv = trd->getXHalfLength1();
+      xv = decodeX(clv->getShape());
+      for (unsigned int i=0;i<m_mdtFoamMat.size();i++) {
+        if ( fabs(xv-0.5*m_mdtFoamMat[i]->thickness())<0.001 ) {
+	  mdtMat = *(m_mdtFoamMat[i]);
+          break;
+	}
       }
-      if (sub){
-	//std::cout << "foam components:" << sub->getOpA()->type() << "," <<sub->getOpB()->type() << std::endl;
-	trd =  dynamic_cast<const GeoTrd*> (sub->getOpA());
-	if (trd) xv = trd->getXHalfLength1();
+      if (mdtMat.thickness()<0.001) {
+        //std::cout << "adding new trd MDT:foam thickness:"<< xv << std::endl;
+        const Trk::TrapezoidVolumeBounds* trd =  dynamic_cast<const Trk::TrapezoidVolumeBounds*> (&(vol->volumeBounds()));
+	double volume = 4*(trd->minHalflengthX()+trd->maxHalflengthX())*(trd->halflengthY())*xv;
+	m_mdtFoamMat.push_back(getAveragedLayerMaterial(cv,volume,2*xv)); 
+        mdtMat = *(m_mdtFoamMat.back());
       }
-      if (!trd) {
-	std::cout << "MDT MultiFoam shape not recognized in MDT trd chamber" << std::endl;
-      }
-      if (!m_mdtFoamMat && trd ) {
-	double volume = 8*(trd->getXHalfLength1())*(trd->getYHalfLength1())*(trd->getZHalfLength());
-	m_mdtFoamMat = getAveragedLayerMaterial(cv,volume,2*xv); 
-      }
-      if (!trd && m_mdtFoamMat) {
-	xv = 0.5*m_mdtFoamMat->thickness();
-      }
-      if (m_mdtFoamMat) mdtMat = *m_mdtFoamMat;        
-      //std::cout << "material properties:" << mdtMat->thickness() <<","<<mdtMat->x0()<<","<<mdtMat->zOverAtimesRho()<<","<< 
-      //  mdtMat->averageZ()<<","<<mdtMat->dEdX() << std::endl;
     }
     
     if (  transfc.getTranslation()[0] != currX ) {
@@ -1660,8 +1642,14 @@ std::vector<const Trk::TrackingVolume*> Muon::MuonStationTypeBuilder::processTgc
      //std::cout << "tgc name:" << tgc_name << std::endl; 
      HepTransform3D transform = mv->getXToChildVol(ich);        
      //std::cout << "TGC component:"<<ich<<":" << clv->getName() <<", made of "<<clv->getMaterial()->getName()<<","<<clv->getShape()->type()<<","<<transform.getTranslation()<<std::endl;
-     if (clv->getShape()->type()=="Trd") {
-       const GeoTrd* trd = dynamic_cast<const GeoTrd*> (clv->getShape());
+     const GeoShape* baseShape = clv->getShape();
+     if (baseShape->type()=="Subtraction") {
+       const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction*> (baseShape);
+       if (sub) baseShape = sub->getOpA();
+     }
+     
+     if (baseShape->type()=="Trd") {
+       const GeoTrd* trd = dynamic_cast<const GeoTrd*> (baseShape);
        double x1 = trd->getXHalfLength1();
        double y1 = trd->getYHalfLength1();
        double y2 = trd->getYHalfLength2();

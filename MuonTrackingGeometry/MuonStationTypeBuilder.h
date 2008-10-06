@@ -103,7 +103,7 @@ namespace Muon {
       mutable Trk::MagneticFieldProperties m_muonMagneticField;          //!< the magnetic Field
  
       mutable Trk::ExtendedMaterialProperties*    m_mdtTubeMat;                  //
-      mutable Trk::ExtendedMaterialProperties*    m_mdtFoamMat;                  //
+      mutable std::vector<Trk::ExtendedMaterialProperties*>    m_mdtFoamMat;                  //
       mutable Trk::ExtendedMaterialProperties*    m_rpc46;                  
       mutable std::vector<Trk::ExtendedMaterialProperties*>    m_rpcDed;                
       mutable Trk::ExtendedMaterialProperties*    m_rpcLayer;                  

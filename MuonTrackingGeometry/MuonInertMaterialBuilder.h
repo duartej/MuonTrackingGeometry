@@ -16,7 +16,9 @@
 // Gaudi
 #include "GaudiKernel/AlgTool.h"
 #include "GaudiKernel/ToolHandle.h"
-
+#include "GaudiKernel/IRndmGenSvc.h"
+#include "GaudiKernel/RndmGenerators.h"
+#
 #include "GeoModelKernel/GeoVPhysVol.h"
 //mw
 #include "TrkDetDescrGeoModelCnv/GeoMaterialConverter.h"
@@ -82,6 +84,14 @@ namespace Muon {
       const void printChildren(const GeoVPhysVol* pv) const;
       /** Simplification of GeoModel object + envelope */
       const Trk::TrackingVolume* simplifyShape(const Trk::TrackingVolume* tr) const;
+      /** Envelope creation */
+      const Trk::Volume* createEnvelope(const HepTransform3D transf, std::vector<std::pair<const Trk::Volume*,double> > ) const;
+      std::vector<std::pair<const Trk::Volume*,double> > splitComposedVolume(const Trk::Volume*,bool) const; 
+      /** Material fraction */
+      void decode(const Trk::Volume*) const;
+      double intersection( const Trk::Volume* , const Trk::Volume* ) const;
+      double scanIntersection( const Trk::Volume* , const Trk::Volume* ) const;
+      Trk::GlobalPosition getScanPoint(const Trk::Volume* vol) const;
       
       const Trk::Layer* boundarySurfaceToLayer(const Trk::Surface&, const Trk::MaterialProperties*, double) const;
       Trk::Volume* createSubtractedVolume(const HepTransform3D& tr, Trk::Volume* subtrVol) const;
@@ -117,6 +127,8 @@ namespace Muon {
 //mw
       Trk::GeoMaterialConverter*           m_materialConverter;          //!< material converter
       Trk::GeoShapeConverter*              m_geoShapeConverter;          //!< shape converter
+      ServiceHandle<IRndmGenSvc>           m_rndmGenSvc;                 //!< Random number generator
+      Rndm::Numbers*                       m_flatDist;
 
       mutable std::vector<std::pair<std::string,std::pair<double,double> > >   m_volFractions;
       

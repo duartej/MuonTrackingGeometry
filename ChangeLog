@@ -1,3 +1,8 @@
+2008-10-20 Sarka Todorova <sarka.todorova@cern.ch>
+	* first version of simplified AGDD volumes
+	* blending does not work for AGDD input yet!
+	* tagged as MuonTrackingGeometry-00-04-01
+
 2008-10-06 Sarka Todorova <sarka.todorova@cern.ch>
 	* first version capable to retrieve and process AGDD volumes
 	* simplification and optimization does not work for AGDD input yet!

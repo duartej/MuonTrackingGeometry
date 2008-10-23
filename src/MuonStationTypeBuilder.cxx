@@ -744,10 +744,15 @@ StatusCode Muon::MuonStationTypeBuilder::finalize()
     delete m_rpcLayer;
     delete m_rpcMidPanel;
     delete m_rpcExtPanel;
+    delete m_muonMaterial;
     for (unsigned int i=0;i<m_rpcDed.size();i++) delete m_rpcDed[i];
     for (unsigned int i=0;i<m_mdtFoamMat.size();i++) delete m_mdtFoamMat[i];
 
     *m_log << MSG::INFO  << name() <<" finalize() successful" << endreq;
+
+    delete m_log;
+    m_log = 0;
+
     return StatusCode::SUCCESS;
 }
 //

@@ -1,3 +1,10 @@
+2008-10-23 Sarka Todorova <sarka.todorova@cern.ch>
+	* fixes simplification of volumes
+	* MIMB:hardcoded fractions replaced by on-fly scan estimate
+	* simplification to layers no longer supported ( no obvious reasons to do so )
+	* memory leaks fixed (S.Snyder)
+	* tagged as MuonTrackingGeometry-00-04-02
+
 2008-10-20 Sarka Todorova <sarka.todorova@cern.ch>
 	* first version of simplified AGDD volumes
 	* blending does not work for AGDD input yet!

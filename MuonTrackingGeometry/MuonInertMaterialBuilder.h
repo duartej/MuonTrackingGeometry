@@ -84,35 +84,19 @@ namespace Muon {
       const void printChildren(const GeoVPhysVol* pv) const;
       /** Simplification of GeoModel object + envelope */
       const Trk::TrackingVolume* simplifyShape(const Trk::TrackingVolume* tr) const;
-      /** Envelope creation */
+      /** Envelope creation & material fraction calculation */
       const Trk::Volume* createEnvelope(const HepTransform3D transf, std::vector<std::pair<const Trk::Volume*,double> > ) const;
+      /** Simplification of objects, material fraction calculation */
       std::vector<std::pair<const Trk::Volume*,double> > splitComposedVolume(const Trk::Volume*,bool) const; 
-      /** Material fraction */
-      void decode(const Trk::Volume*) const;
-      double intersection( const Trk::Volume* , const Trk::Volume* ) const;
-      double scanIntersection( const Trk::Volume* , const Trk::Volume* ) const;
+      /** Scan point generation for 'hit&miss' sampling */
       Trk::GlobalPosition getScanPoint(const Trk::Volume* vol) const;
-      
-      const Trk::Layer* boundarySurfaceToLayer(const Trk::Surface&, const Trk::MaterialProperties*, double) const;
-      Trk::Volume* createSubtractedVolume(const HepTransform3D& tr, Trk::Volume* subtrVol) const;
-      void  splitShape(const GeoShape* sh, std::vector<const GeoShape*>& shapes) const;
-
-      std::pair<std::vector<const Trk::Layer*>*, std::vector<const Trk::TrackingVolume*>* >
-	translateToLayers(const std::vector<const Trk::TrackingVolume*>* vols, int mode) const;
-      std::vector<const Trk::Layer*>*  translateBoundariesToLayers(const Trk::Volume* vol, const Trk::TrackingVolume* trVol, double) const;
-      double volumeToLayers(std::vector<const Trk::Layer*>& lays, const Trk::Volume* vol, 
-			  Trk::Volume* subtrVol, const Trk::MaterialProperties* mat) const;
-      const bool checkVolume(const Trk::Volume*) const;
-      void getVolumeFractions() const;
-      void removeTV(const Trk::Volume*) const;
-      double thinDim( const Trk::Volume* vol) const;
+      /** Volume calculation */
       double calculateVolume( const Trk::Volume* envelope) const;
 
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
       bool                                m_simplify;              // switch geometry simplification on/off 
       bool                                m_simplifyToLayers;      // switch geometry simplification to layers on/off 
-      double                              m_layerThicknessLimit;   // maximal thickness of layer allowed (in X0)   
       bool                                m_debugMode;             // build layers & dense volumes in parallel - double counting material !!! 
       bool                                m_buildBT;                    // build barrel toroids 
       bool                                m_buildECT;                   // build endcap toroids 
@@ -129,8 +113,6 @@ namespace Muon {
       Trk::GeoShapeConverter*              m_geoShapeConverter;          //!< shape converter
       ServiceHandle<IRndmGenSvc>           m_rndmGenSvc;                 //!< Random number generator
       Rndm::Numbers*                       m_flatDist;
-
-      mutable std::vector<std::pair<std::string,std::pair<double,double> > >   m_volFractions;
       
       mutable std::vector<Trk::Volume*>    m_garbage;      
     };

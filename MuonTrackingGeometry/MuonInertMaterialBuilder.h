@@ -115,6 +115,7 @@ namespace Muon {
       Rndm::Numbers*                       m_flatDist;
       
       mutable std::vector<Trk::Volume*>    m_garbage;      
+      mutable std::vector<std::vector<std::pair<const Trk::Volume*,std::pair<double,double> > >* >   m_constituents;
     };
 
 

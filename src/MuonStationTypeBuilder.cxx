@@ -744,15 +744,10 @@ StatusCode Muon::MuonStationTypeBuilder::finalize()
     delete m_rpcLayer;
     delete m_rpcMidPanel;
     delete m_rpcExtPanel;
-    delete m_muonMaterial;
     for (unsigned int i=0;i<m_rpcDed.size();i++) delete m_rpcDed[i];
     for (unsigned int i=0;i<m_mdtFoamMat.size();i++) delete m_mdtFoamMat[i];
 
     *m_log << MSG::INFO  << name() <<" finalize() successful" << endreq;
-
-    delete m_log;
-    m_log = 0;
-
     return StatusCode::SUCCESS;
 }
 //
@@ -1072,9 +1067,18 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
   for (unsigned int ic=0; ic<gv.size(); ++ic) {
     //std::cout << "processing Rpc component:"<< gv[ic]->getLogVol()->getName() <<std::endl;
     const GeoLogVol* glv = gv[ic]->getLogVol();
-    //std::cout << "shape:"<< glv->getShape()->type() <<std::endl;
-    if (glv->getShape()->type()=="Box") {
-      const GeoBox* box = dynamic_cast<const GeoBox*> (glv->getShape());
+    const GeoShape* shape = glv->getShape();
+    if (shape->type()!="Box" && shape->type()!="Trd") {
+      const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction*> (shape);
+      const GeoShape* subt = 0;
+      while (sub) {
+        subt = sub->getOpA();
+        sub = dynamic_cast<const GeoShapeSubtraction*> (subt);
+      }
+      shape = subt; 
+    }
+    if (shape && shape->type()=="Box") {
+      const GeoBox* box = dynamic_cast<const GeoBox*> (shape);
       double xs = box->getXHalfLength();
       double ys = box->getYHalfLength();
       double zs = box->getZHalfLength();
@@ -1123,9 +1127,8 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
       } else {
         layer->setLayerType(0);
       }
-    }
-    if (glv->getShape()->type()=="Trd") {
-      const GeoTrd* trd = dynamic_cast<const GeoTrd*> (glv->getShape());
+    } else if (shape && shape->type()=="Trd") {
+      const GeoTrd* trd = dynamic_cast<const GeoTrd*> (shape);
       double xs1 = trd->getXHalfLength1();
       double xs2 = trd->getXHalfLength2();
       double ys1 = trd->getYHalfLength1();
@@ -1138,11 +1141,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
         Trk::OverlapDescriptor* od=0;
         Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(ys1,zs); 
         Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds);
-        //Trk::RectangleBounds* boundsEta = new Trk::RectangleBounds(zs,ys1); 
         HepTransform3D* cTr = new HepTransform3D( transfc[ic] * HepRotateY3D(90*deg) * HepRotateZ3D(90*deg));
-	//std::cout << "component rotation:" << (*cTr)[0][0] <<"," << (*cTr)[1][1] <<"," << (*cTr)[2][2] << std::endl; 
-	//std::cout << "component translation:" << (*cTr).getTranslation() << std::endl; 
-	//std::cout << "component (layer) dimensions:" << ys1 << "," << zs << std::endl;
         Trk::ExtendedMaterialProperties rpcMat(0.,10e8,10e8,0.,0.,0.);               // default
         if ( (glv->getName()).substr(0,3)=="Ded" ) {
 	  // find if material exists already
@@ -1168,19 +1167,22 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
           for (unsigned int igc=0; igc<ngc; igc++) {
 	    HepTransform3D trgc;
              if (transfc[ic].getTranslation()[0]>vol->center()[0]) {
-	       //std::cout << "rotating RPC module" << std::endl;
                trgc = HepRotateZ3D(180*deg)*(gv[ic]->getXToChildVol(igc)); 
              } else {
                trgc = gv[ic]->getXToChildVol(igc);
              }
-	     //std::cout << "rotation RPC layer component:" << trgc[0][0]<<"," << trgc[1][1] <<"," << trgc[2][2]<<std::endl;
              const GeoVPhysVol* gcv = &(*(gv[ic]->getChildVol(igc)));
              const GeoLogVol* gclv = gcv->getLogVol();
-	     const GeoTrd* gtrd = dynamic_cast<const GeoTrd*> (gclv->getShape());
+             const GeoShape* lshape = gclv->getShape();
+             while (lshape->type()=="Subtraction") {
+	       const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction*> (lshape); 
+	       lshape = sub->getOpA(); 
+	     } 
+	     const GeoTrd* gtrd = dynamic_cast<const GeoTrd*> (lshape);
 	     double gx = gtrd->getXHalfLength1();
 	     double gy = gtrd->getYHalfLength1();
 	     double gz = gtrd->getZHalfLength();
-             //std::cout << "processing RPC layer component:" << gclv->getName() <<"," << trgc.getTranslation()<< std::endl;
+            
              if ( (gclv->getName()).substr(0,6)=="RPC_AL" ) {
 	       if (fabs(gx-5.0) < 0.001) {
 		 if (!m_rpcExtPanel) {
@@ -1212,17 +1214,6 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
 		 m_rpcLayer = getAveragedLayerMaterial(gcv,vol,2*gx);
 	       }
 	       rpcMat=*m_rpcLayer;
-               /*
-               // define 2 layers for strip planes; rotate the one with phi strips
-               thickness = gx;
-	       Trk::HomogenousLayerMaterial rpcMaterial(rpcMat, Trk::oppositePre);
-	       layer = new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(trgc.getTranslation())*HepTranslateX3D(-0.5*gx)*(*cTr)),
-					   bounds, rpcMaterial, thickness, od );
-	       layers.push_back(layer);
-	       layer->setLayerType(1);
-	       layer = new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(trgc.getTranslation())*HepTranslateX3D(+0.5*gx)*(*cTr)
-							      *HepRotateZ3D(90*deg)), boundsEta, rpcMaterial, thickness, od );
-	       */
                // define 1 layer for 2 strip planes
                thickness = 2*gx;
 	       Trk::HomogenousLayerMaterial rpcMaterial(rpcMat);
@@ -1239,17 +1230,12 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
       } else {
          *m_log << MSG::WARNING << name() << "RPC true trapezoid layer, not coded yet" <<endreq;
       }
+    } else {
+      *m_log << MSG::WARNING << name() << "RPC layer shape not recognized" <<endreq;
     }
   } // end loop over Modules
 
   std::vector<const Trk::Layer*>* rpcLayers = new std::vector<const Trk::Layer*>(layers); 
-  /*
-  for (unsigned int i=0; i< rpcLayers->size(); i++) {
-    std::cout << "prototype RPC layer :" << i << ":" << (*rpcLayers)[i]->layerType() << ": center,normal :" 
-    <<((*rpcLayers)[i]->surfaceRepresentation()).center() << "," 
-    <<((*rpcLayers)[i]->surfaceRepresentation()).normal() << std::endl;    
-  }
-  */
   std::string name="RPC";
   const Trk::TrackingVolume* rpc= new Trk::TrackingVolume(*vol,
                                                           *m_muonMaterial,

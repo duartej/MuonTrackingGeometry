@@ -298,6 +298,7 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
 	      const Trk::TrackingVolume* newType= new Trk::TrackingVolume( *trObject, mat, m_muonMagneticField,0,0,protoName);
 	      const Trk::TrackingVolume* simType = simplifyShape(newType);
 	      const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(protoName,simType);
+              typeStat->saveConstituents(m_constituents.back());
 	      objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> >(typeStat,vols[ish].second));
               delete trObject;
 	    }  else {
@@ -312,11 +313,21 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
     const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* mObjects = new std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >(objs);
 
     int count = 0;
+    //double massEstimate = 0.;
     for (unsigned int i=0;i<mObjects->size();i++) { 
-            log << MSG::DEBUG << i<< ":"<< (*mObjects)[i].first->name() << ","<< (*mObjects)[i].second.size()<< endreq;
-      for (unsigned int j=0;j<(*mObjects)[i].second.size();j++) 
-      	log << MSG::DEBUG << j<< "th  position at "<<((*mObjects)[i].second)[j].getTranslation()<<","<<((*mObjects)[i].second)[j].getRotation()<< endreq;      
-      count += (*mObjects)[i].second.size();
+       log << MSG::DEBUG << i<< ":"<< (*mObjects)[i].first->name() << ","<< (*mObjects)[i].second.size()<< endreq;
+       const Trk::MaterialProperties* mat = (*mObjects)[i].first->trackingVolume()->confinedDenseVolumes() ?
+	 (*(*mObjects)[i].first->trackingVolume()->confinedDenseVolumes())[0] :(*mObjects)[i].first->trackingVolume();
+       /*
+	 for (unsigned int ic = 0; ic<(*mObjects)[i].first->constituents()->size(); ic++) {         
+	   double protMass = calculateVolume((*(*mObjects)[i].first->constituents())[ic].first)
+	   *(*(*mObjects)[i].first->constituents())[ic].second.first*(*mat).zOverAtimesRho();
+           massEstimate += protMass*(*mObjects)[i].second.size();
+         }
+       */
+       for (unsigned int j=0;j<(*mObjects)[i].second.size();j++) 
+	 log << MSG::DEBUG << j<< "th  position at "<<((*mObjects)[i].second)[j].getTranslation()<<","<<((*mObjects)[i].second)[j].getRotation()<< endreq;      
+       count += (*mObjects)[i].second.size();
     }
 
     log << MSG::INFO << name() << " returns " << mObjects->size() << " prototypes, to be cloned into "<< count <<" objects" << endreq;   
@@ -331,6 +342,7 @@ StatusCode Muon::MuonInertMaterialBuilder::finalize()
     delete m_materialConverter;
     delete m_geoShapeConverter;
     delete m_flatDist;
+    for (unsigned int i=0;i<m_constituents.size();i++) delete m_constituents[i];
     log << MSG::INFO  << name() <<" finalize() successful" << endreq;
     return StatusCode::SUCCESS;
 }
@@ -375,23 +387,29 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
   const Trk::Volume* envelope = 0;
   // resolve composed volumes (returns constituents with material fraction accounting for subtractions)
   std::vector<std::pair<const Trk::Volume*,double> > constituents = splitComposedVolume(trVol,true);
+
+  //std::cout << "simplifying shape for:"<<trVol->volumeName()<<","<< constituents[0].second<< std::endl;
+  //for (unsigned int i=0;i<constituents.size(); i++) std::cout << "constituent:"<< calculateVolume(constituents[i].first)<<","<<
+  //						       constituents[i].second<< std::endl;   
   
   int simpleMode = 0;
- 
+  
   if (constituents.size() == 1) {  // easy case
-    const Trk::SimplePolygonBrepVolumeBounds* spb = dynamic_cast<const Trk::SimplePolygonBrepVolumeBounds*> (&(constituents[0].first->volumeBounds()));
-    envelope = spb ? new Trk::Volume(*(spb->envelope()),trVol->transform()) : new Trk::Volume(*(constituents.front().first), trVol->transform());
+    //const Trk::SimplePolygonBrepVolumeBounds* spb = dynamic_cast<const Trk::SimplePolygonBrepVolumeBounds*> (&(constituents[0].first->volumeBounds()));
+    //envelope = spb ? new Trk::Volume(*(spb->envelope()),trVol->transform()) 
+    //  : new Trk::Volume(*(constituents.front().first), trVol->transform());
+    envelope =  new Trk::Volume(*(constituents.front().first), trVol->transform());
     if ( constituents.front().second > 0.999 ) simpleMode=1;          // no need to simplify nor envelope
   } else { // construct envelope using constituent edges 
     envelope = createEnvelope(trVol->transform(),constituents);
   }
   if (!envelope) envelope = new Trk::Volume(*trVol);
-
+  
   // simplification
-
-  const Trk::TrackingVolume* newVol;
+  
+  const Trk::TrackingVolume* newVol = 0;
   std::vector<const Trk::TrackingVolume*>* confinedVols = new std::vector<const Trk::TrackingVolume*>;
-
+  
   if ( simpleMode == 1 ) {
     //std::cout << "simple mode 1, no envelope for object:"<< trVol->volumeName() << std::endl;
     newVol = trVol;
@@ -425,8 +443,18 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
     Trk::TrackingVolumeManipulator::confineVolume(*trVol,newVol);
     //std::cout << "enclosing object:"<< trVol->volumeName() << std::endl;
   }
-
+  
+  
+  // save calculable volumes for blending
+  std::vector<std::pair<const Trk::Volume*,std::pair<double,double> > > confinedConst;
+  for (unsigned int ic=0;ic<constituents.size();ic++) {
+    confinedConst.push_back(std::pair<const Trk::Volume*,std::pair<double,double> >
+			    ( new Trk::Volume(*(constituents[ic].first),newVol->transform().inverse()),
+			      std::pair<double,double>(constituents[ic].second,-1.) ) );
+  }
+  m_constituents.push_back(new std::vector<std::pair<const Trk::Volume*,std::pair<double,double> > >(confinedConst));
   //for (unsigned int ic=0;ic<constituents.size();ic++) delete constituents[ic].first; 
+
   delete envelope;
   return newVol;
 }
@@ -479,7 +507,6 @@ double  Muon::MuonInertMaterialBuilder::calculateVolume( const Trk::Volume* enve
   }   
   if ( comb ) {
     envVol = calculateVolume(comb->first()) + calculateVolume(comb->second());
-    return -1.;
   }
   if ( sub ) {
     return -1;
@@ -521,11 +548,15 @@ void Muon::MuonInertMaterialBuilder::getObjsForTranslation(const GeoVPhysVol* pv
 
 const Trk::Volume* Muon::MuonInertMaterialBuilder::createEnvelope(const HepTransform3D transf, std::vector<std::pair<const Trk::Volume*,double> > constituents ) const 
 {
-  const Trk::Volume* envelope = 0;
+  Trk::Volume* envelope = 0;
     
   std::vector<std::pair<const Trk::Volume*,double> >::iterator sIter = constituents.begin();
   std::vector<Trk::GlobalPosition> edges;
+  bool cylinder = false;
+
+  double cVol = 0.;
   while (sIter!= constituents.end()) {
+    cVol +=(*sIter).second * calculateVolume((*sIter).first);
     const Trk::SimplePolygonBrepVolumeBounds* spbBounds = dynamic_cast<const Trk::SimplePolygonBrepVolumeBounds*> (&((*sIter).first->volumeBounds()));
     const Trk::CylinderVolumeBounds*          cylBounds = dynamic_cast<const Trk::CylinderVolumeBounds*>  (&((*sIter).first->volumeBounds()));
     const Trk::CuboidVolumeBounds*            cubBounds = dynamic_cast<const Trk::CuboidVolumeBounds*>    (&((*sIter).first->volumeBounds()));
@@ -542,6 +573,7 @@ const Trk::Volume* Muon::MuonInertMaterialBuilder::createEnvelope(const HepTrans
       edges.push_back(transf.inverse()*(*sIter).first->transform()*Trk::GlobalPosition(-rOut, rOut,-hZ));
       edges.push_back(transf.inverse()*(*sIter).first->transform()*Trk::GlobalPosition( rOut,-rOut,-hZ));
       edges.push_back(transf.inverse()*(*sIter).first->transform()*Trk::GlobalPosition(-rOut,-rOut,-hZ));
+      cylinder = true;
     } else if (cubBounds) {  
       double x = cubBounds->halflengthX();
       double y = cubBounds->halflengthY();
@@ -600,10 +632,17 @@ const Trk::Volume* Muon::MuonInertMaterialBuilder::createEnvelope(const HepTrans
   double xSize = 0.5*(xMax-xMin);
   double ySize = 0.5*(yMax-yMin);
   double zSize = 0.5*(zMax-zMin);
+
+  //std::cout << "envelope parameters:"<< xSize<<","<<ySize<<","<<zSize<< std::endl;
+  //std::cout << "envelope position:"<<0.5*(xMin+xMax)<<","<<0.5*(yMin+yMax)<<","<<0.5*(zMin+zMax) << std::endl;
   
-  envelope = new Trk::Volume(new HepTransform3D(transf*HepTranslate3D(Trk::GlobalPosition(0.5*(xMin+xMax),0.5*(yMin+yMax),0.5*(zMin+zMax)))),
+  if ( cylinder && fabs(xSize-ySize)/fmax(xSize,ySize)<0.1) { // make it a cylinder
+    envelope = new Trk::Volume(new HepTransform3D(transf*HepTranslate3D(Trk::GlobalPosition(0.5*(xMin+xMax),0.5*(yMin+yMax),0.5*(zMin+zMax)))),
+			     new Trk::CylinderVolumeBounds(fmax(xSize,ySize),zSize));
+  } else {
+    envelope = new Trk::Volume(new HepTransform3D(transf*HepTranslate3D(Trk::GlobalPosition(0.5*(xMin+xMax),0.5*(yMin+yMax),0.5*(zMin+zMax)))),
 			     new Trk::CuboidVolumeBounds(xSize,ySize,zSize));
-  
+  }  
   /*
   // check if all edges really confined:
   for (unsigned int ie=0; ie < edges.size(); ie++) {
@@ -613,6 +652,7 @@ const Trk::Volume* Muon::MuonInertMaterialBuilder::createEnvelope(const HepTrans
     }  
   }
   */
+  //std::cout << "volume/envelope fraction:"<< cVol/calculateVolume(envelope)<< std::endl;
   
   return envelope;
 }
@@ -727,8 +767,20 @@ Muon::MuonInertMaterialBuilder::splitComposedVolume(const Trk::Volume* trVol, bo
     if (comb) {
       subVol = (*sIter).second;
       sIter = constituents.erase(sIter);
-      constituents.insert(sIter,std::pair<const Trk::Volume*,const Trk::Volume*> (comb->first(),subVol));
-      constituents.insert(sIter,std::pair<const Trk::Volume*,const Trk::Volume*> (comb->second(),subVol));
+      if (comb->intersection()) {
+	Trk::Volume* newSubVol = new Trk::Volume(0,new Trk::SubtractedVolumeBounds(comb->first()->clone(),comb->second()->clone()));
+        if (subVol) { 
+	  Trk::Volume* newCSubVol = new Trk::Volume(0,new Trk::CombinedVolumeBounds(subVol->clone(),newSubVol,false));
+	  constituents.insert(sIter,std::pair<const Trk::Volume*,const Trk::Volume*> (comb->first(),newCSubVol));        
+	  garbage.push_back(newCSubVol);
+	} else {
+	  constituents.insert(sIter,std::pair<const Trk::Volume*,const Trk::Volume*> (comb->first(),newSubVol));
+	  garbage.push_back(newSubVol);
+	}
+      } else {
+	constituents.insert(sIter,std::pair<const Trk::Volume*,const Trk::Volume*> (comb->first(),subVol));
+	constituents.insert(sIter,std::pair<const Trk::Volume*,const Trk::Volume*> (comb->second(),subVol));
+      }
       sIter=constituents.begin();
     } else if (sub) {
       subVol = (*sIter).second;

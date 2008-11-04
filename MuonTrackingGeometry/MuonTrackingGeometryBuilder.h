@@ -15,6 +15,7 @@
 #include "GaudiKernel/AlgTool.h"
 #include "GaudiKernel/ToolHandle.h"
 #include "GaudiKernel/ServiceHandle.h"
+#include "GaudiKernel/IChronoStatSvc.h"
 #include "MuonTrackingGeometry/MuonStationBuilder.h"
 #include "MuonTrackingGeometry/MuonInertMaterialBuilder.h"
 
@@ -70,15 +71,19 @@ namespace Muon {
       /** Private method to check volume properties */
       void checkVolume(const Trk::TrackingVolume*) const;
       /** Private method to find detached volumes */
-      std::vector<const Trk::DetachedTrackingVolume*>* getDetachedObjects(const Trk::Volume*,Trk::MaterialProperties& mat) const;
-      /** Private method to retrieve z/phi/h partition */
+      std::vector<const Trk::DetachedTrackingVolume*>* getDetachedObjects(const Trk::Volume*) const;
+      /** Private method to check if constituent enclosed */
+      bool enclosed(const Trk::Volume*, const Trk::Volume*) const;
+      /** Private method to retrieve z partition */
       void getZParts() const;
+      /** Private method to retrieve phi partition */
       void getPhiParts() const;
+      /** Private method to retrieve h partition */
       void getHParts() const;
+      /** Private method to calculate volume */
       double calculateVolume(const Trk::Volume*) const;
-      void getDilutingFactors() const;
-      std::pair<double, unsigned int> getDilFactor(std::string) const;
-      void updateMatProps(Trk::MaterialProperties& mat, unsigned int , double fact) const;
+      /** Private method to blend the inert material */
+      void blendMaterial() const;
      
       ToolHandle<Trk::IMagneticFieldTool>                  m_magFieldTool;                  //!< Tracking Interface to Magnetic Field
 
@@ -134,8 +139,12 @@ namespace Muon {
       mutable std::vector<double>                                 m_adjustedPhi;
       mutable std::vector<int>                                    m_adjustedPhiType;
       mutable std::vector<std::vector<std::vector<std::vector<std::pair<int,double> > > > > m_hPartitions;
-      mutable std::vector<std::pair<std::string,std::pair<double, unsigned int> > >   m_dilFact;
+      //mutable std::vector<std::pair<std::string,std::pair<double, unsigned int> > >   m_dilFact;
       mutable std::vector<Trk::MaterialProperties>               m_matProp;
+      mutable std::map<const Trk::DetachedTrackingVolume*,std::vector<const Trk::TrackingVolume*>* > m_blendMap;
+
+      typedef ServiceHandle<IChronoStatSvc> IChronoStatSvc_t;
+      IChronoStatSvc_t              m_chronoStatSvc;      
  };
 
 

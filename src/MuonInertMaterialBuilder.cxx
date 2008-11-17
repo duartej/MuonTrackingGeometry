@@ -243,12 +243,14 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
 	
 	if ((vname.size()>7 && vname.substr(vname.size()-7,7) !="Station") ||  vname.size()<8 ) {        // Inert element
 	  
-	  //	  std::cout << " INERT muon object found:" << vname <<" "<<ichild<< std::endl;
+	  //std::cout << " INERT muon object found:" << vname <<" "<<ichild<< std::endl;
 	  
 	  bool accepted = true ;
-	  if (  vname.substr(0,2)=="BT" || vname.substr(0,6) == "EdgeBT" || vname.substr(0,6) == "HeadBT" ) accepted = m_buildBT ? true : false;
+	  if (  vname.substr(0,3)=="BAR" || vname.substr(0,2)=="BT" || vname.substr(0,6) == "EdgeBT" 
+		|| vname.substr(0,6) == "HeadBT" ) accepted = m_buildBT ? true : false;
 	  else if ( vname.substr(0,3)=="ECT" ) accepted = m_buildECT ? true : false; 
-	  else if ( vname.size()>7 && (vname.substr(3,4)=="Feet" || vname.substr(4,4)=="Feet" ) ) accepted = m_buildFeets ? true : false; 
+	  else if ( vname.substr(0,4)=="Feet" || ( vname.size()>7 && 
+			 (vname.substr(3,4)=="Feet" || vname.substr(4,4)=="Feet" ) ) ) accepted = m_buildFeets ? true : false; 
 	  else if ( vname.substr(0,4)=="Rail" ) accepted = m_buildRails>0 ? true : false; 
 	  //else accepted = m_buildShields ? true : false;
 
@@ -289,8 +291,7 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
 	      } 
 	    }  
 	    if (found) continue;
-	    //std::cout << "decoding shape:"<< protoName << std::endl;
-            //m_geoShapeConverter->decodeShape(input_shapes[ish]);
+            // m_geoShapeConverter->decodeShape(input_shapes[ish]);
             HepTransform3D ident;
 	    const Trk::Volume* trObject = m_geoShapeConverter->translateGeoShape(input_shapes[ish],&ident);
 	    if (trObject) {  
@@ -409,14 +410,15 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
   
   const Trk::TrackingVolume* newVol = 0;
   std::vector<const Trk::TrackingVolume*>* confinedVols = new std::vector<const Trk::TrackingVolume*>;
+
+  std::string envName=trVol->volumeName();
   
   if ( simpleMode == 1 ) {
     //std::cout << "simple mode 1, no envelope for object:"<< trVol->volumeName() << std::endl;
     newVol = trVol;
     delete confinedVols;    
-  } else if (m_simplify) { 
+  } else if (m_simplify || envName.substr(0,3)=="BAR" ) { 
     if (constituents.size()==1) {   // simplified volume
-      std::string envName=trVol->volumeName();
       double fraction = constituents.front().second;
       Trk::MaterialProperties mat(1.,trVol->x0()/fraction,fraction*trVol->zOverAtimesRho());
       newVol = new Trk::TrackingVolume( *envelope, mat, m_muonMagneticField, 0, 0, envName);  
@@ -430,7 +432,7 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
 	Trk::TrackingVolume* trc = new Trk::TrackingVolume(*(constituents[ic].first),mat,m_muonMagneticField, 0, 0, trVol->volumeName());
         confinedVols->push_back(trc);
       }  
-      std::string envName=trVol->volumeName()+"_envelope";
+      envName=trVol->volumeName()+"_envelope";
       newVol = new Trk::TrackingVolume( *envelope, m_muonMaterial, m_muonMagneticField, confinedVols, envName);    
       for (unsigned int iv = 0; iv < confinedVols->size(); iv++)
 	Trk::TrackingVolumeManipulator::confineVolume(*((*confinedVols)[iv]),newVol);
@@ -438,7 +440,7 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
     }
   } else {    // enclose the exact transcript
     confinedVols->push_back(trVol);
-    std::string envName=trVol->volumeName()+"_envelope";
+    envName=trVol->volumeName()+"_envelope";
     newVol = new Trk::TrackingVolume( *envelope, m_muonMaterial, m_muonMagneticField, confinedVols, envName);    
     Trk::TrackingVolumeManipulator::confineVolume(*trVol,newVol);
     //std::cout << "enclosing object:"<< trVol->volumeName() << std::endl;

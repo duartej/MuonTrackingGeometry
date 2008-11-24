@@ -234,6 +234,16 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
   // find object's span with tolerance for the alignment 
   m_stationSpan = findVolumesSpan(m_stations, 100.*m_alignTolerance, m_alignTolerance*deg);
   m_inertSpan = findVolumesSpan(m_inertObjs,0.,0.);
+ 
+  /*
+  if (m_inertSpan) {
+    for (unsigned int ii=0;ii<m_inertSpan->size();ii++) {
+      const Muon::Span* s=(*m_inertSpan)[ii];
+      log << MSG::DEBUG << (*m_inertObjs)[ii]->name()<<":"<<
+	(*s)[0]<<","<<(*s)[1]<<","<<(*s)[2]<<","<<(*s)[3]<<","<<(*s)[4]<<","<<(*s)[5]<<endreq;
+    }
+  }
+  */
   
   // 0) Preparation //////////////////////////////////////////////////////////////////////////////////////
   // if no muon materials are declared, take default ones
@@ -677,10 +687,10 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
   const Trk::SimplePolygonBrepVolumeBounds* spb = dynamic_cast<const Trk::SimplePolygonBrepVolumeBounds*> (volBounds);
   const Trk::PrismVolumeBounds* prism = dynamic_cast<const Trk::PrismVolumeBounds*> (volBounds);
 
-  if (sub) return findVolumeSpan(&(sub->outer()->volumeBounds()),transform,zTol,phiTol);
+  if (sub) return findVolumeSpan(&(sub->outer()->volumeBounds()),sub->outer()->transform(),zTol,phiTol);
 
   if (comb) {
-    const Muon::Span* s1 = findVolumeSpan(&(comb->first()->volumeBounds()),transform,zTol,phiTol);     
+    const Muon::Span* s1 = findVolumeSpan(&(comb->first()->volumeBounds()),comb->first()->transform(),zTol,phiTol);     
     const Muon::Span* s2 = findVolumeSpan(&(comb->second()->volumeBounds()),comb->second()->transform(),zTol,phiTol);     
     Muon::Span scomb;
     scomb.reserve(6); 
@@ -784,14 +794,20 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     }
   }
   // apply transform and get span
+  double minP0=M_PI; double maxP0 = 0.; double minP1=2*M_PI; double maxP1=M_PI;
   for (unsigned int ie=0; ie < edges.size() ; ie++) {
     Trk::GlobalPosition gp = transform*edges[ie];
     double phi = gp.phi()+M_PI; 
+    //log << MSG::DEBUG << "edges:"<< ie<<","<<gp<<","<< phi<< endreq;
     double rad = gp.perp();
     if ( gp[2]<minZ ) minZ = gp[2];
     if ( gp[2]>maxZ ) maxZ = gp[2];
-    if ( phi < minPhi ) minPhi = phi; 
-    if ( phi > maxPhi ) maxPhi = phi; 
+    if ( phi < minP0 ) minP0 = phi; 
+    if ( phi > maxP0 ) maxP0 = phi; 
+    if ( phi < minP1 ) minP1 = phi; 
+    if ( phi > maxP1 ) maxP1 = phi; 
+    //if ( phi < minPhi ) minPhi = phi; 
+    //if ( phi > maxPhi ) maxPhi = phi; 
     if ( rad < minR ) minR = rad; 
     if ( rad > maxR ) maxR = rad; 
     if (cyl || bcyl ) {
@@ -808,11 +824,15 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
       }
     }
   }
-  if ( maxPhi-minPhi > M_PI  &&  maxPhi-minPhi < 2*M_PI ) {
-    double medPhi = minPhi;
-    minPhi = maxPhi;
-    maxPhi = medPhi;
-  }
+  if (maxP0>=minP0 && maxP1<minP1) { minPhi = minP0; maxPhi = maxP0; }
+  else if ( maxP1>=minP1 && maxP0<minP0) { minPhi = minP1; maxPhi = maxP1; }
+  else if ( maxP1 - minP0 < (maxP0 - minP1-2*M_PI) ) { minPhi = minP0; maxPhi = maxP1; }
+  else { minPhi = minP1 ; maxPhi = maxP0; }  
+  //if ( maxPhi-minPhi > M_PI  &&  maxPhi-minPhi < 2*M_PI ) {
+  //  double medPhi = minPhi;
+  //  minPhi = maxPhi;
+  //  maxPhi = medPhi;
+  //}
   if ( box || trd || dtrd || spb ) {
     span.push_back( minZ - zTol );  
     span.push_back( maxZ + zTol );  
@@ -851,7 +871,8 @@ const std::vector<const Muon::Span*>* Muon::MuonTrackingGeometryBuilder::findVol
   for (unsigned int iobj=0; iobj<objs->size(); iobj++) {
     HepTransform3D  transform = (*objs)[iobj]->trackingVolume()->transform();
     const Muon::Span* span = findVolumeSpan(&((*objs)[iobj]->trackingVolume()->volumeBounds()), transform, zTol, phiTol);
-    //std::cout << "span:"<<(*objs)[iobj]->name()<< ","<<(*span)[0]<<","<< (*span)[1]<<","<<(*span)[2]<<","<< (*span)[3]<<","<< (*span)[4]<<","<< (*span)[5]<<std::endl; 
+    //std::cout << "span:"<<(*objs)[iobj]->name()<< ","<<(*span)[0]<<","<< (*span)[1]<<","<<(*span)[2]<<","
+    //<< (*span)[3]<<","<< (*span)[4]<<","<< (*span)[5]<<std::endl; 
     volSpans.push_back(span);
   }
 
@@ -1420,6 +1441,7 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
 
 bool Muon::MuonTrackingGeometryBuilder::enclosed(const Trk::Volume* vol, const Trk::Volume* cs) const
 {
+  MsgStream log(msgSvc(), name());
 
   bool encl = false;
   
@@ -1461,8 +1483,8 @@ bool Muon::MuonTrackingGeometryBuilder::enclosed(const Trk::Volume* vol, const T
   } 
   //
   const Muon::Span* s = findVolumeSpan(&(cs->volumeBounds()), cs->transform(), 0.,0.) ;
-  //std::cout << "enclosing volume:z:"<< zMin<<","<<zMax<<":r:"<< rMin<<","<<rMax<<":phi:"<<pMin<<","<<pMax<< std::endl;
-  //std::cout << "constituent:z:"<< (*s)[0]<<","<<(*s)[1]<<":r:"<< (*s)[4]<<","<<(*s)[5]<<":phi:"<<(*s)[2]<<","<<(*s)[3]<< std::endl;
+  //log << MSG::DEBUG << "enclosing volume:z:"<< zMin<<","<<zMax<<":r:"<< rMin<<","<<rMax<<":phi:"<<pMin<<","<<pMax<< endreq;
+  //log << MSG::DEBUG << "constituent:z:"<< (*s)[0]<<","<<(*s)[1]<<":r:"<< (*s)[4]<<","<<(*s)[5]<<":phi:"<<(*s)[2]<<","<<(*s)[3]<< endreq;
   //
   bool rLimit = (!m_static3d || ( (*s)[4] <= rMax && (*s)[5] >= rMin ) ); 
   if ( rLimit && (*s)[0] <= zMax && (*s)[1] >= zMin ) {
@@ -1707,6 +1729,7 @@ double  Muon::MuonTrackingGeometryBuilder::calculateVolume( const Trk::Volume* e
 
 void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
 {
+  MsgStream log(msgSvc(), name());
   // loop over map
   std::map<const Trk::DetachedTrackingVolume*,std::vector<const Trk::TrackingVolume*>* >::iterator mIter = m_blendMap.begin();
 
@@ -1726,6 +1749,7 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
       // loop over frame volumes, check if confined
       std::vector<const Trk::TrackingVolume*>::iterator fIter = (*mIter).second->begin(); 
       std::vector<bool> fEncl; 
+      fEncl.clear();
       // blending factors can be saved, and not recalculated for each clone
       for ( ; fIter!=(*mIter).second->end(); fIter++) {
         fEncl.push_back(enclosed(*fIter,nCs));
@@ -1737,8 +1761,12 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
       // diluting factor
       double dil =  enVol>0. ?  csVol/enVol : 0.;
       //std::cout << "const:dil:"<< ic<<","<<dil<< std::endl;
-      for ( fIter=(*mIter).second->begin(); fIter!=(*mIter).second->end(); fIter++) { 
-        if (fEncl[fIter-(*mIter).second->begin()]) (*fIter)->addMaterial(*detMat,dil); ;
+      if (dil>0.) { 
+	for ( fIter=(*mIter).second->begin(); fIter!=(*mIter).second->end(); fIter++) { 
+	  if (fEncl[fIter-(*mIter).second->begin()]) (*fIter)->addMaterial(*detMat,dil); ;
+	}
+      } else {
+	log << MSG::DEBUG << "diluting factor:"<< dil<<" for "<< (*mIter).first->name()<<","<<ic<<endreq;
       }
     }
   }

@@ -254,7 +254,7 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
 	  else if ( vname.substr(0,4)=="Rail" ) accepted = m_buildRails>0 ? true : false; 
 	  //else accepted = m_buildShields ? true : false;
 
-          if ( vname=="EdgeBTVoussoir" && accepted && m_simplify ) accepted = false;
+          //if ( vname=="EdgeBTVoussoir" && accepted && m_simplify ) accepted = false;
 	  
 	  if (!accepted) { vol.next(); continue; }  
 

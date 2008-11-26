@@ -666,6 +666,13 @@ StatusCode Muon::MuonTrackingGeometryBuilder::finalize()
       delete m_inertSpan;
     }
 
+    for (std::map<const Trk::DetachedTrackingVolume*,std::vector<const Trk::TrackingVolume*>* >::iterator it = m_blendMap.begin();
+         it != m_blendMap.end();
+         ++it)
+    {
+      delete it->second;
+    }
+
     m_chronoStatSvc->chronoPrint("MS::build-up");
 
     log << MSG::INFO  << name() <<" finalize() successful" << endreq;
@@ -1482,7 +1489,8 @@ bool Muon::MuonTrackingGeometryBuilder::enclosed(const Trk::Volume* vol, const T
     phiLim = true;
   } 
   //
-  const Muon::Span* s = findVolumeSpan(&(cs->volumeBounds()), cs->transform(), 0.,0.) ;
+  //const Muon::Span* s = findVolumeSpan(&(cs->volumeBounds()), cs->transform(), 0.,0.) ;
+  std::auto_ptr<const Muon::Span> s (findVolumeSpan(&(cs->volumeBounds()), cs->transform(), 0.,0.) );
   //log << MSG::DEBUG << "enclosing volume:z:"<< zMin<<","<<zMax<<":r:"<< rMin<<","<<rMax<<":phi:"<<pMin<<","<<pMax<< endreq;
   //log << MSG::DEBUG << "constituent:z:"<< (*s)[0]<<","<<(*s)[1]<<":r:"<< (*s)[4]<<","<<(*s)[5]<<":phi:"<<(*s)[2]<<","<<(*s)[3]<< endreq;
   //

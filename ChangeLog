@@ -1,3 +1,7 @@
+2008-11-26 Sarka Todorova <sarka.todorova@cern.ch>
+	* memory leak fix in MIMB
+	* tagged as MuonTrackingGeometry-00-04-06
+
 2008-11-24 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix phi span calculation
 	* protect material blending ( vanishing diluting factor )

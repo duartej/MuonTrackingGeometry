@@ -317,8 +317,8 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
     //double massEstimate = 0.;
     for (unsigned int i=0;i<mObjects->size();i++) { 
        log << MSG::DEBUG << i<< ":"<< (*mObjects)[i].first->name() << ","<< (*mObjects)[i].second.size()<< endreq;
-       const Trk::MaterialProperties* mat = (*mObjects)[i].first->trackingVolume()->confinedDenseVolumes() ?
-	 (*(*mObjects)[i].first->trackingVolume()->confinedDenseVolumes())[0] :(*mObjects)[i].first->trackingVolume();
+       //const Trk::MaterialProperties* mat = (*mObjects)[i].first->trackingVolume()->confinedDenseVolumes() ?
+       //	 (*(*mObjects)[i].first->trackingVolume()->confinedDenseVolumes())[0] :(*mObjects)[i].first->trackingVolume();
        /*
 	 for (unsigned int ic = 0; ic<(*mObjects)[i].first->constituents()->size(); ic++) {         
 	   double protMass = calculateVolume((*(*mObjects)[i].first->constituents())[ic].first)
@@ -343,7 +343,10 @@ StatusCode Muon::MuonInertMaterialBuilder::finalize()
     delete m_materialConverter;
     delete m_geoShapeConverter;
     delete m_flatDist;
-    for (unsigned int i=0;i<m_constituents.size();i++) delete m_constituents[i];
+    for (unsigned int i=0;i<m_constituents.size();i++) {
+      for (unsigned int iv=0;iv<m_constituents[i]->size();iv++) delete (*(m_constituents[i]))[iv].first;
+      delete m_constituents[i];
+    }
     log << MSG::INFO  << name() <<" finalize() successful" << endreq;
     return StatusCode::SUCCESS;
 }

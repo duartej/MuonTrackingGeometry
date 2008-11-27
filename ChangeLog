@@ -1,3 +1,7 @@
+2008-11-27 Sarka Todorova <sarka.todorova@cern.ch>
+	* prevent memory leak in multiple build of geometry  
+	* tagged as MuonTrackingGeometry-00-04-08
+
 2008-11-26 Sarka Todorova <sarka.todorova@cern.ch>
 	* memory leaks  
 	* tagged as MuonTrackingGeometry-00-04-06(7)

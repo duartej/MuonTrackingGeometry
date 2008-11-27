@@ -223,8 +223,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
     }
   }
   // process muon material objects
-  if (m_muonActive && m_stationBuilder) m_stations = m_stationBuilder->buildDetachedTrackingVolumes();
-  if (m_muonInert && m_inertBuilder) m_inertObjs = m_inertBuilder->buildDetachedTrackingVolumes();
+  if (m_muonActive && m_stationBuilder && !m_stations) m_stations = m_stationBuilder->buildDetachedTrackingVolumes();
+  if (m_muonInert && m_inertBuilder && !m_inertObjs) m_inertObjs = m_inertBuilder->buildDetachedTrackingVolumes();
   //if (m_inertObjs && m_blendInertMaterial) {
   //  //m_inertBlend.resize(m_inertObjs->size());
   //  //getVolumeFractions();    
@@ -232,8 +232,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
   //}
   
   // find object's span with tolerance for the alignment 
-  m_stationSpan = findVolumesSpan(m_stations, 100.*m_alignTolerance, m_alignTolerance*deg);
-  m_inertSpan = findVolumesSpan(m_inertObjs,0.,0.);
+  if (!m_stationSpan) m_stationSpan = findVolumesSpan(m_stations, 100.*m_alignTolerance, m_alignTolerance*deg);
+  if (!m_inertSpan)   m_inertSpan = findVolumesSpan(m_inertObjs,0.,0.);
  
   /*
   if (m_inertSpan) {

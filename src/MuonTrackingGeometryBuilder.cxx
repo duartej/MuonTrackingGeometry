@@ -647,23 +647,23 @@ StatusCode Muon::MuonTrackingGeometryBuilder::finalize()
       for (size_t i = 0; i < m_stations->size(); i++)
 	if ((*m_stations)[i]) delete (*m_stations)[i];
         else log << MSG::DEBUG << name() << " station pointer corrupted ! " << endreq; 
-      delete m_stations;
+      delete m_stations; m_stations = 0;
     } 
     if (m_inertObjs) {
       for (size_t i = 0; i < m_inertObjs->size(); i++)
 	if ((*m_inertObjs)[i])	delete (*m_inertObjs)[i];
         else log << MSG::DEBUG << name() << " inert object pointer corrupted ! " << endreq; 
-      delete m_inertObjs;
+      delete m_inertObjs; m_inertObjs = 0;
     } 
     if (m_stationSpan) {
       for (size_t i = 0; i < m_stationSpan->size(); i++)
         delete (*m_stationSpan)[i];
-      delete m_stationSpan;
+      delete m_stationSpan; m_stationSpan = 0;
     }
     if (m_inertSpan) {
       for (size_t i = 0; i < m_inertSpan->size(); i++)
         delete (*m_inertSpan)[i];
-      delete m_inertSpan;
+      delete m_inertSpan; m_inertSpan = 0;
     }
 
     for (std::map<const Trk::DetachedTrackingVolume*,std::vector<const Trk::TrackingVolume*>* >::iterator it = m_blendMap.begin();

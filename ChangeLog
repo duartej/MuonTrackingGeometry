@@ -1,4 +1,8 @@
 2008-12-01 Sarka Todorova <sarka.todorova@cern.ch>
+	* suppress spacer layers with negative thickness
+	* tagged as MuonTrackingGeometry-00-04-11
+
+2008-12-01 Sarka Todorova <sarka.todorova@cern.ch>
 	* default setup ( merge of ATG & MTG ) 
 	* tagged as MuonTrackingGeometry-00-04-10
 

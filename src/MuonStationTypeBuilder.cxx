@@ -1316,35 +1316,44 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 	Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(boxA->getYHalfLength(),boxA->getZHalfLength());
         double thickness = 0.5*(boxA->getXHalfLength()-boxB->getXHalfLength());
         double shift     = 0.5*(boxA->getXHalfLength()+boxB->getXHalfLength());
-	Trk::ExtendedMaterialProperties material(thickness,cmat.x0(),cmat.l0(),cmat.averageA(),
-						 cmat.averageZ(),cmat.averageRho());  
-	Trk::HomogenousLayerMaterial spacerMaterial(material);
-	Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds);
-	Trk::PlaneLayer* layx = new Trk::PlaneLayer(new HepTransform3D( transf[ic]*HepTranslateX3D(shift)*HepRotateY3D(90*deg)*HepRotateZ3D(90*deg) ), bounds, spacerMaterial, thickness, od, 0 );
-	Trk::PlaneLayer* layxx = new Trk::PlaneLayer(*layx,HepTranslateX3D(-2*shift));
-        layers.push_back(layx)  ; 
-        layers.push_back(layxx) ; layxx->setLayerType(0);
+	Trk::ExtendedMaterialProperties material;
+	Trk::HomogenousLayerMaterial spacerMaterial;
+	Trk::SharedObject<const Trk::SurfaceBounds> bounds;
+        if (thickness>0.) {
+	  material = Trk::ExtendedMaterialProperties(thickness,cmat.x0(),cmat.l0(),cmat.averageA(),
+						   cmat.averageZ(),cmat.averageRho());  
+	  spacerMaterial = Trk::HomogenousLayerMaterial(material);
+	  bounds = Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);
+	  Trk::PlaneLayer* layx = new Trk::PlaneLayer(new HepTransform3D( transf[ic]*HepTranslateX3D(shift)*HepRotateY3D(90*deg)*HepRotateZ3D(90*deg) ), bounds, spacerMaterial, thickness, od, 0 );
+	  Trk::PlaneLayer* layxx = new Trk::PlaneLayer(*layx,HepTranslateX3D(-2*shift));
+	  layers.push_back(layx)  ; 
+	  layers.push_back(layxx) ; layxx->setLayerType(0);
+	}
 	rbounds = new Trk::RectangleBounds(boxB->getXHalfLength(),boxA->getZHalfLength());
         thickness = 0.5*(boxA->getYHalfLength()-boxB->getYHalfLength());
-	material = Trk::ExtendedMaterialProperties(thickness,cmat.x0(),cmat.l0(),cmat.averageA(),
-						   cmat.averageZ(),cmat.averageRho());  
-	spacerMaterial = Trk::HomogenousLayerMaterial(material);
-        shift     = 0.5*(boxA->getYHalfLength()+boxB->getYHalfLength());
-	bounds = Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);
-	Trk::PlaneLayer* lay = new Trk::PlaneLayer(new HepTransform3D( transf[ic]*HepTranslateY3D(shift)*HepRotateX3D(90*deg)), bounds, spacerMaterial, thickness, od, 0 );
-	Trk::PlaneLayer* layy = new Trk::PlaneLayer(*lay,HepTranslateY3D(-2*shift));
-        layers.push_back(lay)  ; 
-        layers.push_back(layy) ; layy->setLayerType(0);
+        if (thickness>0.) {
+	  material = Trk::ExtendedMaterialProperties(thickness,cmat.x0(),cmat.l0(),cmat.averageA(),
+						     cmat.averageZ(),cmat.averageRho());  
+	  spacerMaterial = Trk::HomogenousLayerMaterial(material);
+	  shift     = 0.5*(boxA->getYHalfLength()+boxB->getYHalfLength());
+	  bounds = Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);
+	  Trk::PlaneLayer* lay = new Trk::PlaneLayer(new HepTransform3D( transf[ic]*HepTranslateY3D(shift)*HepRotateX3D(90*deg)), bounds, spacerMaterial, thickness, od, 0 );
+	  Trk::PlaneLayer* layy = new Trk::PlaneLayer(*lay,HepTranslateY3D(-2*shift));
+	  layers.push_back(lay)  ; 
+	  layers.push_back(layy) ; layy->setLayerType(0);
+	}
 	rbounds = new Trk::RectangleBounds(boxB->getXHalfLength(),boxB->getYHalfLength());
         thickness = 0.5*(boxA->getZHalfLength()-boxB->getZHalfLength());
-	material = Trk::ExtendedMaterialProperties(thickness,cmat.x0(),cmat.l0(),cmat.averageA(),cmat.averageZ(),cmat.averageRho());  
-	spacerMaterial = Trk::HomogenousLayerMaterial(material);
-        shift     = 0.5*(boxA->getZHalfLength()+boxB->getZHalfLength());
-	bounds = Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);
-	Trk::PlaneLayer* layz = new Trk::PlaneLayer(new HepTransform3D( transf[ic]*HepTranslateZ3D(shift)), bounds, spacerMaterial, thickness, od, 0 );
-	Trk::PlaneLayer* layzz = new Trk::PlaneLayer(*layz,HepTranslateZ3D(-2*shift));
-        layers.push_back(layz)  ;
-        layers.push_back(layzz) ; layzz->setLayerType(0);
+        if (thickness>0.) {
+	  material = Trk::ExtendedMaterialProperties(thickness,cmat.x0(),cmat.l0(),cmat.averageA(),cmat.averageZ(),cmat.averageRho());  
+	  spacerMaterial = Trk::HomogenousLayerMaterial(material);
+	  shift     = 0.5*(boxA->getZHalfLength()+boxB->getZHalfLength());
+	  bounds = Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);
+	  Trk::PlaneLayer* layz = new Trk::PlaneLayer(new HepTransform3D( transf[ic]*HepTranslateZ3D(shift)), bounds, spacerMaterial, thickness, od, 0 );
+	  Trk::PlaneLayer* layzz = new Trk::PlaneLayer(*layz,HepTranslateZ3D(-2*shift));
+	  layers.push_back(layz)  ;
+	  layers.push_back(layzz) ; layzz->setLayerType(0);
+	}
       } else if (sub) {
 	std::vector<std::pair<const GeoShape*,HepTransform3D> > subVs;
 	const GeoShapeShift* shift = dynamic_cast<const GeoShapeShift*> (sub->getOpB());
@@ -1410,6 +1419,9 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
       std::cout << "unresolved spacer component "<< clv->getName() << std::endl; 
     }
   }
+
+  std::vector<const Trk::Layer*>::iterator lIt = layers.begin();
+  for ( ; lIt!=layers.end();lIt++) if ((*lIt)->thickness()<0.) layers.erase(lIt); 
 
   std::vector<const Trk::Layer*>* spacerLayers = new std::vector<const Trk::Layer*>(layers); 
 

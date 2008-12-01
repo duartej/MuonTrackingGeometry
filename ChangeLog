@@ -1,3 +1,7 @@
+2008-12-01 Sarka Todorova <sarka.todorova@cern.ch>
+	* default setup ( merge of ATG & MTG ) 
+	* tagged as MuonTrackingGeometry-00-04-10
+
 2008-11-28 Sarka Todorova <sarka.todorova@cern.ch>
 	* prevent crash in finalization ( of multiple build of geometry ) 
 	* tagged as MuonTrackingGeometry-00-04-09

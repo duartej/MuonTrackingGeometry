@@ -89,7 +89,7 @@ Muon::MuonStationBuilder::MuonStationBuilder(const std::string& t, const std::st
   m_buildEndcap(true),
   m_buildCsc(true),
   m_buildTgc(true),
-  m_identifyActive(false)
+  m_identifyActive(true)
 {
   declareInterface<Trk::IDetachedTrackingVolumeBuilder>(this);
   declareProperty("MuonDetManagerLocation",           m_muonMgrLocation);

@@ -27,6 +27,9 @@ namespace Trk {
  class ITrackingVolumeDisplayer;
  class ITrackingVolumeArrayCreator;
  class IMagneticFieldTool;
+ typedef std::pair< SharedObject<const TrackingVolume>, const Trk::GlobalPosition*> TrackingVolumeOrderPosition;
+ typedef std::pair< SharedObject<const TrackingVolume>, const HepTransform3D*> TrackingVolumeNavOrder;
+
 }
  
 namespace Muon {

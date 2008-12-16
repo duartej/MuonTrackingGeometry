@@ -15,7 +15,6 @@ use GeoModelKernel        GeoModelKernel-*           DetectorDescription/GeoMode
 
 use TrkDetDescrInterfaces  TrkDetDescrInterfaces-*    Tracking/TrkDetDescr
 use TrkDetDescrUtils       TrkDetDescrUtils-*         Tracking/TrkDetDescr
-use TrkDetDescrTools       TrkDetDescrTools-*         Tracking/TrkDetDescr
 use TrkGeometry            TrkGeometry-*              Tracking/TrkDetDescr
 use TrkSurfaces            TrkSurfaces-*              Tracking/TrkDetDescr 
 use TrkGeometrySurfaces    TrkGeometrySurfaces-*      Tracking/TrkDetDescr 

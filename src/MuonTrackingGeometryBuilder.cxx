@@ -25,7 +25,6 @@
 //#include "TrkDetDescrUtils/BinningType.h"
 #include "TrkDetDescrUtils/GeometryStatics.h"
 #include "TrkDetDescrUtils/SharedObject.h"
-#include "TrkDetDescrTools/TrackingVolumeArrayCreator.h"
 #include "TrkVolumes/CylinderVolumeBounds.h"
 #include "TrkVolumes/TrapezoidVolumeBounds.h"
 #include "TrkVolumes/DoubleTrapezoidVolumeBounds.h"

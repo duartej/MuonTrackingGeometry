@@ -786,14 +786,26 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     edges.push_back( Trk::GlobalPosition(cyl->outerRadius(),0.,0.) );
   }
   if (spb) {
+#ifdef TRKDETDESCR_USEFLOATPRECISON
+#define double float
+#endif      
     const std::vector<std::pair<double, double> > vtcs = spb->xyVertices();
+#ifdef TRKDETDESCR_USEFLOATPRECISON
+#undef double
+#endif      
     for (unsigned int i=0;i<vtcs.size();i++) {
       edges.push_back( Trk::GlobalPosition(vtcs[i].first,vtcs[i].second, spb->halflengthZ()) );
       edges.push_back( Trk::GlobalPosition(vtcs[i].first,vtcs[i].second, -spb->halflengthZ()) );
     }
   }
   if (prism) {
+#ifdef TRKDETDESCR_USEFLOATPRECISON
+#define double float
+#endif  
     const std::vector<std::pair<double, double> > vtcs = prism->xyVertices();
+#ifdef TRKDETDESCR_USEFLOATPRECISON
+#undef double
+#endif      
     for (unsigned int i=0;i<vtcs.size();i++) {
       edges.push_back( Trk::GlobalPosition(vtcs[i].first,vtcs[i].second, prism->halflengthZ()) );
       edges.push_back( Trk::GlobalPosition(vtcs[i].first,vtcs[i].second, -prism->halflengthZ()) );
@@ -1707,7 +1719,13 @@ double  Muon::MuonTrackingGeometryBuilder::calculateVolume( const Trk::Volume* e
 									       -bcyl->innerRadius()*bcyl->innerRadius()); 
   }
   if ( prism ) {
+#ifdef TRKDETDESCR_USEFLOATPRECISON
+#define double float
+#endif    
     std::vector<std::pair<double,double> > v=prism->xyVertices();
+#ifdef TRKDETDESCR_USEFLOATPRECISON
+#undef double
+#endif      
     double a2 = v[1].first*v[1].first+v[1].second*v[1].second
                +v[0].first*v[0].first+v[0].second*v[0].second
 	    -2*(v[0].first*v[1].first+v[0].second*v[1].second);

@@ -9,10 +9,9 @@ use GaudiInterface      GaudiInterface-*      External
 use AtlasCLHEP          AtlasCLHEP-*          External
 use StoreGate           StoreGate-*           Control
 
-use BFieldAth		  BFieldAth-*	             MagneticField 
+use BFieldAth		  BFieldAth-*	              MagneticField 
 
-use GeoModelKernel        GeoModelKernel-*           DetectorDescription/GeoModel 
-
+use GeoModelKernel        GeoModelKernel-*            DetectorDescription/GeoModel 
 use TrkDetDescrInterfaces  TrkDetDescrInterfaces-*    Tracking/TrkDetDescr
 use TrkDetDescrUtils       TrkDetDescrUtils-*         Tracking/TrkDetDescr
 use TrkGeometry            TrkGeometry-*              Tracking/TrkDetDescr

@@ -275,15 +275,17 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
       for (unsigned i=0; i<compVol.size();i++){
         bool comp_processed = false;
         const Trk::CuboidVolumeBounds* compBounds = dynamic_cast<const Trk::CuboidVolumeBounds*> (&(compVol[i]->volumeBounds()));
+        
         double lowX = compVol[i]->center()[0]-compBounds->halflengthX();
         double uppX = compVol[i]->center()[0]+compBounds->halflengthX();
+                
 	if ( lowX < currX ) std::cout<<"Warning: we have a clash between components here!"<< std::endl;
 	if ( uppX > maxX ) std::cout<<"Warning: we have a clash between component and envelope!"<< std::endl;
         // close Rpc if no further components
         if (openRpc  && compName[i].substr(0,3) != "RPC" && compName[i].substr(0,3) != "Ded"){
           // low edge of current volume
           double Xcurr = compVol[i]->center()[0]-compBounds->halflengthX();
-          if (Xcurr>= currX+rpclowXsize+rpcuppXsize) {
+          if (Xcurr >= currX+rpclowXsize+rpcuppXsize) {
             Trk::CuboidVolumeBounds* rpcBounds = new Trk::CuboidVolumeBounds(0.5*(Xcurr-currX),envY,envZ);
 	    Trk::Volume* rpcVol =new Trk::Volume(new HepTranslate3D(currX+rpcBounds->halflengthX(),0.,0.),rpcBounds);
             const Trk::TrackingVolume* rpcTrkVol = processRpc(rpcVol ,geoRpc,transfRpc);

@@ -493,7 +493,13 @@ double  Muon::MuonInertMaterialBuilder::calculateVolume( const Trk::Volume* enve
 									       -bcyl->innerRadius()*bcyl->innerRadius()); 
   }
   if ( prism ) {
+#ifdef TRKDETDESCR_USEFLOATPRECISON
+#define double float
+#endif      
     std::vector<std::pair<double,double> > v=prism->xyVertices();
+#ifdef TRKDETDESCR_USEFLOATPRECISON
+#undef double
+#endif      
     double a2 = v[1].first*v[1].first+v[1].second*v[1].second
                +v[0].first*v[0].first+v[0].second*v[0].second
 	    -2*(v[0].first*v[1].first+v[0].second*v[1].second);
@@ -605,7 +611,13 @@ const Trk::Volume* Muon::MuonInertMaterialBuilder::createEnvelope(const HepTrans
       edges.push_back(transf.inverse()*(*sIter).first->transform()*Trk::GlobalPosition( x1,-y,-z));
       edges.push_back(transf.inverse()*(*sIter).first->transform()*Trk::GlobalPosition(-x1,-y,-z));
     } else if (spbBounds) {
+#ifdef TRKDETDESCR_USEFLOATPRECISON
+#define double float
+#endif      
       std::vector<std::pair<double,double> > xyVtx = spbBounds->xyVertices();
+#ifdef TRKDETDESCR_USEFLOATPRECISON
+#undef double
+#endif        
       double z  = spbBounds->halflengthZ();
       for (unsigned int iv=0;iv<xyVtx.size();iv++) {
 	edges.push_back(transf.inverse()*(*sIter).first->transform()*Trk::GlobalPosition(xyVtx[iv].first,xyVtx[iv].second,-z));
@@ -738,7 +750,13 @@ Trk::GlobalPosition Muon::MuonInertMaterialBuilder::getScanPoint(const Trk::Volu
     // xy
     const Trk::PrismVolumeBounds* prism = dynamic_cast<const Trk::PrismVolumeBounds*> (&(subVols[iPrism-1]->volumeBounds()));
     if (prism) {
+#ifdef TRKDETDESCR_USEFLOATPRECISON
+#define double float
+#endif  
       std::vector<std::pair<double,double> > xy = prism->xyVertices();      
+#ifdef TRKDETDESCR_USEFLOATPRECISON
+#undef double
+#endif       
       //std::cout << "prism vertices:"<< xy.size()<< std::endl;
       gp = Trk::GlobalPosition(xy[2].first +sqrt(rndm[1])*( xy[0].first -xy[2].first 
 							    + rndm[2]*( xy[1].first -xy[0].first  ) ),

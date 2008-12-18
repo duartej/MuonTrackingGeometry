@@ -1,3 +1,7 @@
+2008-12-18 Andreas Salzburger < Andrfeas.Salzburger -at- cern.ch >
+        * changes for double/float testbuilding
+        * tagged as MuonTrackingGeometry-00-04-13
+
 2008-12-16 Andreas Salzburger < Andrfeas.Salzburger -at- cern.ch >
         * adapt dependencies, remove dependency on TrkDetDescrTools
         * tagged as MuonTrackingGeometry-00-04-12 

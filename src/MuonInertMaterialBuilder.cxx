@@ -94,6 +94,7 @@ Muon::MuonInertMaterialBuilder::MuonInertMaterialBuilder(const std::string& t, c
   m_buildFeets(true),
   m_buildRails(1),
   m_buildShields(true),
+  m_buildSupports(true),
   m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
   m_rndmGenSvc("RndmGenSvc","randomGen"),
   m_flatDist(0)
@@ -108,6 +109,7 @@ Muon::MuonInertMaterialBuilder::MuonInertMaterialBuilder(const std::string& t, c
   declareProperty("BuildFeets",                       m_buildFeets);
   declareProperty("BuildRails",                       m_buildRails);
   declareProperty("BuildShields",                     m_buildShields);
+  declareProperty("BuildSupports",                    m_buildSupports);
 }
 
 // destructor
@@ -252,7 +254,8 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
 	  else if ( vname.substr(0,4)=="Feet" || ( vname.size()>7 && 
 			 (vname.substr(3,4)=="Feet" || vname.substr(4,4)=="Feet" ) ) ) accepted = m_buildFeets ? true : false; 
 	  else if ( vname.substr(0,4)=="Rail" ) accepted = m_buildRails>0 ? true : false; 
-	  //else accepted = m_buildShields ? true : false;
+	  else if ( vname.substr(0,1)!="J" )  accepted = m_buildSupports>0 ? true : false; 
+	  else if ( vname.substr(0,1)=="J" )  accepted = m_buildShields>0 ? true : false; 
 
           //if ( vname=="EdgeBTVoussoir" && accepted && m_simplify ) accepted = false;
 	  

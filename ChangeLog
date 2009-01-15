@@ -1,3 +1,7 @@
+2009-01-15 Sarka Todorova <sarka.todorova@cern.ch>
+	* performance update (via fine partitioning )
+	* tagged as MuonTrackingGeometry-00-04-14
+
 2008-12-18 Andreas Salzburger < Andrfeas.Salzburger -at- cern.ch >
         * changes for double/float testbuilding
         * tagged as MuonTrackingGeometry-00-04-13

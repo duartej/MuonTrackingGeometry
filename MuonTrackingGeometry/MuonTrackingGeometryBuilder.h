@@ -67,10 +67,11 @@ namespace Muon {
     private:
       /** Private method to find z/phi span of detached volumes */
       const Span* findVolumeSpan(const Trk::VolumeBounds* volBounds, HepTransform3D transf, double zTol, double phiTol) const;
-      const std::vector<const Span*>* findVolumesSpan(const std::vector<const Trk::DetachedTrackingVolume*>*& objs, double zTol, double phiTol) const;
+      const std::vector<std::vector<std::pair<const Trk::DetachedTrackingVolume*,const Span*> >* >* findVolumesSpan(const std::vector<const Trk::DetachedTrackingVolume*>*& objs, double zTol, double phiTol) const;
       /** Private methods to define subvolumes and fill them with detached volumes */
       const Trk::TrackingVolume* processVolume( const Trk::Volume*, int, int, std::string) const; 
       const Trk::TrackingVolume* processVolume( const Trk::Volume*, int, std::string) const; 
+      const Trk::TrackingVolume* processShield( const Trk::Volume*, int, std::string) const; 
       /** Private method to check volume properties */
       void checkVolume(const Trk::TrackingVolume*) const;
       /** Private method to find detached volumes */
@@ -80,9 +81,11 @@ namespace Muon {
       /** Private method to retrieve z partition */
       void getZParts() const;
       /** Private method to retrieve phi partition */
-      void getPhiParts() const;
+      void getPhiParts(int) const;
       /** Private method to retrieve h partition */
       void getHParts() const;
+      /** Private method to retrieve shield partition */
+      void getShieldParts() const; 
       /** Private method to calculate volume */
       double calculateVolume(const Trk::Volume*) const;
       /** Private method to blend the inert material */
@@ -132,16 +135,20 @@ namespace Muon {
       mutable bool                        m_static3d;
       bool                                m_blendInertMaterial; 
       mutable double                      m_alignTolerance;
+      int                                 m_colorCode;
 
       mutable const std::vector<const Trk::DetachedTrackingVolume*>*    m_stations;    // muon chambers 
       mutable const std::vector<const Trk::DetachedTrackingVolume*>*    m_inertObjs;   // muon inert material 
-      mutable const std::vector<const Span*>*                     m_stationSpan; 
-      mutable const std::vector<const Span*>*                     m_inertSpan; 
+      mutable const std::vector<std::vector<std::pair<const Trk::DetachedTrackingVolume*,const Span*> >* >* m_stationSpan; 
+      mutable const std::vector<std::vector<std::pair<const Trk::DetachedTrackingVolume*,const Span*> >* >* m_inertSpan; 
+      mutable std::vector<const Span*>                            m_spans;             // for clearing
       mutable std::vector<double>                                 m_zPartitions;
       mutable std::vector<int>                                    m_zPartitionsType;
       mutable std::vector<double>                                 m_adjustedPhi;
       mutable std::vector<int>                                    m_adjustedPhiType;
       mutable std::vector<std::vector<std::vector<std::vector<std::pair<int,double> > > > > m_hPartitions;
+      mutable std::vector<double>                                 m_shieldZPart;
+      mutable std::vector<std::vector<std::pair<int,double> > >   m_shieldHPart;
       //mutable std::vector<std::pair<std::string,std::pair<double, unsigned int> > >   m_dilFact;
       mutable std::vector<Trk::MaterialProperties>               m_matProp;
       mutable std::map<const Trk::DetachedTrackingVolume*,std::vector<const Trk::TrackingVolume*>* > m_blendMap;

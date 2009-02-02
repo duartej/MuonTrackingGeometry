@@ -95,6 +95,7 @@ Muon::MuonInertMaterialBuilder::MuonInertMaterialBuilder(const std::string& t, c
   m_buildRails(1),
   m_buildShields(true),
   m_buildSupports(true),
+  m_blendLimit(3e+09),
   m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
   m_rndmGenSvc("RndmGenSvc","randomGen"),
   m_flatDist(0)
@@ -110,6 +111,7 @@ Muon::MuonInertMaterialBuilder::MuonInertMaterialBuilder(const std::string& t, c
   declareProperty("BuildRails",                       m_buildRails);
   declareProperty("BuildShields",                     m_buildShields);
   declareProperty("BuildSupports",                    m_buildSupports);
+  declareProperty("BlendLimit",                       m_blendLimit);
 }
 
 // destructor
@@ -204,6 +206,15 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
   
   for (; msTypeIter != msTypes->end(); ++msTypeIter) {
     std::string msTypeName = (*msTypeIter).first->name();
+    // decide if object suitable for blending; does not concern shields
+    double protMass=0.;
+    for (unsigned int ic = 0; ic<(*msTypeIter).first->constituents()->size(); ic++) {         
+      protMass += calculateVolume((*((*msTypeIter).first->constituents()))[ic].first)
+	*(*((*msTypeIter).first->constituents()))[ic].second.first;
+    }
+    if (msTypeName.substr(0,1)!="J" && m_blendLimit>0 && protMass > m_blendLimit ) msTypeName = msTypeName + "PERM";
+    log << MSG::DEBUG << name() << msTypeName<<" volume estimate:"<<","<< protMass << endreq;
+    //
     const Trk::DetachedTrackingVolume* msTV = (*msTypeIter).first;
     for (unsigned int it=0 ;it<(*msTypeIter).second.size(); it++)  { 
       HepTransform3D combTr((*msTypeIter).second[it]); 
@@ -317,20 +328,10 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
     const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* mObjects = new std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >(objs);
 
     int count = 0;
-    //double massEstimate = 0.;
-    for (unsigned int i=0;i<mObjects->size();i++) { 
-       log << MSG::DEBUG << i<< ":"<< (*mObjects)[i].first->name() << ","<< (*mObjects)[i].second.size()<< endreq;
-       //const Trk::MaterialProperties* mat = (*mObjects)[i].first->trackingVolume()->confinedDenseVolumes() ?
-       //	 (*(*mObjects)[i].first->trackingVolume()->confinedDenseVolumes())[0] :(*mObjects)[i].first->trackingVolume();
-       /*
-	 for (unsigned int ic = 0; ic<(*mObjects)[i].first->constituents()->size(); ic++) {         
-	   double protMass = calculateVolume((*(*mObjects)[i].first->constituents())[ic].first)
-	   *(*(*mObjects)[i].first->constituents())[ic].second.first*(*mat).zOverAtimesRho();
-           massEstimate += protMass*(*mObjects)[i].second.size();
-         }
-       */
+    double massEstimate = 0.;
+    for (unsigned int i=0;i<mObjects->size();i++) {        
        for (unsigned int j=0;j<(*mObjects)[i].second.size();j++) 
-	 log << MSG::DEBUG << j<< "th  position at "<<((*mObjects)[i].second)[j].getTranslation()<<","<<((*mObjects)[i].second)[j].getRotation()<< endreq;      
+       	 log << MSG::DEBUG << j<< "th  position at "<<((*mObjects)[i].second)[j].getTranslation()<<","<<((*mObjects)[i].second)[j].getRotation()<< endreq;      
        count += (*mObjects)[i].second.size();
     }
 
@@ -423,7 +424,8 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
     //std::cout << "simple mode 1, no envelope for object:"<< trVol->volumeName() << std::endl;
     newVol = trVol;
     delete confinedVols;    
-  } else if (m_simplify || envName.substr(0,3)=="BAR" ) { 
+  } else if (m_simplify) { 
+  //} else if (m_simplify || envName.substr(0,3)=="BAR" ) { 
     if (constituents.size()==1) {   // simplified volume
       double fraction = constituents.front().second;
       Trk::MaterialProperties mat(1.,trVol->x0()/fraction,fraction*trVol->zOverAtimesRho());
@@ -455,10 +457,11 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
   
   // save calculable volumes for blending
   std::vector<std::pair<const Trk::Volume*,std::pair<double,double> > > confinedConst;
+  double simpleStatus = m_simplify ? 1. : 0.;                     // prevent double dilution in blending
   for (unsigned int ic=0;ic<constituents.size();ic++) {
     confinedConst.push_back(std::pair<const Trk::Volume*,std::pair<double,double> >
 			    ( new Trk::Volume(*(constituents[ic].first),newVol->transform().inverse()),
-			      std::pair<double,double>(constituents[ic].second,-1.) ) );
+			      std::pair<double,double>(constituents[ic].second,simpleStatus) ) );
   }
   m_constituents.push_back(new std::vector<std::pair<const Trk::Volume*,std::pair<double,double> > >(confinedConst));
   //for (unsigned int ic=0;ic<constituents.size();ic++) delete constituents[ic].first; 

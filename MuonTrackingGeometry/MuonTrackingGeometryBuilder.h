@@ -75,9 +75,9 @@ namespace Muon {
       /** Private method to check volume properties */
       void checkVolume(const Trk::TrackingVolume*) const;
       /** Private method to find detached volumes */
-      std::vector<const Trk::DetachedTrackingVolume*>* getDetachedObjects(const Trk::Volume*) const;
+      std::vector<const Trk::DetachedTrackingVolume*>* getDetachedObjects(const Trk::Volume*, int mode=0) const;
       /** Private method to check if constituent enclosed */
-      bool enclosed(const Trk::Volume*, const Trk::Volume*) const;
+      bool enclosed(const Trk::Volume*, const Muon::Span*) const;
       /** Private method to retrieve z partition */
       void getZParts() const;
       /** Private method to retrieve phi partition */
@@ -86,6 +86,12 @@ namespace Muon {
       void getHParts() const;
       /** Private method to retrieve shield partition */
       void getShieldParts() const; 
+      //void getPartitionFromMaterial(const Trk::Volume*) const; 
+      //void getPPartitionFromMaterial(std::vector<double>& steps, std::vector<const Muon::Span*> sps, double tol, 
+      //				     double zmin, double zmax, double ztol) const;
+      //void getHPartitionFromMaterial(std::vector<std::pair<int,double> >& steps, std::vector<const Muon::Span*> sps, double tol, 
+      //				     double zmin, double zmax, double ztol) const;
+      //void orderEdges(std::vector<double>& edges) const; 
       /** Private method to calculate volume */
       double calculateVolume(const Trk::Volume*) const;
       /** Private method to blend the inert material */
@@ -117,6 +123,8 @@ namespace Muon {
       mutable double                      m_barrelZ;                  //!< maximal extend in z of the muon barrel
       double                              m_innerEndcapZ;             //!< maximal extend in z of the inner part of muon endcap 
       double                              m_outerEndcapZ;             //!< maximal extend in z of the outer part of muon endcap
+      double                              m_bigWheel;                 //!< maximal extend in z of the big wheel
+      double                              m_outerWheel;               //!< minimal extend in z of the outer wheel (EO)
       double                              m_beamPipeRadius;
       double                              m_innerShieldRadius;
       double                              m_outerShieldRadius;

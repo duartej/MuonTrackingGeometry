@@ -80,8 +80,11 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_barrelZ(6750.),
   m_innerEndcapZ(12900.),
   m_outerEndcapZ(23000.),
+  m_bigWheel(15600.),
+  m_outerWheel(21000.),
   m_beamPipeRadius(70.),
-  m_innerShieldRadius(810.),
+  //m_innerShieldRadius(810.),
+  m_innerShieldRadius(850.),
   m_outerShieldRadius(1550.),
   m_diskShieldZ(6909.),
   m_barrelEtaPartition(9),
@@ -236,16 +239,6 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
   if (!m_stationSpan) m_stationSpan = findVolumesSpan(m_stations, 100.*m_alignTolerance, m_alignTolerance*deg);
   if (!m_inertSpan)   m_inertSpan = findVolumesSpan(m_inertObjs,0.,0.);
  
-  /*
-  if (m_inertSpan) {
-    for (unsigned int ii=0;ii<m_inertSpan->size();ii++) {
-      const Muon::Span* s=(*m_inertSpan)[ii];
-      log << MSG::DEBUG << (*m_inertObjs)[ii]->name()<<":"<<
-	(*s)[0]<<","<<(*s)[1]<<","<<(*s)[2]<<","<<(*s)[3]<<","<<(*s)[4]<<","<<(*s)[5]<<endreq;
-    }
-  }
-  */
-  
   // 0) Preparation //////////////////////////////////////////////////////////////////////////////////////
   // if no muon materials are declared, take default ones
   if (m_muonMaterialProperties.size() < 3){
@@ -893,7 +886,7 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     span.push_back( maxR + zTol );  
   } else {
     log << MSG::ERROR  << name() <<" volume shape not recognized: "<< endreq;
-    for (int i=0; i<4; i++) span.push_back(0.);
+    for (int i=0; i<6; i++) span.push_back(0.);
   }
   const Muon::Span* newSpan=new Muon::Span(span);
   return newSpan;
@@ -980,7 +973,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         // prepare blending
         if (m_blendInertMaterial && detVols) {
           for (unsigned int id=0;id<detVols->size();id++) {
-            if (!(*detVols)[id]->layerRepresentation() && (*detVols)[id]->constituents()){
+            if (!(*detVols)[id]->layerRepresentation() && (*detVols)[id]->constituents() && 
+		 (*detVols)[id]->name().substr((*detVols)[id]->name().size()-4,4)!="PERM" ){
 	      if (!m_blendMap[(*detVols)[id]]) 
 		m_blendMap[(*detVols)[id]] = new std::vector<const Trk::TrackingVolume*>;
 	      m_blendMap[(*detVols)[id]]->push_back(sVol);
@@ -1039,7 +1033,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     // prepare blending
     if (m_blendInertMaterial && muonObjs) {
       for (unsigned int id=0;id<muonObjs->size();id++) {
-	if (!(*muonObjs)[id]->layerRepresentation() && (*muonObjs)[id]->constituents()){
+	if (!(*muonObjs)[id]->layerRepresentation() && (*muonObjs)[id]->constituents() &&
+		 (*muonObjs)[id]->name().substr((*muonObjs)[id]->name().size()-4,4)!="PERM" ){
 	  if (!m_blendMap[(*muonObjs)[id]]) 
 	    m_blendMap[(*muonObjs)[id]] = new std::vector<const Trk::TrackingVolume*>;
 	  m_blendMap[(*muonObjs)[id]]->push_back(tVol);
@@ -1064,6 +1059,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
   const Trk::TrackingVolume* tVol = 0;
 
   unsigned int colorCode = m_colorCode;
+
+  //getPartitionFromMaterial(vol);
 
   // retrieve cylinder
   const Trk::CylinderVolumeBounds* cyl=dynamic_cast<const Trk::CylinderVolumeBounds*> (&(vol->volumeBounds()));
@@ -1193,7 +1190,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	  // prepare blending
 	  if (m_blendInertMaterial && detVols) {
 	    for (unsigned int id=0;id<detVols->size();id++) {
-	      if (!(*detVols)[id]->layerRepresentation() && (*detVols)[id]->constituents()){
+	      if (!(*detVols)[id]->layerRepresentation() && (*detVols)[id]->constituents() &&
+		  (*detVols)[id]->name().substr((*detVols)[id]->name().size()-4,4)!="PERM" ){
 		if (!m_blendMap[(*detVols)[id]]) 
 		  m_blendMap[(*detVols)[id]] = new std::vector<const Trk::TrackingVolume*>;
 		m_blendMap[(*detVols)[id]]->push_back(sVol);
@@ -1212,7 +1210,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
 	  //glue subVolume
 	  if (h==0)                sVolsInn.push_back(sVol); 
-	  if (h==hSteps.size()-1)  sVolsOut.push_back(sVol); 
+	  if (h==hSteps.size()-2)  sVolsOut.push_back(sVol); 
 	  if (eta==0)      sVolsNeg.push_back(sVol); 
 	  if (eta==etaN-1) sVolsPos.push_back(sVol); 
           // in R/H
@@ -1334,7 +1332,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         // prepare blending
         if (m_blendInertMaterial && detVols) {
           for (unsigned int id=0;id<detVols->size();id++) {
-            if (!(*detVols)[id]->layerRepresentation() && (*detVols)[id]->constituents()){
+            if (!(*detVols)[id]->layerRepresentation() && (*detVols)[id]->constituents() && 
+		 (*detVols)[id]->name().substr((*detVols)[id]->name().size()-4,4)!="PERM" ){
 	      if (!m_blendMap[(*detVols)[id]]) 
 		m_blendMap[(*detVols)[id]] = new std::vector<const Trk::TrackingVolume*>;
 	      m_blendMap[(*detVols)[id]]->push_back(sVol);
@@ -1396,7 +1395,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     // prepare blending
     if (m_blendInertMaterial && muonObjs) {
       for (unsigned int id=0;id<muonObjs->size();id++) {
-	if (!(*muonObjs)[id]->layerRepresentation() && (*muonObjs)[id]->constituents()){
+	if (!(*muonObjs)[id]->layerRepresentation() && (*muonObjs)[id]->constituents() &&
+		 (*muonObjs)[id]->name().substr((*muonObjs)[id]->name().size()-4,4)!="PERM" ){
 	  if (!m_blendMap[(*muonObjs)[id]]) 
 	    m_blendMap[(*muonObjs)[id]] = new std::vector<const Trk::TrackingVolume*>;
 	  m_blendMap[(*muonObjs)[id]]->push_back(tVol);
@@ -1411,10 +1411,13 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(const Trk::Volume* vol, int type,std::string volumeName) const
 {
   MsgStream log(msgSvc(), name());
+  log << MSG::DEBUG << name() << "processing shield volume in mode:"<< type << endreq;
 
   const Trk::TrackingVolume* tVol = 0;
 
   unsigned int colorCode = m_colorCode;
+
+  //getPartitionFromMaterial(vol);
 
   // retrieve cylinder
   const Trk::CylinderVolumeBounds* cyl=dynamic_cast<const Trk::CylinderVolumeBounds*> (&(vol->volumeBounds()));
@@ -1500,7 +1503,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
       // prepare blending
       if (m_blendInertMaterial && detVols) {
 	for (unsigned int id=0;id<detVols->size();id++) {
-	  if (!(*detVols)[id]->layerRepresentation() && (*detVols)[id]->constituents()){
+	  if (!(*detVols)[id]->layerRepresentation() && (*detVols)[id]->constituents() &&
+		 (*detVols)[id]->name().substr((*detVols)[id]->name().size()-4,4)!="PERM" ){
 	    if (!m_blendMap[(*detVols)[id]]) 
 	      m_blendMap[(*detVols)[id]] = new std::vector<const Trk::TrackingVolume*>;
 	    m_blendMap[(*detVols)[id]]->push_back(sVol);
@@ -1519,7 +1523,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
       
       //glue subVolume
       if (h==0)                sVolsInn.push_back(sVol); 
-      if (h==hSteps.size()-1)  sVolsOut.push_back(sVol); 
+      if (h==hSteps.size()-2)  sVolsOut.push_back(sVol); 
       if (eta==0)      sVolsNeg.push_back(sVol); 
       if (eta==etaN-1) sVolsPos.push_back(sVol); 
       // in R/H
@@ -1563,8 +1567,9 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
   return tVol;
 } 
 
-std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuilder::getDetachedObjects(const Trk::Volume* vol) const
+std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuilder::getDetachedObjects(const Trk::Volume* vol, int mode ) const
 {
+  // mode : 0 all, 1 active only, 2 inert only
 
   std::vector<const Trk::DetachedTrackingVolume*>* detTVs = 0;
 
@@ -1615,7 +1620,7 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
    
   std::list<const Trk::DetachedTrackingVolume*> detached;
   // active, use corrected rMax
-  if (m_stationSpan) {
+  if (mode <2 && m_stationSpan) {
     for (unsigned int i=0; i<(*m_stationSpan)[gMode]->size() ; i++) {
       const Muon::Span* s = (*((*m_stationSpan)[gMode]))[i].second;          // span
       const Trk::DetachedTrackingVolume* station = (*((*m_stationSpan)[gMode]))[i].first;   // station
@@ -1640,7 +1645,7 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
     }
   }
   // passive 
-  if (m_inertSpan) {
+  if (mode !=1 && m_inertSpan) {
     for (unsigned int i=0; i<(*m_inertSpan)[gMode]->size() ; i++) {
       const Muon::Span* s = (*((*m_inertSpan)[gMode]))[i].second;
       const Trk::DetachedTrackingVolume* inert = (*((*m_inertSpan)[gMode]))[i].first;
@@ -1666,11 +1671,12 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
   return detTVs;
 }
 
-bool Muon::MuonTrackingGeometryBuilder::enclosed(const Trk::Volume* vol, const Trk::Volume* cs) const
+bool Muon::MuonTrackingGeometryBuilder::enclosed(const Trk::Volume* vol, const Muon::Span* s) const
 {
   MsgStream log(msgSvc(), name());
 
   bool encl = false;
+  double tol = 1.;
   
   // get min/max Z/Phi from volume (allways a cylinder/bevelled cylinder volume )  
   const Trk::CylinderVolumeBounds* cyl = dynamic_cast<const Trk::CylinderVolumeBounds*> (&(vol->volumeBounds()));
@@ -1710,12 +1716,11 @@ bool Muon::MuonTrackingGeometryBuilder::enclosed(const Trk::Volume* vol, const T
   } 
   //
   //const Muon::Span* s = findVolumeSpan(&(cs->volumeBounds()), cs->transform(), 0.,0.) ;
-  std::auto_ptr<const Muon::Span> s (findVolumeSpan(&(cs->volumeBounds()), cs->transform(), 0.,0.) );
+  //std::auto_ptr<const Muon::Span> s (findVolumeSpan(&(cs->volumeBounds()), cs->transform(), 0.,0.) );
   //log << MSG::DEBUG << "enclosing volume:z:"<< zMin<<","<<zMax<<":r:"<< rMin<<","<<rMax<<":phi:"<<pMin<<","<<pMax<< endreq;
-  //log << MSG::DEBUG << "constituent:z:"<< (*s)[0]<<","<<(*s)[1]<<":r:"<< (*s)[4]<<","<<(*s)[5]<<":phi:"<<(*s)[2]<<","<<(*s)[3]<< endreq;
   //
-  bool rLimit = (!m_static3d || ( (*s)[4] <= rMax && (*s)[5] >= rMin ) ); 
-  if ( rLimit && (*s)[0] <= zMax && (*s)[1] >= zMin ) {
+  bool rLimit = (!m_static3d || ( (*s)[4] < rMax-tol && (*s)[5] > rMin+tol ) ); 
+  if ( rLimit && (*s)[0] < zMax-tol && (*s)[1] > zMin+tol ) {
     if (phiLim) {
       if (pMin>=0 && pMax<=2*M_PI) {
 	if ( (*s)[2]<=(*s)[3] && (*s)[2] <= pMax && (*s)[3] >= pMin )  return true;
@@ -1816,7 +1821,7 @@ void Muon::MuonTrackingGeometryBuilder::getPhiParts(int mode) const
     m_adjustedPhi[0]=0.;
     m_adjustedPhiType[0]=0;
 
-  } else if (mode==1) {
+  } else if (mode==1) {  
     int phiNum = 16;
     m_adjustedPhi.resize(phiNum);
     m_adjustedPhiType.resize(phiNum);
@@ -1830,7 +1835,6 @@ void Muon::MuonTrackingGeometryBuilder::getPhiParts(int mode) const
     }
 
   } else if (mode==2) {
-   
     // hardcode for the moment
     m_adjustedPhi.resize(16);
     m_adjustedPhiType.resize(16);
@@ -1848,6 +1852,32 @@ void Muon::MuonTrackingGeometryBuilder::getPhiParts(int mode) const
       m_adjustedPhi[ic]= m_adjustedPhi[ic-1] + 2*phiSect[is] ;
       m_adjustedPhiType[ic]= 1-is;
     }
+    /*
+    // hardcode for the moment
+    m_adjustedPhi.resize(32);
+    m_adjustedPhiType.resize(32);
+    
+    double phiSect[3];
+    phiSect[0] = 0.126;
+    phiSect[2] = 0.063;
+    phiSect[1] = 0.5*( acos(-1.)/8. - phiSect[0]-phiSect[2] ); 
+    
+    m_adjustedPhi[0]= - phiSect[0];
+    m_adjustedPhiType[0]= 0;
+    m_adjustedPhi[1]= m_adjustedPhi[0]+2*phiSect[0];
+    m_adjustedPhiType[1]= 1;
+    int ic = 1; int is = 0;
+
+    while (ic < 31 ) {
+      ic++; is = 2 - is;
+      m_adjustedPhi[ic]= m_adjustedPhi[ic-1] + 2*phiSect[1] ;
+      m_adjustedPhiType[ic]= is;
+      ic++;
+      m_adjustedPhi[ic]= m_adjustedPhi[ic-1] + 2*phiSect[is] ;
+      m_adjustedPhiType[ic]= 1;
+    }
+    for (unsigned int ic=0;ic<m_adjustedPhi.size();ic++) std::cout<<"adjustedPhi:"<<ic<<","<<m_adjustedPhi[ic]<<","<<m_adjustedPhiType[ic]<< std::endl;
+    */
   }
 
   return;
@@ -1879,6 +1909,7 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   barrelZ1F0.push_back( std::pair<int,double>(0,m_innerBarrelRadius) );
   barrelZ1F0.push_back( std::pair<int,double>(1,5800.) );
   barrelZ1F0.push_back( std::pair<int,double>(1,6500.) );
+  barrelZ1F0.push_back( std::pair<int,double>(1,6750.) );
   barrelZ1F0.push_back( std::pair<int,double>(1,8400.) );
   barrelZ1F0.push_back( std::pair<int,double>(0,8900.) );
   barrelZ1F0.push_back( std::pair<int,double>(1,9100.) );
@@ -1897,12 +1928,18 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   std::vector<std::vector<std::vector<std::pair<int,double> > > >  barrelZF(2);
   barrelZF[0].push_back(barrelZ0F0);
   barrelZF[0].push_back(barrelZ0F1);
+  barrelZF[0].push_back(barrelZ0F1);
   barrelZF[1].push_back(barrelZ1F0);
+  barrelZF[1].push_back(barrelZ1F1);
   barrelZF[1].push_back(barrelZ1F1);
 
   //inner endcap 2x2
   std::vector<std::pair<int,double> >  innerZ0F0;
   innerZ0F0.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
+  //innerZ0F0.push_back( std::pair<int,double>(0,1185.) );
+  innerZ0F0.push_back( std::pair<int,double>(0,1100.) );
+  innerZ0F0.push_back( std::pair<int,double>(0,1650.) );
+  innerZ0F0.push_back( std::pair<int,double>(1,5150.) );
   innerZ0F0.push_back( std::pair<int,double>(1,5300.) );
   innerZ0F0.push_back( std::pair<int,double>(0,6500.) );
   innerZ0F0.push_back( std::pair<int,double>(0,8900.) );
@@ -1910,6 +1947,8 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
 
   std::vector<std::pair<int,double> >  innerZ0F1;
   innerZ0F1.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
+  innerZ0F1.push_back( std::pair<int,double>(0,1185.) );
+  innerZ0F1.push_back( std::pair<int,double>(0,1650.) );
   innerZ0F1.push_back( std::pair<int,double>(1,4700.) );
   innerZ0F1.push_back( std::pair<int,double>(1,5900.) );
   innerZ0F1.push_back( std::pair<int,double>(0,6500.) );
@@ -1917,11 +1956,27 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   innerZ0F1.push_back( std::pair<int,double>(1,10100.) );
   innerZ0F1.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
 
+  std::vector<std::pair<int,double> >  innerZ0F2;
+  innerZ0F2.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
+  innerZ0F2.push_back( std::pair<int,double>(0,1185.) );
+  innerZ0F2.push_back( std::pair<int,double>(0,1650.) );
+  innerZ0F2.push_back( std::pair<int,double>(1,4700.) );
+  innerZ0F2.push_back( std::pair<int,double>(1,5900.) );
+  innerZ0F2.push_back( std::pair<int,double>(0,6500.) );
+  innerZ0F2.push_back( std::pair<int,double>(1,8900.) );
+  innerZ0F2.push_back( std::pair<int,double>(1,10100.) );
+  innerZ0F2.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+
   std::vector<std::pair<int,double> >  innerZ1F0;
   innerZ1F0.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
+  //innerZ1F0.push_back( std::pair<int,double>(0,1185.) );
+  innerZ1F0.push_back( std::pair<int,double>(0,1100.) );
+  innerZ1F0.push_back( std::pair<int,double>(0,1650.) );
+  innerZ1F0.push_back( std::pair<int,double>(1,5150.) );
   innerZ1F0.push_back( std::pair<int,double>(1,5300.) );
   innerZ1F0.push_back( std::pair<int,double>(1,5800.) );
   innerZ1F0.push_back( std::pair<int,double>(1,6500.) );
+  innerZ1F0.push_back( std::pair<int,double>(1,6750.) );
   innerZ1F0.push_back( std::pair<int,double>(1,8400.) );
   innerZ1F0.push_back( std::pair<int,double>(0,8900.) );
   innerZ1F0.push_back( std::pair<int,double>(1,9100.) );
@@ -1929,6 +1984,8 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
 
   std::vector<std::pair<int,double> >  innerZ1F1;
   innerZ1F1.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
+  innerZ1F1.push_back( std::pair<int,double>(0,1185.) );
+  innerZ1F1.push_back( std::pair<int,double>(0,1650.) );
   innerZ1F1.push_back( std::pair<int,double>(1,4700.) );
   innerZ1F1.push_back( std::pair<int,double>(1,6000.) );
   innerZ1F1.push_back( std::pair<int,double>(0,6500.) );
@@ -1937,11 +1994,25 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   innerZ1F1.push_back( std::pair<int,double>(1,10100.) );
   innerZ1F1.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
 
+  std::vector<std::pair<int,double> >  innerZ1F2;
+  innerZ1F2.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
+  innerZ1F2.push_back( std::pair<int,double>(0,1185.) );
+  innerZ1F2.push_back( std::pair<int,double>(0,1650.) );
+  innerZ1F2.push_back( std::pair<int,double>(1,4700.) );
+  innerZ1F2.push_back( std::pair<int,double>(1,6000.) );
+  innerZ1F2.push_back( std::pair<int,double>(0,6500.) );
+  innerZ1F2.push_back( std::pair<int,double>(1,6800.) );
+  innerZ1F2.push_back( std::pair<int,double>(1,8900.) );
+  innerZ1F2.push_back( std::pair<int,double>(1,10100.) );
+  innerZ1F2.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+
   std::vector<std::vector<std::vector<std::pair<int,double> > > >  innerZF(2);
   innerZF[0].push_back(innerZ0F0);
   innerZF[0].push_back(innerZ0F1);
+  innerZF[0].push_back(innerZ0F2);
   innerZF[1].push_back(innerZ1F0);
   innerZF[1].push_back(innerZ1F1);
+  innerZF[1].push_back(innerZ1F2);
 
   // outer 1x1
   std::vector<std::pair<int,double> >  outerZ0F0;
@@ -1975,31 +2046,30 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
 
 void Muon::MuonTrackingGeometryBuilder::getShieldParts() const
 {
-  m_shieldZPart.resize(16);
+  m_shieldZPart.resize(14);
 
   m_shieldZPart[0]=-21900.;      // elm2
   m_shieldZPart[1]=-21500.;      // elm1
   m_shieldZPart[2]=-21000.;      // octogon
   m_shieldZPart[3]=-18000.;      // tube
-  m_shieldZPart[4]= -7869.; 
-  m_shieldZPart[5]= -7169.;      // cone
-  m_shieldZPart[6]= -6829.;      // disk
-  m_shieldZPart[7]= -6779.;       //
+  m_shieldZPart[4]= -7169.;      // cone
+  m_shieldZPart[5]= -6829.;      // disk
+  m_shieldZPart[6]= -6779.;       //
 
-  for (unsigned int i = 8; i<16 ; i++) m_shieldZPart[i] = - m_shieldZPart[15-i];  
+  for (unsigned int i = 7; i<14 ; i++) m_shieldZPart[i] = - m_shieldZPart[13-i];  
 
   m_shieldHPart.clear();
 
   std::vector<std::pair<int,double> >  outerShield;
   outerShield.push_back(std::pair<int,double>(0,m_beamPipeRadius));
+  outerShield.push_back(std::pair<int,double>(0,600.));
   outerShield.push_back(std::pair<int,double>(0,1150.));
   outerShield.push_back(std::pair<int,double>(0,m_outerShieldRadius));
   m_shieldHPart.push_back(outerShield);
 
   std::vector<std::pair<int,double> >  innerShield;
   innerShield.push_back(std::pair<int,double>(0,m_beamPipeRadius));
-  innerShield.push_back(std::pair<int,double>(0,540.));
-  innerShield.push_back(std::pair<int,double>(0,750.));
+  innerShield.push_back(std::pair<int,double>(0,530.));
   innerShield.push_back(std::pair<int,double>(0,m_innerShieldRadius));
   m_shieldHPart.push_back(innerShield);
 
@@ -2007,7 +2077,7 @@ void Muon::MuonTrackingGeometryBuilder::getShieldParts() const
   diskShield.push_back(std::pair<int,double>(0,0.));
   diskShield.push_back(std::pair<int,double>(0,540.));
   diskShield.push_back(std::pair<int,double>(0,750.));
-  diskShield.push_back(std::pair<int,double>(0,2700));
+  diskShield.push_back(std::pair<int,double>(0,2700.));
   diskShield.push_back(std::pair<int,double>(0,m_innerBarrelRadius));
   m_shieldHPart.push_back(diskShield);
 
@@ -2089,11 +2159,14 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
     if (!cs) continue;
     // find material source
     const Trk::MaterialProperties* detMat = (*mIter).first->trackingVolume();
-    //std::cout << "blending:"<<(*mIter).first->name()<< std::endl;
     if ( (*mIter).first->trackingVolume()->confinedDenseVolumes()) detMat = (*(*mIter).first->trackingVolume()->confinedDenseVolumes())[0];
     for (unsigned int ic=0; ic<cs->size(); ic++) {
       const Trk::Volume* nCs = new Trk::Volume(*((*cs)[ic].first),(*mIter).first->trackingVolume()->transform());
-      double csVol = (*cs)[ic].second.first*calculateVolume(nCs);      
+      double fraction = (*cs)[ic].second.second>0 ? 1. : (*cs)[ic].second.first;
+      double csVol = fraction*calculateVolume(nCs);      
+      const Muon::Span* s = findVolumeSpan(&(nCs->volumeBounds()), nCs->transform(), 0.,0.) ;
+      log << MSG::DEBUG << "constituent:"<<ic<<":z:"<< (*s)[0]<<","<<(*s)[1]<<":r:"<< (*s)[4]<<","<<(*s)[5]
+	  <<":phi:"<<(*s)[2]<<","<<(*s)[3]<< endreq;      
       double enVol = 0.;
       // loop over frame volumes, check if confined
       std::vector<const Trk::TrackingVolume*>::iterator fIter = (*mIter).second->begin(); 
@@ -2101,12 +2174,10 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
       fEncl.clear();
       // blending factors can be saved, and not recalculated for each clone
       for ( ; fIter!=(*mIter).second->end(); fIter++) {
-        fEncl.push_back(enclosed(*fIter,nCs));
+        fEncl.push_back(enclosed(*fIter,s));
         if ( fEncl.back() ) enVol += calculateVolume(*fIter);
-        //if ((*cs)[ic].second.second<0. && fEncl.back() ) enVol += calculateVolume(*fIter);
-        //if ((*cs)[ic].second.second<0.)  enVol += calculateVolume(*fIter);
       }
-      delete nCs;
+      delete nCs; delete s;
       // diluting factor
       double dil =  enVol>0. ?  csVol/enVol : 0.;
       //std::cout << "const:dil:"<< ic<<","<<dil<< std::endl;
@@ -2122,3 +2193,150 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
   }
 }
 
+/*
+void Muon::MuonTrackingGeometryBuilder::getPartitionFromMaterial(const Trk::Volume* vol) const
+{
+  MsgStream log(msgSvc(), name());
+
+  // find z/h partitions using material objects (optimize blending)
+  // enclosed inert objects ? 
+  std::vector<const Trk::DetachedTrackingVolume*>* muonIn = getDetachedObjects( vol, 2);
+
+  // retrieve cylinder
+  const Trk::CylinderVolumeBounds* cyl=dynamic_cast<const Trk::CylinderVolumeBounds*> (&(vol->volumeBounds()));
+  if (!cyl) {
+    log << MSG::ERROR << name()<< "volume cylinder boundaries not retrieved, return 0 " << endreq;
+    return; 
+  }
+  // gather span for all constituents
+  std::vector<const Muon::Span*> cspan;
+  std::vector<std::pair<const Trk::Volume*,std::pair<double,double> > >* cs = 0;
+  if (muonIn) {
+    for (unsigned int i=0; i<muonIn->size(); i++) {
+      cs = (*muonIn)[i]->constituents();     
+      if (!cs) continue;
+      for (unsigned int ic=0; ic<cs->size(); ic++) {
+	const Trk::Volume* nCs = new Trk::Volume(*((*cs)[ic].first),(*muonIn)[i]->trackingVolume()->transform());
+	cspan.push_back(findVolumeSpan(&(nCs->volumeBounds()), nCs->transform(), 0.,0.)) ;
+	std::cout << "span:"<<(*muonIn)[i]->name()<<","<<ic<<":z:"<<(*cspan.back())[0]<<","<<(*cspan.back())[1]<<":phi:"<<(*cspan.back())[2]<<","<<
+	  (*cspan.back())[3]<<":R:"<<(*cspan.back())[4]<<","<<(*cspan.back())[5]<<std::endl;
+      }
+    } 
+  }
+    
+  // create vector of zSteps for this volume
+  std::vector<double> zSteps;
+  zSteps.push_back(vol->center().z()-cyl->halflengthZ()); 
+  zSteps.push_back(vol->center().z()+cyl->halflengthZ()); 
+  double tolZ = 20.; 
+
+  std::vector<double> edges;
+  edges.insert(edges.end(),zSteps.begin(),zSteps.end());
+
+  for (unsigned int ic=0; ic<cspan.size(); ic++) {
+    edges.push_back((*(cspan[ic]))[0]);
+    edges.push_back((*(cspan[ic]))[1]);
+  } 
+  // order and remove duplicates  
+  orderEdges(edges);
+  // insert with minimal distance
+  for (unsigned int iz=0;iz<edges.size();iz++) 
+    for (unsigned int is=1;is<zSteps.size();is++)     
+      if (edges[iz]>zSteps[is-1]+tolZ && edges[iz]<zSteps[is]-tolZ) { zSteps.insert(zSteps.begin()+is,edges[iz]); break;}
+ 
+  double tolE =1.; 
+  for (unsigned int iz=0;iz<zSteps.size();iz++) {
+    std::cout << "zStep verification:"<<iz<<","<<zSteps[iz]<< std::endl;
+    if (iz<zSteps.size()-1) {
+      // create phi partition
+      double tolP = 0.01;
+      std::vector<double> pSteps;
+      getPPartitionFromMaterial(pSteps,cspan,tolP,zSteps[iz],zSteps[iz+1],tolE);
+      for (unsigned int i=0;i<pSteps.size();i++) std::cout << "phiStep verification:"<<i<<","<<pSteps[i]<< std::endl;
+      // create h partition
+      double tolR = 20.;
+      std::vector<std::pair<int,double> > hSteps;
+      hSteps.push_back(std::pair<int,double>(0,cyl->innerRadius()));
+      hSteps.push_back(std::pair<int,double>(0,cyl->outerRadius()));
+      getHPartitionFromMaterial(hSteps,cspan,tolR,zSteps[iz],zSteps[iz+1],tolE);
+      for (unsigned int i=0;i<hSteps.size();i++) std::cout << "hStep verification:"<<i<<","<<hSteps[i].second<< std::endl;
+    }
+  }
+  //  Trk::BinUtility1DZZ* zBinUtil = new Trk::BinUtility1DZZ(zSteps);
+
+  return;
+}
+
+void Muon::MuonTrackingGeometryBuilder::orderEdges(std::vector<double>& edges) const 
+{
+  std::vector<double>::iterator iTer = edges.begin();
+  std::vector<double>::iterator iBeg = edges.begin();
+
+  std::cout<< "ordering edges:"<< edges.size()<< std::endl;
+
+  while (iTer!= edges.end()-1) {
+    if ( fabs((*iTer) -(*(iTer+1)))< 0.001 ) { 
+      //std::cout << "erasing:"<< iTer-edges.begin()+1<<" out of "<< edges.size();
+      edges.erase(iTer+1); 
+    } else if ( (*iTer) > (*(iTer+1)) ) {
+      double swp = edges[iTer-iBeg+1];
+      edges[iTer-iBeg+1] = edges[iTer-iBeg] ; edges[iTer-iBeg]= swp; iTer=iBeg;
+    } else iTer++;    
+  } 
+  //for (unsigned i=0; i<edges.size()-1; i++) std::cout << "ordered edges:"<< i<<","<<edges[i]<< std::endl;
+
+}
+
+void Muon::MuonTrackingGeometryBuilder::getHPartitionFromMaterial(std::vector<std::pair<int,double> >& steps, std::vector<const Muon::Span*> sps, double tol, 
+								  double zmin, double zmax, double ztol) const
+{
+
+  MsgStream log(msgSvc(), name());
+
+  if (steps.size()<2) {
+    log << MSG::WARNING << name()<< " input bounds corrupted"<< endreq;
+    return;
+  }
+
+  std::vector<double> edges;
+  edges.push_back(steps[0].second);
+  edges.push_back(steps[1].second);
+
+  for (unsigned int ic=0; ic<sps.size(); ic++) {
+    if ( (*(sps[ic]))[0]<zmax-ztol && (*(sps[ic]))[1]>zmin+ztol ) {
+      edges.push_back((*(sps[ic]))[4]);
+      edges.push_back((*(sps[ic]))[5]);
+    }
+  } 
+  // order and remove duplicates  
+  orderEdges(edges);
+  // insert with minimal distance
+  for (unsigned int ih=0;ih<edges.size();ih++) 
+    for (unsigned int is=1;is<steps.size();is++)     
+      if (edges[ih]>steps[is-1].second+tol && edges[ih]<steps[is].second-tol) { steps.insert(steps.begin()+is,std::pair<int,double>(0,edges[ih])); break;}
+  
+  return;
+}
+
+void Muon::MuonTrackingGeometryBuilder::getPPartitionFromMaterial(std::vector<double>& steps, std::vector<const Muon::Span*> sps, double tol, 
+								  double zmin, double zmax, double ztol) const
+{
+
+  MsgStream log(msgSvc(), name());
+
+  std::vector<double> edges;
+  for (unsigned int ic=0; ic<sps.size(); ic++) {
+    if ( (*(sps[ic]))[0]<zmax-ztol && (*(sps[ic]))[1]>zmin+ztol ) {
+      edges.push_back((*(sps[ic]))[2]);
+      edges.push_back((*(sps[ic]))[3]);
+    }
+  } 
+  // order and remove duplicates  
+  if (edges.size()>2) orderEdges(edges);
+  // insert with minimal distance
+  for (unsigned int is=0;is<edges.size();is++)     
+    steps.push_back(edges[is]);
+  
+  return;
+}
+*/

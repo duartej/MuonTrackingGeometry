@@ -1,3 +1,8 @@
+2009-02-03 Andreas Salzburger < Andreas.Salzburger -at- cern.ch >
+        * switch to new TrkDetFlags
+	* tagged as MuonTrackingGeometry-00-04-16
+       
+
 2009-02-02 Sarka Todorova <sarka.todorova@cern.ch>
 	* adjustable blending
 	* tagged as MuonTrackingGeometry-00-04-15

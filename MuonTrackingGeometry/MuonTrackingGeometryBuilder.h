@@ -144,7 +144,10 @@ namespace Muon {
       bool                                m_blendInertMaterial; 
       mutable double                      m_alignTolerance;
       int                                 m_colorCode;
-
+     
+      std::string                         m_entryVolume;
+      std::string                         m_exitVolume;
+      
       mutable const std::vector<const Trk::DetachedTrackingVolume*>*    m_stations;    // muon chambers 
       mutable const std::vector<const Trk::DetachedTrackingVolume*>*    m_inertObjs;   // muon inert material 
       mutable const std::vector<std::vector<std::pair<const Trk::DetachedTrackingVolume*,const Span*> >* >* m_stationSpan; 

@@ -96,6 +96,8 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_blendInertMaterial(true),
   m_alignTolerance(0.),
   m_colorCode(0),
+  m_entryVolume("MuonSpectrometerEntrance"),
+  m_exitVolume("All::Container::CompleteDetector"),
   m_chronoStatSvc( "ChronoStatSvc", n )
 {
   m_stationSpan = 0;
@@ -125,6 +127,9 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   declareProperty("StaticPartition3D",              m_static3d);
   declareProperty("BlendInertMaterial",             m_blendInertMaterial);
   declareProperty("AlignmentPositionTolerance",     m_alignTolerance);
+  // calo entry volume & exit volume
+  declareProperty("EntryVolumeName",                   m_entryVolume);
+  declareProperty("ExitVolumeName",                    m_exitVolume);  
 }
 
 // destructor
@@ -312,7 +317,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 // if input, redefine dimensions to fit expected MS entry 
   if (tvol){
     bool msEntryDefined = false;
-    if ( tvol->volumeName() == "MuonSpectrometerEntrance" ) msEntryDefined = true; 
+    if ( tvol->volumeName() == m_entryVolume ) msEntryDefined = true; 
     // get dimensions
     const Trk::CylinderVolumeBounds* enclosedDetectorBounds 
       = dynamic_cast<const Trk::CylinderVolumeBounds*>(&(tvol->volumeBounds()));
@@ -409,7 +414,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 											       *barrelZPBuffer,Trk::negativeFaceXY, 
 											       "All::Gaps::BarrelZP");    
         // set name
-	std::string nameEncl = msEntryDefined ? "All::Gaps::Barrel" : "MuonSpectrometerEntrance" ;
+	std::string nameEncl = msEntryDefined ? "All::Gaps::Barrel" : m_entryVolume ;
 	enclosed = m_trackingVolumeHelper->glueTrackingVolumeArrays(*barrelZP, Trk::negativeFaceXY,
 								    *barrelZMBuffer,Trk::positiveFaceXY, 
 								    nameEncl);    
@@ -440,7 +445,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 				       m_muonMaterial,
 				       m_muonMagneticField,
 				       dummyLayers,dummyVolumes,
-				       "MuonSpectrometerEntrance", bcorr);
+				       m_entryVolume, bcorr);
     enclosed->registerColorCode(0); 
   }
   
@@ -625,7 +630,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 									                "All::Container::NegDet");  
    const Trk::TrackingVolume* detector = m_trackingVolumeHelper->glueTrackingVolumeArrays(*posEndcap, Trk::negativeFaceXY, 
 											  *negDet, Trk::positiveFaceXY,
-											  "All::Container::CompleteDetector");
+											  m_exitVolume);
 //
    Trk::TrackingGeometry* trackingGeometry = new Trk::TrackingGeometry(detector,Trk::globalSearch);
 

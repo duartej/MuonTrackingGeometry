@@ -10,9 +10,12 @@ from MuonTrackingGeometry.MuonTrackingGeometryConf import Muon__MuonInertMateria
 MuonInertMaterialBuilder= Muon__MuonInertMaterialBuilder(name = 'MuonInertMaterialBuilder')
 ToolSvc += MuonInertMaterialBuilder 
 
+from TrkDetDescrSvc.TrkDetDescrJobProperties import TrkDetFlags
 # muon tracking geometry builder
 from MuonTrackingGeometry.MuonTrackingGeometryConf import Muon__MuonTrackingGeometryBuilder
 MuonTrackingGeometryBuilder= Muon__MuonTrackingGeometryBuilder(name = 'MuonTrackingGeometryBuilder')
+MuonTrackingGeometryBuilder.EntryVolumeName = TrkDetFlags.MuonSystemEntryVolumeName.get_Value()
+MuonTrackingGeometryBuilder.ExitVolumeName  = TrkDetFlags.MuonSystemContainerName.get_Value()
 ToolSvc += MuonTrackingGeometryBuilder
 
 print MuonTrackingGeometryBuilder

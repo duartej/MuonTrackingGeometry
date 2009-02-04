@@ -1,3 +1,7 @@
+2009-02-04 Sarka Todorova <sarka.todorova@cern.ch>
+	* update steering
+	* tagged as MuonTrackingGeometry-00-04-17
+
 2009-02-03 Andreas Salzburger < Andreas.Salzburger -at- cern.ch >
         * switch to new TrkDetFlags
 	* tagged as MuonTrackingGeometry-00-04-16

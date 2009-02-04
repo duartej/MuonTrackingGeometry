@@ -86,12 +86,6 @@ namespace Muon {
       void getHParts() const;
       /** Private method to retrieve shield partition */
       void getShieldParts() const; 
-      //void getPartitionFromMaterial(const Trk::Volume*) const; 
-      //void getPPartitionFromMaterial(std::vector<double>& steps, std::vector<const Muon::Span*> sps, double tol, 
-      //				     double zmin, double zmax, double ztol) const;
-      //void getHPartitionFromMaterial(std::vector<std::pair<int,double> >& steps, std::vector<const Muon::Span*> sps, double tol, 
-      //				     double zmin, double zmax, double ztol) const;
-      //void orderEdges(std::vector<double>& edges) const; 
       /** Private method to calculate volume */
       double calculateVolume(const Trk::Volume*) const;
       /** Private method to blend the inert material */
@@ -125,6 +119,7 @@ namespace Muon {
       double                              m_outerEndcapZ;             //!< maximal extend in z of the outer part of muon endcap
       double                              m_bigWheel;                 //!< maximal extend in z of the big wheel
       double                              m_outerWheel;               //!< minimal extend in z of the outer wheel (EO)
+      double                              m_ectZ;                     //!< minimal extent in z of the ECT
       double                              m_beamPipeRadius;
       double                              m_innerShieldRadius;
       double                              m_outerShieldRadius;
@@ -144,6 +139,8 @@ namespace Muon {
       bool                                m_blendInertMaterial; 
       mutable double                      m_alignTolerance;
       int                                 m_colorCode;
+      mutable int                         m_activeAdjustLevel;
+      mutable int                         m_inertAdjustLevel;
      
       std::string                         m_entryVolume;
       std::string                         m_exitVolume;

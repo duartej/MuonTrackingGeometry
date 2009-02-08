@@ -328,7 +328,7 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
     const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* mObjects = new std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >(objs);
 
     int count = 0;
-    double massEstimate = 0.;
+    //double massEstimate = 0.;
     for (unsigned int i=0;i<mObjects->size();i++) {        
        for (unsigned int j=0;j<(*mObjects)[i].second.size();j++) 
        	 log << MSG::DEBUG << j<< "th  position at "<<((*mObjects)[i].second)[j].getTranslation()<<","<<((*mObjects)[i].second)[j].getRotation()<< endreq;      

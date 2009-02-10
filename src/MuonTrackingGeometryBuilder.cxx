@@ -1250,9 +1250,6 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
       hBinUtil.push_back(phBinUtil);
     }
 
-    // subvolume boundaries
-    Trk::VolumeBounds* subBds=0;
-
     // create subvolumes & BinnedArray
     std::vector<Trk::TrackingVolumeOrderPosition>  subVolumesVect;
     std::vector<std::vector<std::vector<const Trk::TrackingVolume*> > > subVolumes;
@@ -1268,6 +1265,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
       std::vector<std::vector<const Trk::TrackingVolume*> > phiSubs;
       std::vector<Trk::SharedObject<Trk::BinnedArray<Trk::TrackingVolume> > >  phBins;
       std::vector<int> phiType(phiTypeMax+1,-1);        // indication of first phi/R partition built for a given type (for cloning)
+      std::vector<std::vector<Trk::Volume*> > garbVol(phiTypeMax+1);
       for (unsigned int phi = 0; phi < phiN; phi++) {
 	if (colorCode>0) colorCode = 26 -colorCode;
 	double posPhi = 0.5*m_adjustedPhi[phi];
@@ -1288,7 +1286,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         for (unsigned int h = 0; h < hSteps.size()-1; h++) {
 	  hCode = colorCode>0 ? 1 - hCode : 0; 
           // similar volume may exist already
-	  Trk::Volume subVol;
+	  Trk::Volume* subVol=0;
 	  HepTransform3D* transf = new HepTransform3D(HepRotateZ3D(posPhi)*HepTranslateZ3D(posZ));
           //
           int volType = 0;     // cylinder 
@@ -1297,32 +1295,34 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
           if ( hSteps[h].first == 1 && hSteps[h+1].first == 1 ) volType = 3;  
 	  // define subvolume
           if (phiP>-1 ) {
-            subVol = Trk::Volume(*(phiSubs[phiP][h]),(*transf)*phiSubs[phiP][h]->transform().inverse());
+            subVol =new Trk::Volume(*(phiSubs[phiP][h]),(*transf)*phiSubs[phiP][h]->transform().inverse());
 	  } else if ( phiSect<0.5*M_PI) {
-	    subBds = new Trk::BevelledCylinderVolumeBounds(hSteps[h].second,
+	    Trk::BevelledCylinderVolumeBounds* subBds = new Trk::BevelledCylinderVolumeBounds(hSteps[h].second,
 							   hSteps[h+1].second,
 							   phiSect, 
 							   hZ,
 							   volType);
-	    subVol = Trk::Volume(transf, subBds);
+	    subVol = new Trk::Volume(transf, subBds);
 	  } else {
-	    subBds = new Trk::CylinderVolumeBounds(hSteps[h].second,
+	    Trk::CylinderVolumeBounds* subBds = new Trk::CylinderVolumeBounds(hSteps[h].second,
 						   hSteps[h+1].second,
 						   phiSect, 
 						   hZ);
-	    subVol = Trk::Volume(transf, subBds);
+	    subVol = new Trk::Volume(transf, subBds);
 	  }
        
 	  // enclosed muon objects ? also adjusts material properties in case of material blend  
 	  std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) +MuonGM::buildString(h,2) ; 
-	  std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( &subVol);
+	  std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol);
 
-	  const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( subVol,
+	  const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( *subVol,
 								     m_muonMaterial,
 								     m_muonMagneticField,
 								     detVols,
 								     volName );
-                                                                                                                          
+                                                                      
+          if (phiP>-1) delete subVol;
+          else garbVol[m_adjustedPhiType[phi]].push_back(subVol);       // don't delete before cloned                                             
 	  // prepare blending
 	  if (m_blendInertMaterial && detVols) {
 	    for (unsigned int id=0;id<detVols->size();id++) {
@@ -1394,6 +1394,9 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
       }
       subVolumes.push_back(phiSubs);
       hBins.push_back(phBins);
+      // get rid of the garbage
+      for (unsigned int j=0;j<garbVol.size();j++)
+	for (unsigned int jj=0;jj<garbVol[j].size();jj++) delete garbVol[j][jj];
     }
 
     Trk::BinUtility3DZFH* volBinUtil=new Trk::BinUtility3DZFH(zBinUtil,pBinUtil,hBinUtil,new HepTransform3D(vol->transform()));

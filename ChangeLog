@@ -1,3 +1,7 @@
+2009-02-10 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix segm.fault (cloning of frame volumes) 
+	* tagged as MuonTrackingGeometry-00-04-20
+
 2009-02-09 Sarka Todorova <sarka.todorova@cern.ch>
 	* update (BT,ECT,feet adjustment) 
 	* tagged as MuonTrackingGeometry-00-04-19

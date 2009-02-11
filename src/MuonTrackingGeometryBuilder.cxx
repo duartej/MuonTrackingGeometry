@@ -1906,9 +1906,13 @@ void Muon::MuonTrackingGeometryBuilder::checkVolume(const Trk::TrackingVolume* v
 
 void Muon::MuonTrackingGeometryBuilder::getZParts() const
 {
-  // for updates:
-  // TGC 13270-13346-13421.5-(13430-13440)-13448.5-13525-13531
-
+  // activeAdjustLevel:  1: separate MDT stations
+  //                        +(inertLevel=0) barrel Z partition
+  //                     2: split TGC
+  //                        +(inertLevel=0) barrel R partition
+  //                     3: split TGC supports
+  // inertAdjustLevel:   1: BT,ECT     
+ 
   // hardcode for the moment
   m_zPartitions.clear();
   m_zPartitionsType.clear();
@@ -1958,9 +1962,9 @@ void Muon::MuonTrackingGeometryBuilder::getZParts() const
   if (m_activeAdjustLevel>2) { m_zPartitions.push_back(-6978.); m_zPartitionsType.push_back(0); }   // TGC
 
   // barrel
-  m_zPartitions.push_back(-m_diskShieldZ);   m_zPartitionsType.push_back(2);   // disk 
+  m_zPartitions.push_back(-m_diskShieldZ);   m_zPartitionsType.push_back(0);   // disk 
   if (m_inertAdjustLevel>0) { m_zPartitions.push_back(-6829.);  m_zPartitionsType.push_back(0); }   // back disk 
-  if (m_inertAdjustLevel>1) { m_zPartitions.push_back(-6600.);  m_zPartitionsType.push_back(0); }   // ect
+  if (m_inertAdjustLevel>1) { m_zPartitions.push_back(-6600.);  m_zPartitionsType.push_back(0); }   // 
   if (m_activeAdjustLevel>0){ m_zPartitions.push_back(-6100.);  m_zPartitionsType.push_back(0); }  
   if (m_inertAdjustLevel>0) { m_zPartitions.push_back(-5503.);  m_zPartitionsType.push_back(1); }   // BT 
   if (m_inertAdjustLevel>0) { m_zPartitions.push_back(-4772.);  m_zPartitionsType.push_back(0); }   //  
@@ -2059,12 +2063,12 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   // hardcode for the moment
   m_hPartitions.clear();              // barrel, inner endcap, outer endcap
 
-  // 0: barrel 3x2
+  // 0: barrel 2x2
   // non BT sector
   std::vector<std::pair<int,double> >  barrelZ0F0;
   barrelZ0F0.push_back( std::pair<int,double>(0,m_innerBarrelRadius) );
-  //barrelZ0F0.push_back( std::pair<int,double>(0,4450.) );                // for DiskShieldingBackDisk
   if (m_activeAdjustLevel>0) {
+    barrelZ0F0.push_back( std::pair<int,double>(0,4450.) );                // for DiskShieldingBackDisk
     barrelZ0F0.push_back( std::pair<int,double>(0,6500.) );                // BI/BM
     barrelZ0F0.push_back( std::pair<int,double>(0,8900.) );                // BM/BO
   }
@@ -2072,25 +2076,25 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
 
   std::vector<std::pair<int,double> >  barrelZ0F1;
   barrelZ0F1.push_back( std::pair<int,double>(0,m_innerBarrelRadius) );
-  //barrelZ0F1.push_back( std::pair<int,double>(0,4450.) );                // for DiskShieldingBackDisk
   if (m_inertAdjustLevel>0) {
-    barrelZ0F1.push_back( std::pair<int,double>(1,4700.) );
+    barrelZ0F1.push_back( std::pair<int,double>(1,4500.) );
     barrelZ0F1.push_back( std::pair<int,double>(1,5900.) );
-  }
+  } else if (m_activeAdjustLevel>0) barrelZ0F1.push_back( std::pair<int,double>(0,4450.) );                
   if (m_activeAdjustLevel>0) barrelZ0F1.push_back( std::pair<int,double>(0,6500.) );
-  if (m_inertAdjustLevel>0) {
-    barrelZ0F1.push_back( std::pair<int,double>(1,8900.) );
-    barrelZ0F1.push_back( std::pair<int,double>(1,10100.) );
-  }
+  if (m_inertAdjustLevel>0)  barrelZ0F1.push_back( std::pair<int,double>(1,8900.) );
+  else if (m_activeAdjustLevel>0)  barrelZ0F1.push_back( std::pair<int,double>(0,8900.) );
+  if (m_inertAdjustLevel>0)  barrelZ0F1.push_back( std::pair<int,double>(1,10100.) );
   barrelZ0F1.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
 
   // BT sector
   std::vector<std::pair<int,double> >  barrelZ1F0;
   barrelZ1F0.push_back( std::pair<int,double>(0,m_innerBarrelRadius) );
-  //barrelZ1F0.push_back( std::pair<int,double>(0,4450.) );                // for DiskShieldingBackDisk
+  if (m_activeAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,double>(0,4450.) );                
   if (m_inertAdjustLevel>0) {
     barrelZ1F0.push_back( std::pair<int,double>(1,5800.) );
     barrelZ1F0.push_back( std::pair<int,double>(1,6500.) );
+  } else if (m_activeAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,double>(0,6500.) );
+  if (m_inertAdjustLevel>0) {
     barrelZ1F0.push_back( std::pair<int,double>(1,6750.) );
     barrelZ1F0.push_back( std::pair<int,double>(1,8400.) );
   }
@@ -2100,44 +2104,23 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
 
   std::vector<std::pair<int,double> >  barrelZ1F1;
   barrelZ1F1.push_back( std::pair<int,double>(0,m_innerBarrelRadius) );
-  //barrelZ1F1.push_back( std::pair<int,double>(0,4450.) );                // for DiskShieldingBackDisk
   if (m_inertAdjustLevel>0) {
-    barrelZ1F1.push_back( std::pair<int,double>(1,4700.) );
+    barrelZ1F1.push_back( std::pair<int,double>(1,4500.) );
     barrelZ1F1.push_back( std::pair<int,double>(1,6000.) );
-  }
+  } else if (m_activeAdjustLevel>0) barrelZ1F1.push_back( std::pair<int,double>(0,4450.) );
   if (m_activeAdjustLevel>0) barrelZ1F1.push_back( std::pair<int,double>(0,6500.) );
   if (m_inertAdjustLevel>0) barrelZ1F1.push_back( std::pair<int,double>(1,6800.) );
-  if (m_activeAdjustLevel>0 || m_inertAdjustLevel>0) barrelZ1F1.push_back( std::pair<int,double>(1,8900.) );
-  if (m_inertAdjustLevel>0) barrelZ1F1.push_back( std::pair<int,double>(1,10100.) );
+  if (m_inertAdjustLevel>0) {
+    barrelZ1F1.push_back( std::pair<int,double>(1,8900.) );
+    barrelZ1F1.push_back( std::pair<int,double>(1,10100.) );
+  } else if (m_activeAdjustLevel>0) barrelZ1F1.push_back( std::pair<int,double>(0,8900.) );
   barrelZ1F1.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
 
-  // non BT border region
-  std::vector<std::pair<int,double> >  barrelZ2F0;
-  barrelZ2F0.push_back( std::pair<int,double>(0,m_innerBarrelRadius) );
-  barrelZ2F0.push_back( std::pair<int,double>(0,4450.) );                // for DiskShieldingBackDisk
-  if (m_activeAdjustLevel>0) {
-    barrelZ2F0.push_back( std::pair<int,double>(0,6500.) );                // for active
-    barrelZ2F0.push_back( std::pair<int,double>(0,8900.) );                // for active
-  }
-  barrelZ2F0.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
-
-  std::vector<std::pair<int,double> >  barrelZ2F1;
-  barrelZ2F1.push_back( std::pair<int,double>(0,m_innerBarrelRadius) );
-  barrelZ2F1.push_back( std::pair<int,double>(0,4450.) );                // for DiskShieldingBackDisk
-  //barrelZ2F1.push_back( std::pair<int,double>(1,4700.) );
-  if (m_inertAdjustLevel>0) barrelZ2F1.push_back( std::pair<int,double>(1,5900.) );
-  if (m_activeAdjustLevel>0) barrelZ2F1.push_back( std::pair<int,double>(0,6500.) );
-  if (m_activeAdjustLevel>0 || m_inertAdjustLevel>0) barrelZ2F1.push_back( std::pair<int,double>(1,8900.) );
-  if (m_inertAdjustLevel>0) barrelZ2F1.push_back( std::pair<int,double>(1,10100.) );
-  barrelZ2F1.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
-
-  std::vector<std::vector<std::vector<std::pair<int,double> > > >  barrelZF(3);
+  std::vector<std::vector<std::vector<std::pair<int,double> > > >  barrelZF(2);
   barrelZF[0].push_back(barrelZ0F0);
   barrelZF[0].push_back(barrelZ0F1);
   barrelZF[1].push_back(barrelZ1F0);
   barrelZF[1].push_back(barrelZ1F1);
-  barrelZF[2].push_back(barrelZ2F0);
-  barrelZF[2].push_back(barrelZ2F1);
 
   // small wheel 1x2 ( no z BT sector) 
   // non BT sector
@@ -2165,7 +2148,7 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   if (m_inertAdjustLevel>0) {
     swZ0F1.push_back( std::pair<int,double>(1,8900.) );
     swZ0F1.push_back( std::pair<int,double>(1,10100.) );
-  }
+  } else if (m_activeAdjustLevel>0) swZ0F1.push_back( std::pair<int,double>(0,8900.) );
   swZ0F1.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
 
   std::vector<std::vector<std::vector<std::pair<int,double> > > >  swZF(1);
@@ -2176,12 +2159,9 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   // ect coil, non-BT z
   std::vector<std::pair<int,double> >  innerZ0F0;
   innerZ0F0.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
-  //innerZ0F0.push_back( std::pair<int,double>(0,1185.) );
-  if (m_inertAdjustLevel>0) {
-    innerZ0F0.push_back( std::pair<int,double>(0,1100.) );
-  }
-  innerZ0F0.push_back( std::pair<int,double>(1,5150.) );
-  innerZ0F0.push_back( std::pair<int,double>(1,5300.) );
+  if (m_inertAdjustLevel>0) innerZ0F0.push_back( std::pair<int,double>(0,1100.) );
+  if (m_inertAdjustLevel>1) innerZ0F0.push_back( std::pair<int,double>(1,5150.) );
+  if (m_inertAdjustLevel>0) innerZ0F0.push_back( std::pair<int,double>(1,5300.) );
   if (m_activeAdjustLevel>0) {
     innerZ0F0.push_back( std::pair<int,double>(0,6500.) );
     innerZ0F0.push_back( std::pair<int,double>(0,8900.) );
@@ -2191,13 +2171,15 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   // coil gap, non-BT z
   std::vector<std::pair<int,double> >  innerZ0F1;
   innerZ0F1.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
-  if (m_inertAdjustLevel>0) {
-    innerZ0F1.push_back( std::pair<int,double>(0,1100.) );
+  if (m_inertAdjustLevel>0) innerZ0F1.push_back( std::pair<int,double>(0,1100.) );
+  if (m_inertAdjustLevel>1) {
     innerZ0F1.push_back( std::pair<int,double>(1,1400.) );
     innerZ0F1.push_back( std::pair<int,double>(1,1685.) );
   }
-  innerZ0F1.push_back( std::pair<int,double>(1,4700.) );
-  innerZ0F1.push_back( std::pair<int,double>(1,5900.) );
+  if (m_inertAdjustLevel>0) {
+    innerZ0F1.push_back( std::pair<int,double>(1,4700.) );
+    innerZ0F1.push_back( std::pair<int,double>(1,5900.) );
+  }
   if (m_activeAdjustLevel>0) {
     innerZ0F1.push_back( std::pair<int,double>(0,6500.) );
     innerZ0F1.push_back( std::pair<int,double>(0,8900.) );
@@ -2207,67 +2189,74 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   // BT coil, no-BT z 
   std::vector<std::pair<int,double> >  innerZ0F2;
   innerZ0F2.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
-  if (m_inertAdjustLevel>0) {
-    innerZ0F2.push_back( std::pair<int,double>(0,1100.) );
+  if (m_inertAdjustLevel>0) innerZ0F2.push_back( std::pair<int,double>(0,1100.) );
+  if (m_inertAdjustLevel>1) {
     innerZ0F2.push_back( std::pair<int,double>(1,1400.) );
     innerZ0F2.push_back( std::pair<int,double>(1,1685.) );
   }
-  innerZ0F2.push_back( std::pair<int,double>(1,4700.) );
-  innerZ0F2.push_back( std::pair<int,double>(1,5900.) );
+  if (m_inertAdjustLevel>0) {
+    innerZ0F2.push_back( std::pair<int,double>(1,4700.) );
+    innerZ0F2.push_back( std::pair<int,double>(1,5900.) );
+  }
   if (m_activeAdjustLevel>0) innerZ0F2.push_back( std::pair<int,double>(0,6500.) );
-  innerZ0F2.push_back( std::pair<int,double>(1,8900.) );
-  if (m_inertAdjustLevel>0) innerZ0F2.push_back( std::pair<int,double>(1,10100.) );
+  if (m_inertAdjustLevel>0) {
+    innerZ0F2.push_back( std::pair<int,double>(1,8900.) );
+    innerZ0F2.push_back( std::pair<int,double>(1,10100.) );
+  } else if (m_activeAdjustLevel>0) innerZ0F2.push_back( std::pair<int,double>(0,8900.) );
   innerZ0F2.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
 
   // ect coil, z BT sector
   std::vector<std::pair<int,double> >  innerZ1F0;
   innerZ1F0.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
-  //innerZ1F0.push_back( std::pair<int,double>(0,1185.) );
-  if (m_inertAdjustLevel>0) {
-    innerZ1F0.push_back( std::pair<int,double>(0,1100.) );
-  }
-  innerZ1F0.push_back( std::pair<int,double>(1,5150.) );
-  innerZ1F0.push_back( std::pair<int,double>(1,5300.) );
+  if (m_inertAdjustLevel>0) innerZ1F0.push_back( std::pair<int,double>(0,1100.) );
+  if (m_inertAdjustLevel>1) innerZ1F0.push_back( std::pair<int,double>(1,5150.) );
+  if (m_inertAdjustLevel>0) innerZ1F0.push_back( std::pair<int,double>(1,5300.) );
   if (m_inertAdjustLevel>0) innerZ1F0.push_back( std::pair<int,double>(1,5800.) );
-  innerZ1F0.push_back( std::pair<int,double>(1,6500.) );
   if (m_inertAdjustLevel>0) innerZ1F0.push_back( std::pair<int,double>(1,6750.) );
-  if (m_inertAdjustLevel>0) innerZ1F0.push_back( std::pair<int,double>(1,8400.) );
-  innerZ1F0.push_back( std::pair<int,double>(0,8900.) );
-  if (m_inertAdjustLevel>0) innerZ1F0.push_back( std::pair<int,double>(1,9600.) );
+  else if (m_activeAdjustLevel>0) innerZ1F0.push_back( std::pair<int,double>(0,6500.) );
+  if (m_inertAdjustLevel>0) {
+    innerZ1F0.push_back( std::pair<int,double>(1,8400.) );
+    innerZ1F0.push_back( std::pair<int,double>(1,9600.) );
+  } else if (m_activeAdjustLevel>0) innerZ1F0.push_back( std::pair<int,double>(0,8900.) );
   innerZ1F0.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
 
   // coil gap, BT z sector
   std::vector<std::pair<int,double> >  innerZ1F1;
   innerZ1F1.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
-  if (m_inertAdjustLevel>0) {
-    innerZ1F1.push_back( std::pair<int,double>(0,1100.) );
+  if (m_inertAdjustLevel>0)  innerZ1F1.push_back( std::pair<int,double>(0,1100.) );
+  if (m_inertAdjustLevel>1) {
     innerZ1F1.push_back( std::pair<int,double>(1,1400.) );
     innerZ1F1.push_back( std::pair<int,double>(1,1685.) );
   }
-  innerZ1F1.push_back( std::pair<int,double>(1,4700.) );
-  if (m_inertAdjustLevel>0) innerZ1F1.push_back( std::pair<int,double>(1,5800.) );
-  if (m_activeAdjustLevel>0) innerZ1F1.push_back( std::pair<int,double>(0,6500.) );
-  if (m_inertAdjustLevel>0) innerZ1F1.push_back( std::pair<int,double>(1,6750.) );
-  if (m_inertAdjustLevel>0) innerZ1F1.push_back( std::pair<int,double>(1,8400.) );
-  if (m_activeAdjustLevel>0) innerZ1F1.push_back( std::pair<int,double>(0,8900.) );
-  if (m_inertAdjustLevel>0) innerZ1F1.push_back( std::pair<int,double>(1,9600.) );
+  if (m_inertAdjustLevel>0) {
+    innerZ1F1.push_back( std::pair<int,double>(1,4700.) );
+    innerZ1F1.push_back( std::pair<int,double>(1,5800.) );
+    innerZ1F1.push_back( std::pair<int,double>(1,6750.) );
+  } else if (m_activeAdjustLevel>0) innerZ1F1.push_back( std::pair<int,double>(0,6500.) );
+  if (m_inertAdjustLevel>0) {
+    innerZ1F1.push_back( std::pair<int,double>(1,8400.) );
+    innerZ1F1.push_back( std::pair<int,double>(1,9600.) );
+  } else if (m_activeAdjustLevel>0) innerZ1F1.push_back( std::pair<int,double>(0,8900.) );
   innerZ1F1.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
 
   // BT coil, BT z sector
   std::vector<std::pair<int,double> >  innerZ1F2;
   innerZ1F2.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
-  if (m_inertAdjustLevel>0) {
-    innerZ1F2.push_back( std::pair<int,double>(0,1100.) );
+  if (m_inertAdjustLevel>0) innerZ1F2.push_back( std::pair<int,double>(0,1100.) );
+  if (m_inertAdjustLevel>1) {
     innerZ1F2.push_back( std::pair<int,double>(1,1400.) );
     innerZ1F2.push_back( std::pair<int,double>(1,1685.) );
     innerZ1F2.push_back( std::pair<int,double>(1,4000.) );    // limit leaking Cryo
+  }
+  if (m_inertAdjustLevel>0) {
     innerZ1F2.push_back( std::pair<int,double>(1,4700.) );
     innerZ1F2.push_back( std::pair<int,double>(1,5900.) );
-  }
-  innerZ1F2.push_back( std::pair<int,double>(0,6500.) );
-  innerZ1F2.push_back( std::pair<int,double>(1,6800.) );
-  innerZ1F2.push_back( std::pair<int,double>(1,8900.) );
-  innerZ1F2.push_back( std::pair<int,double>(1,10100.) );
+    innerZ1F2.push_back( std::pair<int,double>(1,6800.) );
+  } else if (m_activeAdjustLevel>0) innerZ1F2.push_back( std::pair<int,double>(0,6500.) );
+  if (m_inertAdjustLevel>0) {
+    innerZ1F2.push_back( std::pair<int,double>(1,8900.) );
+    innerZ1F2.push_back( std::pair<int,double>(1,10100.) );
+  } else if (m_activeAdjustLevel>0) innerZ1F2.push_back( std::pair<int,double>(0,8900.) );
   innerZ1F2.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
 
   std::vector<std::vector<std::vector<std::pair<int,double> > > >  innerZF(2);

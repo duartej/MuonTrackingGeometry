@@ -82,11 +82,11 @@ namespace Muon {
       const Trk::LayerArray* processTGCComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, HepTransform3D*&) const;
       const Trk::Layer* createLayerRepresentation(const Trk::TrackingVolume* trVol) const; 
    
-      const void printChildren(const GeoVPhysVol*) const ;
+      void printChildren(const GeoVPhysVol*) const ;
   private:
-      const double get_x_size(const GeoVPhysVol*) const ;
-      const double decodeX(const GeoShape*) const ;
-      const double getVolume(const GeoShape*) const;
+      double get_x_size(const GeoVPhysVol*) const ;
+      double decodeX(const GeoShape*) const ;
+      double getVolume(const GeoShape*) const;
       Trk::ExtendedMaterialProperties* getAveragedLayerMaterial(const GeoVPhysVol*,double,double) const;
       void collectMaterial(const GeoVPhysVol*,Trk::ExtendedMaterialProperties*& ,double) const;
       Trk::ExtendedMaterialProperties collectStationMaterial(const Trk::TrackingVolume* trVol,double) const; 

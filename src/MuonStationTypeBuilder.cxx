@@ -1688,7 +1688,7 @@ std::vector<const Trk::TrackingVolume*> Muon::MuonStationTypeBuilder::processTgc
 
 }
 
-const void Muon::MuonStationTypeBuilder::printChildren(const GeoVPhysVol* pv) const
+void Muon::MuonStationTypeBuilder::printChildren(const GeoVPhysVol* pv) const
 {
   // subcomponents
   unsigned int nc = pv->getNChildVols();
@@ -1733,7 +1733,7 @@ const void Muon::MuonStationTypeBuilder::printChildren(const GeoVPhysVol* pv) co
 
 }
 
-const double Muon::MuonStationTypeBuilder::get_x_size(const GeoVPhysVol* pv) const
+double Muon::MuonStationTypeBuilder::get_x_size(const GeoVPhysVol* pv) const
 {
   double xlow = 0;
   double xup  = 0; 
@@ -1849,7 +1849,7 @@ Trk::ExtendedMaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerM
   }
 }
 
-const double Muon::MuonStationTypeBuilder::getVolume( const GeoShape* shape) const {
+double Muon::MuonStationTypeBuilder::getVolume( const GeoShape* shape) const {
   //
   double volume = 0.;
   
@@ -2297,7 +2297,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processTGCComponent(const G
 
 } 
 
-const double Muon::MuonStationTypeBuilder::decodeX(const GeoShape* sh) const 
+double Muon::MuonStationTypeBuilder::decodeX(const GeoShape* sh) const 
 {
   double xHalf = 0;
 

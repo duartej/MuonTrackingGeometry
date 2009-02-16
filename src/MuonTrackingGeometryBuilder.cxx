@@ -1259,15 +1259,16 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     std::vector<const Trk::TrackingVolume*> sVolsNeg;             // for gluing
     std::vector<const Trk::TrackingVolume*> sVolsPos;             // for gluing
     for (unsigned int eta = 0; eta < zSteps.size()-1; eta++) {
-      if (colorCode>0) colorCode = 26 -colorCode;
+      if (colorCode>0) colorCode = 6 -colorCode;
       double posZ = 0.5*(zSteps[eta] + zSteps[eta+1]) ;
       double   hZ = 0.5*fabs(zSteps[eta+1] - zSteps[eta]) ;
       std::vector<std::vector<const Trk::TrackingVolume*> > phiSubs;
       std::vector<Trk::SharedObject<Trk::BinnedArray<Trk::TrackingVolume> > >  phBins;
       std::vector<int> phiType(phiTypeMax+1,-1);        // indication of first phi/R partition built for a given type (for cloning)
       std::vector<std::vector<Trk::Volume*> > garbVol(phiTypeMax+1);
+      unsigned int pCode = 1; 
       for (unsigned int phi = 0; phi < phiN; phi++) {
-	if (colorCode>0) colorCode = 26 -colorCode;
+	pCode = (colorCode>0) ? 3-pCode : 0;
 	double posPhi = 0.5*m_adjustedPhi[phi];
 	double phiSect = 0.;
         if (phi<phiN-1) {
@@ -1335,7 +1336,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	    }
 	  }  
           //
-          sVol->registerColorCode(colorCode+hCode);
+          sVol->registerColorCode(colorCode+pCode+hCode);
 	  // reference position 
 	  HepPoint3D gp(0.5*(hSteps[h].second+hSteps[h+1].second),0.,0.);
 	  subVolumesVect.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, false),
@@ -2441,7 +2442,7 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
       //std::cout << "const:dil:"<< ic<<","<<dil<< std::endl;
       if (dil>0.) { 
 	for ( fIter=(*mIter).second->begin(); fIter!=(*mIter).second->end(); fIter++) { 
-	  if (fEncl[fIter-(*mIter).second->begin()]) { (*fIter)->addMaterial(*detMat,dil); (*fIter)->registerColorCode(12) ; 
+	  if (fEncl[fIter-(*mIter).second->begin()]) { (*fIter)->addMaterial(*detMat,dil); if (m_colorCode==0) (*fIter)->registerColorCode(12) ; 
 	  log << MSG::DEBUG << (*fIter)->volumeName()<<" acquires material from "<<  (*mIter).first->name()<< endreq;  }
 	}
 	log << MSG::DEBUG << "diluting factor:"<< dil<<" for "<< (*mIter).first->name()<<","<<ic<<endreq;

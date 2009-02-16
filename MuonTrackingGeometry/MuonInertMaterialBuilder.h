@@ -80,8 +80,8 @@ namespace Muon {
       /** Method extracting material objects from GeoModel tree */
       void getObjsForTranslation(const GeoVPhysVol* pv,HepTransform3D , std::vector<std::pair<const GeoLogVol*,std::vector<HepTransform3D> > >& vols ) const;
       /** Dump from GeoModel tree  */
-      const void printInfo(const GeoVPhysVol* pv) const;
-      const void printChildren(const GeoVPhysVol* pv) const;
+      void printInfo(const GeoVPhysVol* pv) const;
+      void printChildren(const GeoVPhysVol* pv) const;
       /** Simplification of GeoModel object + envelope */
       const Trk::TrackingVolume* simplifyShape(const Trk::TrackingVolume* tr) const;
       /** Envelope creation & material fraction calculation */

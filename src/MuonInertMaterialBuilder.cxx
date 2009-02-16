@@ -356,7 +356,7 @@ StatusCode Muon::MuonInertMaterialBuilder::finalize()
 }
 //
 
-const void Muon::MuonInertMaterialBuilder::printInfo(const GeoVPhysVol* pv) const
+void Muon::MuonInertMaterialBuilder::printInfo(const GeoVPhysVol* pv) const
 {
   const GeoLogVol* lv = pv->getLogVol();
   std::cout << "New Muon Inert Object:"<<lv->getName()<<", made of"<<lv->getMaterial()->getName()<<","<<lv->getShape()->type()<<std::endl;
@@ -364,7 +364,7 @@ const void Muon::MuonInertMaterialBuilder::printInfo(const GeoVPhysVol* pv) cons
   printChildren(pv);
 }
 
-const void Muon::MuonInertMaterialBuilder::printChildren(const GeoVPhysVol* pv) const
+void Muon::MuonInertMaterialBuilder::printChildren(const GeoVPhysVol* pv) const
 {
   // subcomponents
   unsigned int nc = pv->getNChildVols();

@@ -1,3 +1,7 @@
+2009-03-19 Sarka Todorova <sarka.todorova@cern.ch>
+	* add multilayer representation 
+	* tagged as MuonTrackingGeometry-00-04-23
+
 2009-02-16 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix return values (gcc43 warnings) 
 	* tagged as MuonTrackingGeometry-00-04-22

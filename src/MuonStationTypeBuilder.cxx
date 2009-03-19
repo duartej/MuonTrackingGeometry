@@ -2343,12 +2343,14 @@ double Muon::MuonStationTypeBuilder::decodeX(const GeoShape* sh) const
 }
 //
 
-const Trk::Layer* Muon::MuonStationTypeBuilder::createLayerRepresentation(const Trk::TrackingVolume* trVol) const
+std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonStationTypeBuilder::createLayerRepresentation(const Trk::TrackingVolume* trVol) const
 {
 
   const Trk::Layer* layRepr = 0;   
-  
-  if (!trVol) return layRepr;
+  if (!trVol) return std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> (layRepr,0);
+
+  std::vector<const Trk::Layer*>* multi = new std::vector<const Trk::Layer*>;
+
   // retrieve volume envelope
 
   const Trk::CuboidVolumeBounds* cubBounds= dynamic_cast<const Trk::CuboidVolumeBounds*> (&(trVol->volumeBounds()));
@@ -2362,7 +2364,8 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayerRepresentation(const 
     double sf        = 4*cubBounds->halflengthZ()*cubBounds->halflengthY();
     //const std::vector<const Trk::Surface*>* surfs = cubBounds->decomposeToSurfaces(HepTransform3D());
     //const Trk::RectangleBounds* rbounds = dynamic_cast<const Trk::RectangleBounds*> (&(*(surfs))[0]->bounds());
-    const Trk::RectangleBounds rbounds(cubBounds->halflengthY(),cubBounds->halflengthZ());
+    Trk::RectangleBounds* rbounds=new Trk::RectangleBounds(cubBounds->halflengthY(),cubBounds->halflengthZ());
+    Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds);
     Trk::OverlapDescriptor* od=0;
     Trk::ExtendedMaterialProperties matProp = collectStationMaterial(trVol,sf);
     if (matProp.thickness() > thickness) {
@@ -2375,15 +2378,27 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayerRepresentation(const 
     }
     Trk::HomogenousLayerMaterial mat(matProp);  
     layer = new Trk::PlaneLayer(new HepTransform3D(trVol->transform()*HepRotateY3D(90*deg) * HepRotateZ3D(90*deg) ),
-                                new Trk::RectangleBounds(rbounds), mat, thickness, od, 1 );
+                                bounds, mat, thickness, od, 1 );
     //for (size_t i=0; i<surfs->size(); i++) delete (*surfs)[i];
     //delete surfs;
+    // multilayers
+    if ( trVol->confinedVolumes()) {
+      const std::vector<const Trk::TrackingVolume*> vols = trVol->confinedVolumes()->arrayObjects();
+      if (vols.size()>1) {
+      for (unsigned int i=0;i<vols.size();i++) {
+	Trk::ExtendedMaterialProperties matMulti = collectStationMaterial(vols[i],sf);
+        multi->push_back(new Trk::PlaneLayer(new HepTransform3D(vols[i]->transform()*HepRotateY3D(90*deg) * HepRotateZ3D(90*deg) ),
+                                bounds, Trk::HomogenousLayerMaterial(matMulti), matMulti.thickness(), od, 1 ));
+	//std::cout <<"multilayer added:"<< i<<","<<matMulti.thickness()<< std::endl;
+      }}      
+    }
   }
   if (trdBounds) {
     double thickness = 2*trdBounds->halflengthZ();
     double sf        = 2*(trdBounds->minHalflengthX()+trdBounds->maxHalflengthX())*trdBounds->halflengthY();
     const std::vector<const Trk::Surface*>* surfs = trdBounds->decomposeToSurfaces(HepTransform3D());
     const Trk::TrapezoidBounds* tbounds = dynamic_cast<const Trk::TrapezoidBounds*> (&(*(surfs))[0]->bounds());
+    Trk::SharedObject<const Trk::SurfaceBounds> bounds(new Trk::TrapezoidBounds(*tbounds));
     Trk::OverlapDescriptor* od=0;
     Trk::ExtendedMaterialProperties matProp = collectStationMaterial(trVol,sf);
     if (matProp.thickness() > thickness) {
@@ -2396,9 +2411,20 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayerRepresentation(const 
     }
     Trk::HomogenousLayerMaterial mat(matProp);  
     layer = new Trk::PlaneLayer(new HepTransform3D(trVol->transform()),
-			  new Trk::TrapezoidBounds(*tbounds), mat, thickness, od, 1 );
+				bounds, mat, thickness, od, 1 );
     for (size_t i=0; i<surfs->size(); i++) delete (*surfs)[i];
     delete surfs;
+    // multilayers
+    if ( trVol->confinedVolumes() ) {
+      const std::vector<const Trk::TrackingVolume*> vols = trVol->confinedVolumes()->arrayObjects();
+      if (vols.size()>1) {
+      for (unsigned int i=0;i<vols.size();i++) {
+	Trk::ExtendedMaterialProperties matMulti = collectStationMaterial(vols[i],sf);
+        multi->push_back(new Trk::PlaneLayer(new HepTransform3D(vols[i]->transform()),
+					     bounds, Trk::HomogenousLayerMaterial(matMulti), matMulti.thickness(), od, 1 ));
+	//std::cout <<"multilayer added:"<< i<<","<<matMulti.thickness()<< std::endl;
+      }}      
+    }
   }
   if (dtrdBounds) {
     double thickness = 2*dtrdBounds->halflengthZ();
@@ -2406,6 +2432,7 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayerRepresentation(const 
                       +2*(dtrdBounds->medHalflengthX()+dtrdBounds->maxHalflengthX())*dtrdBounds->halflengthY2();
     const std::vector<const Trk::Surface*>* surfs = dtrdBounds->decomposeToSurfaces(HepTransform3D());
     const Trk::DiamondBounds* dbounds = dynamic_cast<const Trk::DiamondBounds*> (& (*(surfs))[0]->bounds());
+    Trk::SharedObject<const Trk::SurfaceBounds> bounds(new Trk::DiamondBounds(*dbounds));
     Trk::OverlapDescriptor* od=0;
     Trk::ExtendedMaterialProperties matProp = collectStationMaterial(trVol,sf);
     if (matProp.thickness() > thickness) {
@@ -2418,14 +2445,30 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayerRepresentation(const 
     }
     Trk::HomogenousLayerMaterial mat(matProp);  
     layer = new Trk::PlaneLayer(new HepTransform3D(trVol->transform()),
-                                new Trk::DiamondBounds(*dbounds), mat, thickness, od, 1 );
+                                bounds, mat, thickness, od, 1 );
     for (size_t i=0; i<surfs->size(); i++) delete (*surfs)[i];
     delete surfs;
+    // multilayers
+    if ( trVol->confinedVolumes()) {
+      const std::vector<const Trk::TrackingVolume*> vols = trVol->confinedVolumes()->arrayObjects();
+      if (vols.size()>1) {
+      for (unsigned int i=0;i<vols.size();i++) {
+	Trk::ExtendedMaterialProperties matMulti = collectStationMaterial(vols[i],sf);
+        multi->push_back(new Trk::PlaneLayer(new HepTransform3D(vols[i]->transform()),
+					     bounds, Trk::HomogenousLayerMaterial(matMulti), matMulti.thickness(), od, 1 ));
+	//std::cout <<"multilayer added:"<< i<<","<<matMulti.thickness()<< std::endl;
+      }}      
+    }
   }
+
+  //std::cout << "station:"<<trVol->volumeName()<<",thickness:"<<layer->thickness()<<std::endl;
+  //std::cout << "station:"<<trVol->volumeName()<<",dInX0:"<<layer->layerMaterialProperties()->fullMaterial(layer->center())->thicknessInX0()<<std::endl;
+  //if (trVol->confinedVolumes()) std::cout << "subvolumes:"<<trVol->confinedVolumes()->arrayObjects().size()<< std::endl;
  
   layRepr = layer;
 
-  return layRepr;
+  if (!multi->size()) {delete multi; multi=0;} 
+  return std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> (layRepr,multi);
 }
 
 Trk::ExtendedMaterialProperties Muon::MuonStationTypeBuilder::collectStationMaterial(const Trk::TrackingVolume* vol, double sf) const

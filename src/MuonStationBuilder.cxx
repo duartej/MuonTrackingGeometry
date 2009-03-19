@@ -411,17 +411,19 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
                 if (name.substr(0,2)=="CS") { 
                   const Trk::TrackingVolume* csc_station = m_muonStationTypeBuilder->processCscStation(cv, name);   
 		  // create layer representation
-		  const Trk::Layer* layerRepr = m_muonStationTypeBuilder->createLayerRepresentation(csc_station);
+		  std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> layerRepr =
+		    m_muonStationTypeBuilder->createLayerRepresentation(csc_station);
 		  // create prototype as detached tracking volume
-		  const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(name,csc_station,layerRepr);
+		  const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(name,csc_station,layerRepr.first,layerRepr.second);
 		  stations.push_back(typeStat); 
                 } else {
                   std::vector<const Trk::TrackingVolume*> tgc_stations = m_muonStationTypeBuilder->processTgcStation(cv);   
                   for (unsigned int i=0;i<tgc_stations.size();i++) {
 		    // create layer representation
-		    const Trk::Layer* layerRepr = m_muonStationTypeBuilder->createLayerRepresentation(tgc_stations[i]);
+		    std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> layerRepr =
+		      m_muonStationTypeBuilder->createLayerRepresentation(tgc_stations[i]);
 		    // create prototype as detached tracking volume
-		    const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(name,tgc_stations[i],layerRepr);
+		    const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(name,tgc_stations[i],layerRepr.first,layerRepr.second);
                     stations.push_back(typeStat); 
                   }
                 }
@@ -507,10 +509,11 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		if (m_identifyActive && ( name.substr(0,1)=="B" || name.substr(0,1)=="E") ) identifyPrototype(newType,eta,phi,gmStation->getTransform());
 		
 		// create layer representation
-		const Trk::Layer* layerRepresentation = m_muonStationTypeBuilder->createLayerRepresentation(newType);
+		std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> layerRepr 
+		  = m_muonStationTypeBuilder->createLayerRepresentation(newType);
 		
 		// create prototype as detached tracking volume
-		const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(name,newType,layerRepresentation);
+		const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(name,newType,layerRepr.first,layerRepr.second);
 		
 		stations.push_back(typeStat); 
 	      }

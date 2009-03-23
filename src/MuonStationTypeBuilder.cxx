@@ -2384,7 +2384,7 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
     //for (size_t i=0; i<surfs->size(); i++) delete (*surfs)[i];
     //delete surfs;
     // multilayers
-    if ( trVol->confinedVolumes()) {
+    if ( m_multilayerRepresentation && trVol->confinedVolumes()) {
       const std::vector<const Trk::TrackingVolume*> vols = trVol->confinedVolumes()->arrayObjects();
       if (vols.size()>1) {
       for (unsigned int i=0;i<vols.size();i++) {
@@ -2417,7 +2417,7 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
     for (size_t i=0; i<surfs->size(); i++) delete (*surfs)[i];
     delete surfs;
     // multilayers
-    if ( trVol->confinedVolumes() ) {
+    if ( m_multilayerRepresentation && trVol->confinedVolumes() ) {
       const std::vector<const Trk::TrackingVolume*> vols = trVol->confinedVolumes()->arrayObjects();
       if (vols.size()>1) {
       for (unsigned int i=0;i<vols.size();i++) {
@@ -2451,7 +2451,7 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
     for (size_t i=0; i<surfs->size(); i++) delete (*surfs)[i];
     delete surfs;
     // multilayers
-    if ( trVol->confinedVolumes()) {
+    if ( m_multilayerRepresentation && trVol->confinedVolumes()) {
       const std::vector<const Trk::TrackingVolume*> vols = trVol->confinedVolumes()->arrayObjects();
       if (vols.size()>1) {
       for (unsigned int i=0;i<vols.size();i++) {

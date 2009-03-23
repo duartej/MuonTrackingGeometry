@@ -95,6 +95,7 @@ namespace Muon {
 
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
+      bool                                m_multilayerRepresentation;   
 
       ToolHandle<Trk::ITrackingVolumeArrayCreator>   m_trackingVolumeArrayCreator;  //!< Helper Tool to create TrackingVolume Arrays
       ToolHandle<Trk::IMagneticFieldTool>            m_magFieldTool;                //!< Tracking Interface to Magnetic Field

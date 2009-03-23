@@ -82,6 +82,7 @@ const InterfaceID& Muon::MuonStationTypeBuilder::interfaceID()
 Muon::MuonStationTypeBuilder::MuonStationTypeBuilder(const std::string& t, const std::string& n, const IInterface* p) :
   AlgTool(t,n,p),
   m_muonMgrLocation("MuonMgr"),
+  m_multilayerRepresentation(true), 
   m_trackingVolumeArrayCreator("Trk::TrackingVolumeArrayCreator/TrackingVolumeArrayCreator"),
   m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
   m_mdtTubeMat(0),
@@ -102,6 +103,7 @@ Muon::MuonStationTypeBuilder::MuonStationTypeBuilder(const std::string& t, const
   declareInterface<Muon::MuonStationTypeBuilder>(this);
 
   declareProperty("MuonDetManagerLocation",           m_muonMgrLocation);
+  declareProperty("BuildMultilayerRepresentation",    m_multilayerRepresentation);
 }
 
 // destructor

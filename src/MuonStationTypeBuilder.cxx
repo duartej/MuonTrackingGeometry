@@ -1441,202 +1441,199 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 
 const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processCscStation(const GeoVPhysVol* mv, std::string name) const
 {
-
- // CSC stations have the particularity of displacement in Z between multilayer and the spacer - the envelope
- //   has to be derived from the component volume shape and component displacement
-    bool isDiamond = false;
-    double xMin=0; double xMed=0; double xMax=0; double y1=0; double y2=0; double z=0;
- //   std::cout << "processing CSC, number of children volumes:"<< mv->getNChildVols() <<std::endl;
- // find the shape and dimensions for the first component
-    const GeoVPhysVol* cv = &(*(mv->getChildVol(0))); 
+  
+  // CSC stations have the particularity of displacement in Z between multilayer and the spacer - the envelope
+  //   has to be derived from the component volume shape and component displacement
+  bool isDiamond = false;
+  double xMin=0; double xMed=0; double xMax=0; double y1=0; double y2=0; double z=0;
+  //printChildren(mv);
+  // find the shape and dimensions for the first component
+  const GeoVPhysVol* cv = &(*(mv->getChildVol(0))); 
+  const GeoLogVol* clv = cv->getLogVol();
+  HepTransform3D transform = mv->getXToChildVol(0);        
+  if (clv->getShape()->type()=="Shift") {
+    const GeoShapeShift* shift = dynamic_cast<const GeoShapeShift*> (clv->getShape());
+    if (shift->getOp()->type()=="Union") {
+      // that would be the union making the diamond/double trapezoid shape, let's retrieve the parameters 
+      isDiamond = true;
+      const GeoShapeUnion* uni = dynamic_cast<const GeoShapeUnion*> (shift->getOp());
+      if (uni->getOpA()->type()=="Trd") {
+	const GeoTrd* trdA = dynamic_cast<const GeoTrd*> (uni->getOpA());                  
+	xMin =  trdA->getYHalfLength1();
+	xMed =  trdA->getYHalfLength2();
+	y1   =  trdA->getZHalfLength();
+	z    =  trdA->getXHalfLength1();
+      }
+      if (uni->getOpB()->type()=="Shift") {
+	const GeoShapeShift* sh = dynamic_cast<const GeoShapeShift*> (uni->getOpB());
+	const GeoTrd* trdB = dynamic_cast<const GeoTrd*> (sh->getOp());          
+	if ( trdB->getYHalfLength1() != xMed ||  trdB->getXHalfLength1() != z )
+	  std::cout <<"Something is wrong: dimensions of 2 trapezoids do not match"<<std::endl ;
+	xMax =  trdB->getYHalfLength2();
+	y2   =  trdB->getZHalfLength();
+      }
+    } //end Union
+    if (shift->getOp()->type()=="Trd") {
+      // that would be the trapezoid shape, let's retrieve the parameters 
+      const GeoTrd* trd = dynamic_cast<const GeoTrd*> (shift->getOp());
+      xMin =  trd->getYHalfLength1();
+      xMed =  trd->getYHalfLength2();
+      y1   =  trd->getZHalfLength();
+      z    =  trd->getXHalfLength1();      
+    } //end Trd
+  } else {
+    if (clv->getShape()->type()=="Trd"){
+      // that would be the trapezoid shape, let's retrieve the parameters 
+      const GeoTrd* trd = dynamic_cast<const GeoTrd*> (clv->getShape());
+      xMin =  trd->getYHalfLength1();
+      xMed =  trd->getYHalfLength2();
+      y1   =  trd->getZHalfLength();
+      z    =  trd->getXHalfLength1();      
+    }
+  }
+  // then loop over all components to get total Xsize & transforms 
+  std::vector<HepTransform3D> compTransf;
+  std::vector<std::string> compName;
+  std::vector<const GeoVPhysVol*> compGeoVol;
+  std::vector<double> xSizes;
+  double xmn = +10000.; double xmx = -10000.;
+  for (unsigned int ich =0; ich< mv->getNChildVols(); ++ich) {
+    const GeoVPhysVol* cv = &(*(mv->getChildVol(ich))); 
     const GeoLogVol* clv = cv->getLogVol();
-    HepTransform3D transform = mv->getXToChildVol(0);        
-    //std::cout << "First CSC component:"<< clv->getName() <<", made of "<<clv->getMaterial()->getName()<<","<<clv->getShape()->type()<<","<<transform.getTranslation()<<std::endl;
+    HepTransform3D transform = mv->getXToChildVol(ich);        
+    compTransf.push_back(transform);
+    compName.push_back(clv->getName());
+    compGeoVol.push_back(cv);
     if (clv->getShape()->type()=="Shift") {
       const GeoShapeShift* shift = dynamic_cast<const GeoShapeShift*> (clv->getShape());
-      //std::cout << shift->getOp()->type()<<","<<(shift->getX()).getTranslation()<<std::endl;
       if (shift->getOp()->type()=="Union") {
-        // that would be the union making the diamond/double trapezoid shape, let's retrieve the parameters 
-        isDiamond = true;
-   	const GeoShapeUnion* uni = dynamic_cast<const GeoShapeUnion*> (shift->getOp());
-        //std::cout << uni->getOpA()->type()<<","<< uni->getOpB()->type() << std::endl;
-        if (uni->getOpA()->type()=="Trd") {
-         const GeoTrd* trdA = dynamic_cast<const GeoTrd*> (uni->getOpA());                  
-         xMin =  trdA->getYHalfLength1();
-         xMed =  trdA->getYHalfLength2();
-         y1   =  trdA->getZHalfLength();
-         z    =  trdA->getXHalfLength1();
-        }
-        if (uni->getOpB()->type()=="Shift") {
-          const GeoShapeShift* sh = dynamic_cast<const GeoShapeShift*> (uni->getOpB());
-          //std::cout << sh->getOp()->type()<<","<<(sh->getX()).getTranslation()<<std::endl;
-          const GeoTrd* trdB = dynamic_cast<const GeoTrd*> (sh->getOp());          
-          if ( trdB->getYHalfLength1() != xMed ||  trdB->getXHalfLength1() != z )
-                     std::cout <<"Something is wrong: dimensions of 2 trapezoids do not match"<<std::endl ;
-          xMax =  trdB->getYHalfLength2();
-          y2   =  trdB->getZHalfLength();
-       }
+	// that would be the union making the diamond/double trapezoid shape, let's retrieve the parameters 
+	const GeoShapeUnion* uni = dynamic_cast<const GeoShapeUnion*> (shift->getOp());
+	//std::cout << uni->getOpA()->type()<<","<< uni->getOpB()->type() << std::endl;
+	if (uni->getOpA()->type()=="Trd") {
+	  const GeoTrd* trdA = dynamic_cast<const GeoTrd*> (uni->getOpA());
+	  double xSize  =  trdA->getXHalfLength1();
+	  if (xSizes.size()>0) xSizes.push_back((fabs(transform.getTranslation()[0]-compTransf[ich-1].getTranslation()[0])
+						 -xSizes.back()));
+	  else xSizes.push_back(xSize);
+	  double xpos = (transform*shift->getX()).getTranslation()[0];
+	  if ( xpos-xSize < xmn ) xmn = xpos-xSizes.back();
+	  if ( xpos+xSize > xmx ) xmx = xpos+xSizes.back();
+	}
       } //end Union
-      if (shift->getOp()->type()=="Trd") {
-        // that would be the trapezoid shape, let's retrieve the parameters 
-         const GeoTrd* trd = dynamic_cast<const GeoTrd*> (shift->getOp());
-         xMin =  trd->getYHalfLength1();
-         xMed =  trd->getYHalfLength2();
-         y1   =  trd->getZHalfLength();
-         z    =  trd->getXHalfLength1();      
-      } //end Trd
-    } else {
-      if (clv->getShape()->type()=="Trd"){
-        // that would be the trapezoid shape, let's retrieve the parameters 
-         const GeoTrd* trd = dynamic_cast<const GeoTrd*> (clv->getShape());
-         xMin =  trd->getYHalfLength1();
-         xMed =  trd->getYHalfLength2();
-         y1   =  trd->getZHalfLength();
-         z    =  trd->getXHalfLength1();      
-      }
-    }
-// then loop over all components to get total Xsize & transforms 
-   std::vector<HepTransform3D> compTransf;
-   std::vector<std::string> compName;
-   std::vector<const GeoVPhysVol*> compGeoVol;
-   std::vector<double> xSizes;
-   for (unsigned int ich =0; ich< mv->getNChildVols(); ++ich) {
-     const GeoVPhysVol* cv = &(*(mv->getChildVol(ich))); 
-     const GeoLogVol* clv = cv->getLogVol();
-     HepTransform3D transform = mv->getXToChildVol(ich);        
-     compTransf.push_back(transform);
-     compName.push_back(clv->getName());
-     compGeoVol.push_back(cv);
-     //std::cout << "CSC component:"<<ich<<":" << clv->getName() <<", made of "<<clv->getMaterial()->getName()<<","<<clv->getShape()->type()<<","<<transform.getTranslation()<<std::endl;
-      if (clv->getShape()->type()=="Shift") {
-       const GeoShapeShift* shift = dynamic_cast<const GeoShapeShift*> (clv->getShape());
-       //std::cout << shift->getOp()->type()<<","<<(shift->getX()).getTranslation()<<std::endl;
-       if (shift->getOp()->type()=="Union") {
-	 // that would be the union making the diamond/double trapezoid shape, let's retrieve the parameters 
-   	 const GeoShapeUnion* uni = dynamic_cast<const GeoShapeUnion*> (shift->getOp());
-         //std::cout << uni->getOpA()->type()<<","<< uni->getOpB()->type() << std::endl;
-         if (uni->getOpA()->type()=="Trd") {
-          const GeoTrd* trdA = dynamic_cast<const GeoTrd*> (uni->getOpA());
-          double xSize  =  trdA->getXHalfLength1();
-          xSizes.push_back(xSize); 
-        }
-       } //end Union
-      } // end Shift
-      if (clv->getShape()->type()=="Trd") {
-       const GeoTrd* trd = dynamic_cast<const GeoTrd*> (clv->getShape());
-       double xSize  =  trd->getXHalfLength1();
-       xSizes.push_back(xSize); 
-      } // end Trd
-      
+    } // end Shift
+    if (clv->getShape()->type()=="Trd") {
+      const GeoTrd* trd = dynamic_cast<const GeoTrd*> (clv->getShape());
+      double xSize  =  trd->getXHalfLength1();
+      if (xSizes.size()>0) xSizes.push_back(fabs(transform.getTranslation()[0]-compTransf[ich-1].getTranslation()[0])
+					    -xSizes.back());
+      else xSizes.push_back(xSize); 
+      double xpos = transform.getTranslation()[0];
+      if ( xpos-xSize < xmn ) xmn = xpos-xSizes.back();
+      if ( xpos+xSize > xmx ) xmx = xpos+xSizes.back();
+    } // end Trd
       // printChildren(cv);  
-   } 
-   // this should be enough to build station envelope
-   double xTotal = 0;
-   for (unsigned int i=0;i<xSizes.size(); i++) xTotal += xSizes[i];
-   //std::cout << "total station thickness:" << xTotal << std::endl;
-   double zShift = 0;
-   zShift = fabs(((compTransf.front()).getTranslation())[2])+  fabs(((compTransf.back()).getTranslation())[2]);
-   //std::cout << "z displacement:" << zShift << std::endl;
-   // calculate displacement with respect to GeoModel station volume
-   // one way or the other, the station envelope is double trapezoid
-   Trk::Volume* envelope;
-   double envXMed = xMed;
-   double envY1   = y1; 
-   double envY2   = y2;
-   std::vector<double>* volSteps=new std::vector<double>; 
-   std::vector<const Trk::TrackingVolume*> components;
-   if ( !isDiamond ) {
-     Trk::TrapezoidVolumeBounds* cscBounds=0;
-     Trk::TrapezoidVolumeBounds* compBounds=0;
-     xMax = xMed;
-     y2 = 0.5*zShift;
-     //std::cout << "envelope dimensions:"<<xMin<<","<<envXMed<<","<<xMax<<","<<envY1<<","<<envY2<<","<<xTotal<<std::endl;
-     // cscBounds = new Trk::DoubleTrapezoidVolumeBounds(xMin,xMed,xMax,y1,y2,xTotal); 
-     cscBounds = new Trk::TrapezoidVolumeBounds(xMin,xMax,y1,xTotal); 
-     //std::cout << "envelope bounds created"<<std::endl;
-     // xy -> yz  rotation
-     // the center of Volume is shifted by y1-y2 in y
-     HepTransform3D* cTr = new HepTransform3D( HepRotateY3D(90*deg)*HepRotateZ3D(90*deg) );
-     envelope = new Trk::Volume(cTr,cscBounds);
-     //std::cout << "envelope created"<<std::endl;
-     // components
-     double xCurr = -xTotal;
-     for (unsigned int ic = 0; ic< xSizes.size(); ic++) {
-       // component volumes follow the envelope dimension
-       xCurr += xSizes[ic];
-       HepTransform3D* compTr = new HepTransform3D( HepRotateY3D(90*deg)*HepRotateZ3D(90*deg)*HepTranslateZ3D(xCurr));
-       compBounds = new Trk::TrapezoidVolumeBounds(xMin,xMax,y1,xSizes[ic]);
-       const Trk::LayerArray* cscLayerArray = processCSCTrdComponent(compGeoVol[ic],compBounds,compTr); 
-       Trk::Volume* compVol = new Trk::Volume(compTr,compBounds);
-       const Trk::TrackingVolume* compTV = new Trk::TrackingVolume( *compVol,
-                                                                    *m_muonMaterial,
-                                                                    m_muonMagneticField,
-                                                                    cscLayerArray,0,
-                                                                    compName[ic]);                    
-       delete compVol;
-       components.push_back(compTV);
-       volSteps->push_back(2*xSizes[ic]);  
-       xCurr += xSizes[ic];
-     } // end components
-     
-   } else {
-     Trk::DoubleTrapezoidVolumeBounds* cscBounds=0;
-     Trk::DoubleTrapezoidVolumeBounds* compBounds=0;
-     if (xMed!=xMin && xMed!=xMax) {
-       envXMed += zShift/(y1/(xMed-xMin)+y2/(xMed-xMax));
-       envY1 = y1*(envXMed-xMin)/(xMed-xMin);
-       envY2 = y2*(envXMed-xMax)/(xMed-xMax);
-     } 
-     //std::cout << "envelope dimensions:"<<xMin<<","<<envXMed<<","<<xMax<<","<<envY1<<","<<envY2<<","<<z+0.5*zShift<<std::endl;
-     cscBounds = new Trk::DoubleTrapezoidVolumeBounds(xMin,envXMed,xMax,envY1,envY2,xTotal); 
-     //std::cout << "envelope bounds created"<<std::endl;
-     // xy -> yz  rotation
-     // the center of DoubleTrapezoidVolume is shifted by (envY1-envY2) in y
-     //HepTransform3D* cTr = new HepTransform3D(HepRotateZ3D(90*deg)*HepTranslateY3D(envY1-envY2));
-     HepTransform3D* cTr = new HepTransform3D(HepRotateY3D(90*deg)*HepRotateZ3D(90*deg)*HepTranslateY3D(envY1-envY2));
-     envelope = new Trk::Volume(cTr,cscBounds);
-     //std::cout << "envelope created"<<std::endl;
-     // components
-     double xCurr = -xTotal;
-     for (unsigned int ic = 0; ic< xSizes.size(); ic++) {
-       // component volumes follow the envelope dimension
-       xCurr += xSizes[ic];
-       //HepTransform3D* compTr = new HepTransform3D(HepRotateZ3D(90*deg)*HepTranslateZ3D(envY1-envY2)*HepTranslateY3D(xCurr));
-       HepTransform3D* compTr = new HepTransform3D(HepRotateY3D(90*deg)*HepRotateZ3D(90*deg)*HepTranslateY3D(envY1-envY2)*HepTranslateZ3D(xCurr));
-       compBounds = new Trk::DoubleTrapezoidVolumeBounds(xMin,envXMed,xMax,envY1,envY2,xSizes[ic]); 
-       const Trk::LayerArray* cscLayerArray = processCSCDiamondComponent(compGeoVol[ic],compBounds,compTr); 
-       Trk::Volume* compVol = new Trk::Volume(compTr,compBounds);
-       const Trk::TrackingVolume* compTV = new Trk::TrackingVolume( *compVol,
-                                                                    *m_muonMaterial,
-                                                                    m_muonMagneticField,
-                                                                    cscLayerArray,0,
-                                                                    compName[ic]);                    
-       delete compVol;
-       components.push_back(compTV);
-       volSteps->push_back(2*xSizes[ic]);  
-       xCurr += xSizes[ic];
-     } // end components
-   }
-
- // convert component volumes into array 
-   const Trk::BinnedArray<Trk::TrackingVolume>* compArray = 0; 
-   if (components.size() && isDiamond) {
-     Trk::BinUtility1DX* binUtil = new Trk::BinUtility1DX(-xTotal, volSteps);
-     if (m_trackingVolumeArrayCreator) compArray = m_trackingVolumeArrayCreator->doubleTrapezoidVolumesArrayNav( components, binUtil, false);
-   }
-   if (components.size() && !isDiamond) {
-     Trk::BinUtility1DX* binUtil = new Trk::BinUtility1DX(-xTotal, volSteps);
-     if (m_trackingVolumeArrayCreator) compArray = m_trackingVolumeArrayCreator->trapezoidVolumesArrayNav( components, binUtil, false);
-   }
- // ready to build the station prototype
- const Trk::TrackingVolume* csc_station = new Trk::TrackingVolume( *envelope,
+  } 
+  // this should be enough to build station envelope
+  double xTotal = 0;
+  for (unsigned int i=0;i<xSizes.size(); i++) xTotal += xSizes[i];
+  double xShift = 0.5*(xmx+xmn);
+  double zShift = 0;
+  zShift = fabs(((compTransf.front()).getTranslation())[2])+  fabs(((compTransf.back()).getTranslation())[2]);
+  //std::cout << "z displacement:" << zShift << std::endl;
+  // calculate displacement with respect to GeoModel station volume
+  // one way or the other, the station envelope is double trapezoid
+  Trk::Volume* envelope;
+  double envXMed = xMed;
+  double envY1   = y1; 
+  double envY2   = y2;
+  std::vector<double>* volSteps=new std::vector<double>; 
+  std::vector<const Trk::TrackingVolume*> components;
+  if ( !isDiamond ) {
+    Trk::TrapezoidVolumeBounds* cscBounds=0;
+    Trk::TrapezoidVolumeBounds* compBounds=0;
+    xMax = xMed;
+    y2 = 0.5*zShift;
+    //std::cout << "envelope dimensions:"<<xMin<<","<<xMax<<","<<y1<<","<<xTotal<<std::endl;
+    cscBounds = new Trk::TrapezoidVolumeBounds(xMin,xMax,y1,xTotal); 
+    // xy -> yz  rotation
+    // the center of Volume is shifted by y1-y2 in y
+    HepTransform3D* cTr = new HepTransform3D( HepRotateY3D(90*deg)*HepRotateZ3D(90*deg)*HepTranslateZ3D(xShift) );
+    envelope = new Trk::Volume(cTr,cscBounds);
+    // components
+    double xCurr = -xTotal;
+    for (unsigned int ic = 0; ic< xSizes.size(); ic++) {
+      // component volumes follow the envelope dimension
+      xCurr += xSizes[ic];
+      HepTransform3D* compTr = new HepTransform3D( HepRotateY3D(90*deg)*HepRotateZ3D(90*deg)*HepTranslateZ3D(xCurr+xShift));
+      compBounds = new Trk::TrapezoidVolumeBounds(xMin,xMax,y1,xSizes[ic]);
+      const Trk::LayerArray* cscLayerArray = processCSCTrdComponent(compGeoVol[ic],compBounds,compTr); 
+      Trk::Volume* compVol = new Trk::Volume(compTr,compBounds);
+      const Trk::TrackingVolume* compTV = new Trk::TrackingVolume( *compVol,
 								   *m_muonMaterial,
 								   m_muonMagneticField,
-								   0,compArray,
-								   name);                    
- 
- delete envelope;
- return csc_station;    
+								   cscLayerArray,0,
+								   compName[ic]);                    
+      delete compVol;
+      components.push_back(compTV);
+      volSteps->push_back(2*xSizes[ic]);  
+      xCurr += xSizes[ic];
+    } // end components      
+  } else {
+    Trk::DoubleTrapezoidVolumeBounds* cscBounds=0;
+    Trk::DoubleTrapezoidVolumeBounds* compBounds=0;
+    if (xMed!=xMin && xMed!=xMax) {
+      envXMed += zShift/(y1/(xMed-xMin)+y2/(xMed-xMax));
+      envY1 = y1*(envXMed-xMin)/(xMed-xMin);
+      envY2 = y2*(envXMed-xMax)/(xMed-xMax);
+    } 
+    //std::cout << "envelope dimensions:"<<xMin<<","<<envXMed<<","<<xMax<<","<<envY1<<","<<envY2<<","<<z+0.5*zShift<<std::endl;
+    cscBounds = new Trk::DoubleTrapezoidVolumeBounds(xMin,envXMed,xMax,envY1,envY2,xTotal); 
+    // xy -> yz  rotation
+    // the center of DoubleTrapezoidVolume is shifted by (envY1-envY2) in y
+    HepTransform3D* cTr = new HepTransform3D(HepRotateY3D(90*deg)*HepRotateZ3D(90*deg)*HepTranslateY3D(envY1-envY2)*HepTranslateZ3D(xShift));
+    envelope = new Trk::Volume(cTr,cscBounds);
+    // components
+    double xCurr = -xTotal;
+    for (unsigned int ic = 0; ic< xSizes.size(); ic++) {
+      // component volumes follow the envelope dimension
+      xCurr += xSizes[ic];
+      HepTransform3D* compTr = new HepTransform3D(HepRotateY3D(90*deg)*HepRotateZ3D(90*deg)*HepTranslateY3D(envY1-envY2)*HepTranslateZ3D(xCurr+xShift));
+      compBounds = new Trk::DoubleTrapezoidVolumeBounds(xMin,envXMed,xMax,envY1,envY2,xSizes[ic]); 
+      const Trk::LayerArray* cscLayerArray = processCSCDiamondComponent(compGeoVol[ic],compBounds,compTr); 
+      Trk::Volume* compVol = new Trk::Volume(compTr,compBounds);
+      const Trk::TrackingVolume* compTV = new Trk::TrackingVolume( *compVol,
+								   *m_muonMaterial,
+								   m_muonMagneticField,
+								   cscLayerArray,0,
+								   compName[ic]);                    
+      delete compVol;
+      components.push_back(compTV);
+      volSteps->push_back(2*xSizes[ic]);  
+      xCurr += xSizes[ic];
+    } // end components
+  }
+    
+  // convert component volumes into array 
+  const Trk::BinnedArray<Trk::TrackingVolume>* compArray = 0; 
+  //std::cout << "verifying CSC subvolume array:"<< -xTotal<< std::endl;
+  //for (unsigned int i=0;i<volSteps->size();i++) std::cout << i<<","<<(*volSteps)[i]<< std::endl;
+  if (components.size() && isDiamond) {
+    Trk::BinUtility1DX* binUtil = new Trk::BinUtility1DX(-xTotal+xShift, volSteps);
+    if (m_trackingVolumeArrayCreator) compArray = m_trackingVolumeArrayCreator->doubleTrapezoidVolumesArrayNav( components, binUtil, false);
+  }
+  if (components.size() && !isDiamond) {
+    Trk::BinUtility1DX* binUtil = new Trk::BinUtility1DX(-xTotal+xShift, volSteps);
+    if (m_trackingVolumeArrayCreator) compArray = m_trackingVolumeArrayCreator->trapezoidVolumesArrayNav( components, binUtil, false);
+  }
+  // ready to build the station prototype
+  const Trk::TrackingVolume* csc_station = new Trk::TrackingVolume( *envelope,
+								    *m_muonMaterial,
+								    m_muonMagneticField,
+								    0,compArray,
+								    name);                      
+  delete envelope;
+  return csc_station;    
 }
 
 std::vector<const Trk::TrackingVolume*> Muon::MuonStationTypeBuilder::processTgcStation(const GeoVPhysVol* mv) const
@@ -1923,9 +1920,6 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(cons
         } 
       }
     } 
-    //
-    //std::cout << " Csc multilayer has " << x_array.size() << " active layers" << std::endl; 
-    // TO DO: in the following, the material should be scaled to the actual layer thickness 
     if (x_array.size()==0) {
       x_array.push_back(0.);
       x_mat.push_back(matCSC);
@@ -1957,9 +1951,6 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(cons
         x_active.push_back(1);
       }
     }
-    //for (unsigned int il=0; il < x_array.size(); il++) {
-    //  std::cout << "csc active layers:" << il << "," << x_array[il]<< ","<<x_thickness[il] << std::endl;
-    //}    
   } 
   if (name == "CSCspacer" ) {
     if (!m_matCSCspacer1 ) { 
@@ -1977,7 +1968,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(cons
   Trk::TrapezoidBounds* tbounds= new Trk::TrapezoidBounds(minX,maxX,halfY); 
   Trk::SharedObject<const Trk::SurfaceBounds> bounds(tbounds);
   for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {
-    HepTransform3D* cTr = new HepTransform3D(  HepTranslateX3D(x_array[iloop]) * (*transf) ); // this won't work for multiple layers !!! //
+    HepTransform3D* cTr = new HepTransform3D( (*transf) * HepTranslateZ3D(x_array[iloop])  ); // this won't work for multiple layers !!! //
     Trk::HomogenousLayerMaterial cscMaterial(x_mat[iloop]);  
     layer = new Trk::PlaneLayer(cTr,
                                 bounds,
@@ -1987,37 +1978,30 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(cons
     layers.push_back(layer);
     // make preliminary identification of active layers
     layer->setLayerType(x_active[iloop]);
-
-    //std::cout << "CSC layer built ok"<<std::endl;
-
   }
 
   // create the BinnedArray
-  //std::cout << "number of Csc layers:"<<layers.size()<<std::endl;
   std::vector<Trk::SharedObject<const Trk::Layer> > layerOrder;
   std::vector<double> binSteps;
   double xShift = transf->getTranslation()[0];
   double lowX = - compBounds->halflengthZ()+xShift ;
 
   if (layers.size()) {
-    // lowX = layers[0]->transform().getTranslation()[0]-0.5*layers[0]->thickness();
-     currX = lowX; 
-     for (unsigned int i=0;i<layers.size()-1;i++) { 
-       const HepTransform3D ltransf = HepTranslateX3D(x_array[i]);
-       layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers[i]));
-       binSteps.push_back(ltransf.getTranslation()[0]+0.5*layers[i]->thickness()-currX+xShift);
-       currX = ltransf.getTranslation()[0]+0.5*layers[i]->thickness()+xShift;     
-       //std::cout << "binstep:"<<i <<","<<binSteps[i]<<std::endl;
-     }
-     const HepTransform3D ltransf = HepTranslateX3D(x_array.back());
-     layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers.back()));
-     binSteps.push_back(compBounds->halflengthZ()-currX+xShift);
-     //std::cout << "binstep:"<<layers.size() <<","<<binSteps.back()<<std::endl;
+    currX = lowX-xShift; 
+    for (unsigned int i=0;i<layers.size()-1;i++) { 
+      const HepTransform3D ltransf = HepTranslateX3D(x_array[i]);
+      layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers[i]));
+      binSteps.push_back(ltransf.getTranslation()[0]+0.5*layers[i]->thickness()-currX);
+      currX = ltransf.getTranslation()[0]+0.5*layers[i]->thickness();     
+    }
+    const HepTransform3D ltransf = HepTranslateX3D(x_array.back());
+    layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers.back()));
+    binSteps.push_back(compBounds->halflengthZ()-currX);
   }
   Trk::BinUtility* binUtility = new Trk::BinUtility1DX( lowX, new std::vector<double>(binSteps));
   Trk::LayerArray* cscLayerArray = 0;
   cscLayerArray = new Trk::NavBinnedArray1D<Trk::Layer>(layerOrder, binUtility, new HepTransform3D());     
-
+  
   return cscLayerArray;
 
 } 
@@ -2069,8 +2053,6 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCDiamondComponent(
       }
     } 
     //
-    //std::cout << " Csc multilayer has " << x_array.size() << " active layers" << std::endl; 
-    // TO DO: in the following, the material should be scaled to the actual layer thickness 
     if (x_array.size()==0) {
       x_array.push_back(0.);
       x_mat.push_back(matCSC);
@@ -2100,9 +2082,6 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCDiamondComponent(
         x_active.push_back(1); 
       }
     }
-    //for (unsigned int il=0; il < x_array.size(); il++) {
-    //  std::cout << "csc active layers:" << il << "," << x_array[il]<< ","<<x_thickness[il] << std::endl;
-    //}    
   } 
   if (name == "CSCspacer" ) {
     if (!m_matCSCspacer2 ) { 
@@ -2121,7 +2100,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCDiamondComponent(
   Trk::DiamondBounds* dbounds= new Trk::DiamondBounds(minX,medX,maxX,halfY1,halfY2); ;
   Trk::SharedObject<const Trk::SurfaceBounds> bounds(dbounds);
   for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {
-    HepTransform3D* cTr = new HepTransform3D( HepTranslateX3D(x_array[iloop]) * (*transf) ); // this won't work for multiple layers !!! //
+    HepTransform3D* cTr = new HepTransform3D( (*transf)*HepTranslateZ3D(x_array[iloop]) ); // this won't work for multiple layers !!! //
     Trk::HomogenousLayerMaterial cscMaterial(x_mat[iloop]);  
     layer = new Trk::PlaneLayer(cTr,
                                 bounds,
@@ -2131,38 +2110,32 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCDiamondComponent(
     layers.push_back(layer);
     // make preliminary identification of active layers
     layer->setLayerType(x_active[iloop]);
-    //std::cout << "CSC layer built ok"<<std::endl;
   }
    
   // create the BinnedArray
-  //std::cout << "number of Csc layers:"<<layers.size()<<std::endl;
   std::vector<Trk::SharedObject<const Trk::Layer> > layerOrder;
   std::vector<double> binSteps;
   double xShift = transf->getTranslation()[0];
   double lowX = - compBounds->halflengthZ()+xShift ;
-
+  
   if (layers.size()) {
-    // lowX = layers[0]->transform().getTranslation()[0]-0.5*layers[0]->thickness();
-     currX = lowX; 
-     for (unsigned int i=0;i<layers.size()-1;i++) { 
-       const HepTransform3D ltransf = HepTranslateX3D(x_array[i]);
-       layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers[i]));
-       binSteps.push_back(ltransf.getTranslation()[0]+0.5*layers[i]->thickness()-currX+xShift);
-       currX = ltransf.getTranslation()[0]+0.5*layers[i]->thickness()+xShift;     
-       //std::cout << "binstep:"<<i <<","<<binSteps[i]<<std::endl;
-     }
-     const HepTransform3D ltransf = HepTranslateX3D(x_array.back());
-     layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers.back()));
-     binSteps.push_back(compBounds->halflengthZ()-currX+xShift);
-     //std::cout << "binstep:"<<layers.size() <<","<<binSteps.back()<<std::endl;
+    currX = lowX; 
+    for (unsigned int i=0;i<layers.size()-1;i++) { 
+      const HepTransform3D ltransf = HepTranslateX3D(x_array[i]);
+      layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers[i]));
+      binSteps.push_back(ltransf.getTranslation()[0]+0.5*layers[i]->thickness()-currX+xShift);
+      currX = ltransf.getTranslation()[0]+0.5*layers[i]->thickness()+xShift;     
+    }
+    const HepTransform3D ltransf = HepTranslateX3D(x_array.back());
+    layerOrder.push_back(Trk::SharedObject<const Trk::Layer>(layers.back()));
+    binSteps.push_back(compBounds->halflengthZ()-currX+xShift);
   }
-   
+  
   Trk::BinUtility* binUtility = new Trk::BinUtility1DX( lowX, new std::vector<double>(binSteps));
   Trk::LayerArray* cscLayerArray = 0;
   cscLayerArray = new Trk::NavBinnedArray1D<Trk::Layer>(layerOrder, binUtility, new HepTransform3D());     
-
+  
   return cscLayerArray;
-
 } 
 
 const Trk::LayerArray* Muon::MuonStationTypeBuilder::processTGCComponent(const GeoVPhysVol*& pv, Trk::TrapezoidVolumeBounds*& tgcBounds, HepTransform3D*& transf) const {

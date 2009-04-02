@@ -600,6 +600,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
   if (stationName.substr(0,1)=="C") { 
     int st = stationName.substr(0,3)=="CSS" ? 0 : 1;
     const MuonGM::CscReadoutElement* cscRE = m_muonMgr->getCscReadoutElement(st,eta,phi,0);    
+    if (!cscRE) cscRE = m_muonMgr->getCscReadoutElement(st,eta,phi,1);
     if (cscRE) {
       for (int gasgap = 0; gasgap < cscRE->Ngasgaps(); gasgap++) {
         int etaId = eta;

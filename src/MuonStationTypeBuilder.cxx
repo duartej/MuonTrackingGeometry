@@ -84,6 +84,7 @@ Muon::MuonStationTypeBuilder::MuonStationTypeBuilder(const std::string& t, const
   m_muonMgrLocation("MuonMgr"),
   m_multilayerRepresentation(true), 
   m_trackingVolumeArrayCreator("Trk::TrackingVolumeArrayCreator/TrackingVolumeArrayCreator"),
+  m_magFieldMode(Trk::RealisticField),  
   m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
   m_mdtTubeMat(0),
   m_mdtFoamMat(),
@@ -102,6 +103,7 @@ Muon::MuonStationTypeBuilder::MuonStationTypeBuilder(const std::string& t, const
 {
   declareInterface<Muon::MuonStationTypeBuilder>(this);
 
+  declareProperty("MagneticFieldMode",                m_magFieldMode);  
   declareProperty("MuonDetManagerLocation",           m_muonMgrLocation);
   declareProperty("BuildMultilayerRepresentation",    m_multilayerRepresentation);
 }
@@ -139,7 +141,7 @@ StatusCode Muon::MuonStationTypeBuilder::initialize()
     *m_log << MSG::DEBUG << m_muonMgr->geometryVersion() << endreq; 
     
     // Retrieve the magnetic field tool   ----------------------------------------------------    
-    if (m_magFieldTool.retrieve().isFailure())
+    if (m_magFieldMode && m_magFieldTool.retrieve().isFailure())
     {
       *m_log << MSG::FATAL << "Failed to retrieve tool " << m_magFieldTool << endreq;
       return StatusCode::FAILURE;
@@ -156,8 +158,11 @@ StatusCode Muon::MuonStationTypeBuilder::initialize()
     // default (trivial) muon material properties 
     m_muonMaterial = new Trk::MaterialProperties(0.,10e8,0.);
 
-    Trk::MagneticFieldProperties muonMagneticFieldProperties(&(*m_magFieldTool), Trk::RealisticField);    
-    m_muonMagneticField = muonMagneticFieldProperties;
+    // set the magnetic field 
+    if (!m_magFieldMode)
+        m_muonMagneticField = Trk::MagneticFieldProperties();
+    else                                            
+        m_muonMagneticField = Trk::MagneticFieldProperties(&(*m_magFieldTool), Trk::RealisticField);    
 
     m_materialConverter= new Trk::GeoMaterialConverter();
      

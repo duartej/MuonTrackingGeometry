@@ -27,7 +27,7 @@ namespace Trk {
  class ITrackingVolumeDisplayer;
  class ITrackingVolumeArrayCreator;
  class IMagneticFieldTool;
- typedef std::pair< SharedObject<const TrackingVolume>, const Trk::GlobalPosition*> TrackingVolumeOrderPosition;
+ typedef std::pair< SharedObject<const TrackingVolume>, Trk::GlobalPosition> TrackingVolumeOrderPosition;
  typedef std::pair< SharedObject<const TrackingVolume>, const HepTransform3D*> TrackingVolumeNavOrder;
 
 }
@@ -91,6 +91,7 @@ namespace Muon {
       /** Private method to blend the inert material */
       void blendMaterial() const;
      
+      unsigned int                                         m_magFieldMode;                  //!< switch the magnetic field mode
       ToolHandle<Trk::IMagneticFieldTool>                  m_magFieldTool;                  //!< Tracking Interface to Magnetic Field
 
       ToolHandle<Trk::IDetachedTrackingVolumeBuilder>      m_stationBuilder;                //!< A Tool for station type creation
@@ -125,7 +126,7 @@ namespace Muon {
       double                              m_outerShieldRadius;
       double                              m_diskShieldZ;
 
-      mutable Trk::MaterialProperties     m_muonMaterial;               //!< the (empty) material
+      mutable Trk::MaterialProperties       m_muonMaterial;               //!< the (empty) material
       mutable Trk::MagneticFieldProperties  m_muonMagneticField;          //!< the magnetic Field
 
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 

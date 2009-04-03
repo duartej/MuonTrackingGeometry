@@ -64,6 +64,7 @@
 // constructor
 Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string& t, const std::string& n, const IInterface* p) :
   AlgTool(t,n,p),
+  m_magFieldMode(Trk::RealisticField),
   m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
   m_stationBuilder("Muon::MuonStationBuilder/MuonStationBuilder"),
   m_inertBuilder("Muon::MuonInertMaterialBuilder/MuonInertMaterialBuilder"),
@@ -115,6 +116,7 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   declareProperty("LoadMSEntry",                      m_loadMSentry);  
   declareProperty("BuildActiveMaterial",              m_muonActive);  
   declareProperty("BuildInertMaterial",               m_muonInert);
+  declareProperty("MagneticFieldMode",                m_magFieldMode);
   declareProperty("MagneticFieldTool",                m_magFieldTool);  
   // the overall dimensions
   declareProperty("InnerBarrelRadius",              m_innerBarrelRadius);
@@ -154,7 +156,7 @@ StatusCode Muon::MuonTrackingGeometryBuilder::initialize()
 
 
     // Retrieve the magnetic field tool   ----------------------------------------------------    
-    if (m_magFieldTool.retrieve().isFailure())
+    if (m_magFieldMode && m_magFieldTool.retrieve().isFailure())
     {
       log << MSG::FATAL << "Failed to retrieve tool " << m_magFieldTool << endreq;
       return StatusCode::FAILURE;
@@ -268,8 +270,11 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 					   m_muonMaterialProperties[1],
 					   m_muonMaterialProperties[2]);
   
-  Trk::MagneticFieldProperties muonMagneticFieldProperties(&(*m_magFieldTool), Trk::RealisticField);    
-  m_muonMagneticField = muonMagneticFieldProperties;
+  // magnetic field steering
+  if (!m_magFieldMode)
+      m_muonMagneticField = Trk::MagneticFieldProperties();
+  else      
+      m_muonMagneticField = Trk::MagneticFieldProperties(&(*m_magFieldTool), (Trk::MagneticFieldMode)m_magFieldMode);
   
   // dummy substructures
   const Trk::LayerArray* dummyLayers = 0;
@@ -1113,7 +1118,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	// reference position 
 	HepPoint3D gp(subBds->outerRadius(),0.,0.);
 	subVolumes.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
-                                                             new HepPoint3D(transf*gp)));
+                                                             Trk::GlobalPosition(transf*gp)));
         //glue subVolumes
         sVols.push_back(sVol); 
         if (eta==0)      sVolsNeg.push_back(sVol); 
@@ -1340,9 +1345,9 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	  // reference position 
 	  HepPoint3D gp(0.5*(hSteps[h].second+hSteps[h+1].second),0.,0.);
 	  subVolumesVect.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, false),
-	                                                       new HepPoint3D((*transf)*gp)));
+	                                                       Trk::GlobalPosition((*transf)*gp)));
 	  hSubsTr.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
-	                                                       new HepPoint3D((*transf)*gp)));
+	                                                       Trk::GlobalPosition((*transf)*gp)));
 	  hSubs.push_back(sVol);
 
 	  //glue subVolume
@@ -1485,9 +1490,9 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         // reference position 
 	HepPoint3D gp(subBds->outerRadius(),0.,0.);
 	//subVolumes.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
-        //                                                     new HepPoint3D((*transf)*gp)));
+        //                                                     Trk::GlobalPosition((*transf)*gp)));
 	subVolumes[phi*etaN+eta] = Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, false),
-                                                             new HepPoint3D((*transf)*gp));
+                                                             Trk::GlobalPosition((*transf)*gp));
         //glue subVolumes
         //sVols[phi*etaN+eta] = sVol; 
         sVols[phiN*eta+phi] = sVol; 
@@ -1656,9 +1661,9 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
       // reference position 
       HepPoint3D gp(subBds->mediumRadius(),0.,0.);
       subVolumesVect.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, false),
-								new HepPoint3D((*transf)*gp)));
+								Trk::GlobalPosition((*transf)*gp)));
       hSubsTr.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
-							 new HepPoint3D((*transf)*gp)));
+							 Trk::GlobalPosition((*transf)*gp)));
       hSubs.push_back(sVol);
       
       //glue subVolume

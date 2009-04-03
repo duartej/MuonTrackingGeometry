@@ -98,6 +98,7 @@ namespace Muon {
       bool                                m_multilayerRepresentation;   
 
       ToolHandle<Trk::ITrackingVolumeArrayCreator>   m_trackingVolumeArrayCreator;  //!< Helper Tool to create TrackingVolume Arrays
+      unsigned int                                   m_magFieldMode;                //!< set the magnetic field mode
       ToolHandle<Trk::IMagneticFieldTool>            m_magFieldTool;                //!< Tracking Interface to Magnetic Field
 
       mutable Trk::MaterialProperties*     m_muonMaterial;               //!< the material

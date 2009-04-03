@@ -81,6 +81,7 @@ namespace Muon {
       const TgcIdHelper*            m_tgcIdHelper;           //!< 
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
 
+      unsigned int                              m_magFieldMode;           //!< set the magnetic field properties
       ToolHandle<Trk::IMagneticFieldTool>       m_magFieldTool;           //!< Tracking Interface to Magnetic Field
 
       ToolHandle<Muon::MuonStationTypeBuilder>  m_muonStationTypeBuilder; //!< Helper Tool to create TrackingVolume Arrays

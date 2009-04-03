@@ -82,6 +82,7 @@
 Muon::MuonStationBuilder::MuonStationBuilder(const std::string& t, const std::string& n, const IInterface* p) :
   AlgTool(t,n,p),
   m_muonMgrLocation("MuonMgr"),
+  m_magFieldMode(Trk::RealisticField),
   m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
   m_muonStationTypeBuilder("Muon::MuonStationTypeBuilder/MuonStationTypeBuilder"),
   m_trackingVolumeHelper("Trk::TrackingVolumeHelper/TrackingVolumeHelper"),
@@ -92,6 +93,8 @@ Muon::MuonStationBuilder::MuonStationBuilder(const std::string& t, const std::st
   m_identifyActive(true)
 {
   declareInterface<Trk::IDetachedTrackingVolumeBuilder>(this);
+  declareProperty("StationTypeBuilder",               m_muonStationTypeBuilder);
+  declareProperty("MagneticFieldMode",                m_magFieldMode);  
   declareProperty("MuonDetManagerLocation",           m_muonMgrLocation);
   declareProperty("BuildBarrelStations",              m_buildBarrel);
   declareProperty("BuildEndcapStations",              m_buildEndcap);
@@ -135,7 +138,7 @@ StatusCode Muon::MuonStationBuilder::initialize()
     log << MSG::INFO << m_muonMgr->geometryVersion() << endreq; 
     
     // Retrieve the magnetic field tool   ----------------------------------------------------    
-    if (m_magFieldTool.retrieve().isFailure())
+    if (m_magFieldMode && m_magFieldTool.retrieve().isFailure())
     {
       log << MSG::FATAL << "Failed to retrieve tool " << m_magFieldTool << endreq;
       return StatusCode::FAILURE;
@@ -171,9 +174,11 @@ StatusCode Muon::MuonStationBuilder::initialize()
     m_muonMaterial = Trk::MaterialProperties(m_muonMaterialProperties[0],
                                              m_muonMaterialProperties[1],
                                              m_muonMaterialProperties[2]);
-
-    Trk::MagneticFieldProperties muonMagneticFieldProperties(&(*m_magFieldTool), Trk::RealisticField);    
-    m_muonMagneticField = muonMagneticFieldProperties;
+    // set the magnetic field 
+    if (!m_magFieldMode)
+        m_muonMagneticField = Trk::MagneticFieldProperties();
+    else                                            
+        m_muonMagneticField = Trk::MagneticFieldProperties(&(*m_magFieldTool), Trk::RealisticField);    
 
     log << MSG::INFO  << name() <<" initialize() successful" << endreq;    
     

@@ -1078,7 +1078,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
   // layers correspond to DedModules and RpcModules; all substructures averaged in material properties
   std::vector<const Trk::Layer*> layers;
   for (unsigned int ic=0; ic<gv.size(); ++ic) {
-    //std::cout << "processing Rpc component:"<< gv[ic]->getLogVol()->getName() <<std::endl;
+    //std::cout << "processing Rpc component:"<< gv[ic]->getLogVol()->getName() <<","<< transfc[ic].getRotation()<<std::endl;
     const GeoLogVol* glv = gv[ic]->getLogVol();
     const GeoShape* shape = glv->getShape();
     if (shape->type()!="Box" && shape->type()!="Trd") {
@@ -1178,65 +1178,63 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
           //printChildren(gv[ic]);
           unsigned int ngc = gv[ic]->getNChildVols();
           for (unsigned int igc=0; igc<ngc; igc++) {
-	    HepTransform3D trgc;
-             if (transfc[ic].getTranslation()[0]>vol->center()[0]) {
-               trgc = HepRotateZ3D(180*deg)*(gv[ic]->getXToChildVol(igc)); 
-             } else {
-               trgc = gv[ic]->getXToChildVol(igc);
-             }
-             const GeoVPhysVol* gcv = &(*(gv[ic]->getChildVol(igc)));
-             const GeoLogVol* gclv = gcv->getLogVol();
-             const GeoShape* lshape = gclv->getShape();
-             while (lshape->type()=="Subtraction") {
-	       const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction*> (lshape); 
-	       lshape = sub->getOpA(); 
-	     } 
-	     const GeoTrd* gtrd = dynamic_cast<const GeoTrd*> (lshape);
-	     double gx = gtrd->getXHalfLength1();
-	     double gy = gtrd->getYHalfLength1();
-	     double gz = gtrd->getZHalfLength();
+	    HepTransform3D trgc;             
+            if (transfc[ic].getRotation().isIdentity()) trgc = gv[ic]->getXToChildVol(igc);
+            else trgc = HepRotateZ3D(180*deg)*(gv[ic]->getXToChildVol(igc)); 
+	    
+	    const GeoVPhysVol* gcv = &(*(gv[ic]->getChildVol(igc)));
+	    const GeoLogVol* gclv = gcv->getLogVol();
+	    const GeoShape* lshape = gclv->getShape();
+	    while (lshape->type()=="Subtraction") {
+	      const GeoShapeSubtraction* sub = dynamic_cast<const GeoShapeSubtraction*> (lshape); 
+	      lshape = sub->getOpA(); 
+	    } 
+	    const GeoTrd* gtrd = dynamic_cast<const GeoTrd*> (lshape);
+	    double gx = gtrd->getXHalfLength1();
+	    double gy = gtrd->getYHalfLength1();
+	    double gz = gtrd->getZHalfLength();
             
-             if ( (gclv->getName()).substr(0,6)=="RPC_AL" ) {
-	       if (fabs(gx-5.0) < 0.001) {
-		 if (!m_rpcExtPanel) {
-		   double vol = 8*gx*gy*gz;
-                   m_rpcExtPanel = getAveragedLayerMaterial(gcv,vol,2*gx);
-                 }
-                 rpcMat=*m_rpcExtPanel;
-	       } else if (fabs(gx - 4.3) < 0.001) {
-		 if (!m_rpcMidPanel) {
-		   double vol = 8*gx*gy*gz;
-                   m_rpcMidPanel = getAveragedLayerMaterial(gcv,vol,2*gx);
-                 }
-                 rpcMat=*m_rpcMidPanel;
-	       } else {
-		 *m_log << MSG::WARNING << name() << "unknown RPC panel:" << gx << endreq;               
-               }
-	       // create Rpc panel layers 
-               thickness = 2*gx;
-	       Trk::HomogenousLayerMaterial rpcMaterial(rpcMat);
-	       layer = new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(trgc.getTranslation())*(*cTr)),
-					   bounds, rpcMaterial, thickness, od );
-	       layers.push_back(layer);
-	       layer->setLayerType(0);
-	     } else if  ( (gclv->getName())=="Rpclayer" ) {
-               if ( fabs(gx-6.85)>0.001 )  *m_log << MSG::WARNING << name() << " unusual thickness of RPC layer:" << 2*gx << endreq;
-	       if (!m_rpcLayer) {                   
-		 double vol = 8*gx*gy*gz;
-                 // material allocated to two strip planes ( gas volume suppressed )
-		 m_rpcLayer = getAveragedLayerMaterial(gcv,vol,2*gx);
-	       }
-	       rpcMat=*m_rpcLayer;
-               // define 1 layer for 2 strip planes
-               thickness = 2*gx;
-	       Trk::HomogenousLayerMaterial rpcMaterial(rpcMat);
-	       layer = new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(trgc.getTranslation())*(*cTr)),
-					   bounds, rpcMaterial, thickness, od );
-	       layers.push_back(layer);
-	       layer->setLayerType(1);               
-             } else {
-	       *m_log << MSG::WARNING << name()  << "unknown RPC component? " << gclv->getName() << endreq;
-             }
+	    if ( (gclv->getName()).substr(0,6)=="RPC_AL" ) {
+	      if (fabs(gx-5.0) < 0.001) {
+		if (!m_rpcExtPanel) {
+		  double vol = 8*gx*gy*gz;
+		  m_rpcExtPanel = getAveragedLayerMaterial(gcv,vol,2*gx);
+		}
+		rpcMat=*m_rpcExtPanel;
+	      } else if (fabs(gx - 4.3) < 0.001) {
+		if (!m_rpcMidPanel) {
+		  double vol = 8*gx*gy*gz;
+		  m_rpcMidPanel = getAveragedLayerMaterial(gcv,vol,2*gx);
+		}
+		rpcMat=*m_rpcMidPanel;
+	      } else {
+		*m_log << MSG::WARNING << name() << "unknown RPC panel:" << gx << endreq;               
+	      }
+	      // create Rpc panel layers 
+	      thickness = 2*gx;
+	      Trk::HomogenousLayerMaterial rpcMaterial(rpcMat);
+	      layer = new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(trgc.getTranslation())*(*cTr)),
+					  bounds, rpcMaterial, thickness, od );
+	      layers.push_back(layer);
+	      layer->setLayerType(0);
+	    } else if  ( (gclv->getName())=="Rpclayer" ) {
+	      if ( fabs(gx-6.85)>0.001 )  *m_log << MSG::WARNING << name() << " unusual thickness of RPC layer:" << 2*gx << endreq;
+	      if (!m_rpcLayer) {                   
+		double vol = 8*gx*gy*gz;
+		// material allocated to two strip planes ( gas volume suppressed )
+		m_rpcLayer = getAveragedLayerMaterial(gcv,vol,2*gx);
+	      }
+	      rpcMat=*m_rpcLayer;
+	      // define 1 layer for 2 strip planes
+	      thickness = 2*gx;
+	      Trk::HomogenousLayerMaterial rpcMaterial(rpcMat);
+	      layer = new Trk::PlaneLayer(new HepTransform3D(HepTranslate3D(trgc.getTranslation())*(*cTr)),
+					  bounds, rpcMaterial, thickness, od );
+	      layers.push_back(layer);
+	      layer->setLayerType(1);               
+	    } else {
+	      *m_log << MSG::WARNING << name()  << "unknown RPC component? " << gclv->getName() << endreq;
+	    }
 	  }
           delete cTr;
 	}

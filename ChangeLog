@@ -1,3 +1,7 @@
+2009-04-06 Sarka Todorova <sarka.todorova@cern.ch>
+	* unidentified RPC stations (partially) fixed (for GEO) 
+	* tagged as MuonTrackingGeometry-00-05-01
+
 2009-04-03 Andreas Salzburger <Andreas.Salzburger -at- cern.ch>
         * noField option introduced
         * memory defragmentation fixes (no dynamic allocation)

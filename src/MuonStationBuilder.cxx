@@ -605,16 +605,13 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
   if (stationName.substr(0,1)=="C") { 
     int st = stationName.substr(0,3)=="CSS" ? 0 : 1;
     const MuonGM::CscReadoutElement* cscRE = m_muonMgr->getCscReadoutElement(st,eta,phi,0);    
-    if (!cscRE) cscRE = m_muonMgr->getCscReadoutElement(st,eta,phi,1);
+    int cLay = cscRE ? 0 : 1;
+    if (!cscRE) cscRE = m_muonMgr->getCscReadoutElement(st,eta,phi,cLay);
     if (cscRE) {
       for (int gasgap = 0; gasgap < cscRE->Ngasgaps(); gasgap++) {
-        int etaId = eta;
-        if (etaId < 1 ) etaId = -1;
-	Identifier idi = m_cscIdHelper->channelID(stationName.substr(0,3),etaId,phi+1,1,gasgap+1,0,cscRE->NetaStrips(gasgap));       
+	Identifier idi = m_cscIdHelper->channelID(cscRE->identify(),cscRE->ChamberLayer(),gasgap+1,0,1);   
         const Trk::PlaneSurface* stripSurf = dynamic_cast<const Trk::PlaneSurface*> (&(cscRE->surface(idi)));
         const HepPoint3D gpi = stripSurf->center();
-        //const HepPoint3D gpi = cscRE->stripPos(idi);
-        //const HepPoint3D gp = cscRE->stripPos(eta,0,gasgap+1,0,cscRE->NetaStrips(gasgap));
         const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gpi);
         const Trk::Layer* assocLay = 0;
         if (assocVol) assocLay = assocVol->associatedLayer(gpi);

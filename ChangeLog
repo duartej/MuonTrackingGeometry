@@ -1,3 +1,7 @@
+2009-04-27 Sarka Todorova <sarka.todorova@cern.ch>
+	* memory leak fix 
+	* tagged as MuonTrackingGeometry-00-05-03
+
 2009-04-08 Sarka Todorova <sarka.todorova@cern.ch>
 	* bugfix in CSC identification 
 	* tagged as MuonTrackingGeometry-00-05-02

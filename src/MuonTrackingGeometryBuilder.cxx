@@ -116,6 +116,7 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   declareProperty("LoadMSEntry",                      m_loadMSentry);  
   declareProperty("BuildActiveMaterial",              m_muonActive);  
   declareProperty("BuildInertMaterial",               m_muonInert);
+  declareProperty("InertMaterialBuilder",             m_inertBuilder);
   declareProperty("MagneticFieldMode",                m_magFieldMode);
   declareProperty("MagneticFieldTool",                m_magFieldTool);  
   // the overall dimensions
@@ -1327,7 +1328,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 								     detVols,
 								     volName );
                                                                       
-          if (phiP>-1) delete subVol;
+          if (phiP>-1) {delete subVol; delete transf;}
           else garbVol[m_adjustedPhiType[phi]].push_back(subVol);       // don't delete before cloned                                             
 	  // prepare blending
 	  if (m_blendInertMaterial && detVols) {

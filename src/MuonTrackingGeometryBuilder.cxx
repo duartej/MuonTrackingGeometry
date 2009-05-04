@@ -1302,7 +1302,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
           if ( hSteps[h].first == 1 && hSteps[h+1].first == 1 ) volType = 3;  
 	  // define subvolume
           if (phiP>-1 ) {
-            subVol =new Trk::Volume(*(phiSubs[phiP][h]),(*transf)*phiSubs[phiP][h]->transform().inverse());
+            subVol = new Trk::Volume(*(phiSubs[phiP][h]),(*transf)*phiSubs[phiP][h]->transform().inverse());
 	  } else if ( phiSect<0.5*M_PI) {
 	    Trk::BevelledCylinderVolumeBounds* subBds = new Trk::BevelledCylinderVolumeBounds(hSteps[h].second,
 							   hSteps[h+1].second,
@@ -1328,8 +1328,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 								     detVols,
 								     volName );
                                                                       
-          if (phiP>-1) {delete subVol; delete transf;}
-          else garbVol[m_adjustedPhiType[phi]].push_back(subVol);       // don't delete before cloned                                             
+        
 	  // prepare blending
 	  if (m_blendInertMaterial && detVols) {
 	    for (unsigned int id=0;id<detVols->size();id++) {
@@ -1350,6 +1349,10 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	  hSubsTr.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
 	                                                       Trk::GlobalPosition((*transf)*gp)));
 	  hSubs.push_back(sVol);
+
+          // cleanup 
+          if (phiP>-1) {delete transf; delete subVol;}
+          else garbVol[m_adjustedPhiType[phi]].push_back(subVol);       // don't delete before cloned
 
 	  //glue subVolume
 	  if (h==0)                sVolsInn.push_back(sVol); 

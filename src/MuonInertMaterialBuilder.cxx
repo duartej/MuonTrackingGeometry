@@ -6,9 +6,7 @@
 #include "MuonTrackingGeometry/MuonInertMaterialBuilder.h"
 #include "MuonTrackingGeometry/MuonStationTypeBuilder.h"
 //MuonSpectrometer include
-#include "MuonGeoModel/MuonDetectorManager.h"
-#include "MuonGeoModel/MuonStation.h"
-#include "MuonGeoModel/MdtReadoutElement.h"
+#include "MuonReadoutGeometry/MuonDetectorManager.h"
 #include "MuonIdHelpers/MuonIdHelper.h"
 // Trk
 #include "TrkDetDescrInterfaces/ILayerArrayCreator.h"

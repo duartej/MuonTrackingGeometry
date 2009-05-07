@@ -4,7 +4,7 @@
 
 // Muon
 #include "MuonTrackingGeometry/MuonTrackingGeometryBuilder.h"
-#include "MuonGeoModel/GlobalUtilities.h" 
+#include "MuonReadoutGeometry/GlobalUtilities.h" 
 // Trk
 #include "TrkDetDescrInterfaces/ITrackingVolumeArrayCreator.h"
 #include "TrkDetDescrInterfaces/ITrackingVolumeHelper.h"

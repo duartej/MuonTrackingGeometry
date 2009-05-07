@@ -1,3 +1,7 @@
+2009-05-07 Sarka Todorova <sarka.todorova@cern.ch>
+	* MGM/MuonReadoutGeometry dependence
+	* tagged as MuonTrackingGeometry-00-05-05
+
 2009-05-04 Sarka Todorova <sarka.todorova@cern.ch>
 	* bugfix 
 	* tagged as MuonTrackingGeometry-00-05-04

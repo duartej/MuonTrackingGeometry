@@ -96,6 +96,8 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_adjustStatic(true),
   m_static3d(true),
   m_blendInertMaterial(true),
+  m_removeBlended(false),
+  m_inertPerm(0),
   m_alignTolerance(0.),
   m_colorCode(0),
   m_activeAdjustLevel(2),
@@ -134,6 +136,7 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   declareProperty("ActiveAdjustLevel",              m_activeAdjustLevel);
   declareProperty("InertAdjustLevel",               m_inertAdjustLevel);
   declareProperty("BlendInertMaterial",             m_blendInertMaterial);
+  declareProperty("RemoveBlendedMaterialObjects",   m_removeBlended);
   declareProperty("AlignmentPositionTolerance",     m_alignTolerance);
   declareProperty("ColorCode",                      m_colorCode);
   // calo entry volume & exit volume
@@ -247,11 +250,10 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
   // process muon material objects
   if (m_muonActive && m_stationBuilder && !m_stations) m_stations = m_stationBuilder->buildDetachedTrackingVolumes();
   if (m_muonInert && m_inertBuilder && !m_inertObjs) m_inertObjs = m_inertBuilder->buildDetachedTrackingVolumes();
-  //if (m_inertObjs && m_blendInertMaterial) {
-  //  //m_inertBlend.resize(m_inertObjs->size());
-  //  //getVolumeFractions();    
-  //  getDilutingFactors();    
-  //}
+  if (m_inertObjs && m_blendInertMaterial && m_removeBlended) {
+    while ( m_inertPerm<m_inertObjs->size() 
+	    && (*m_inertObjs)[m_inertPerm]->name().substr((*m_inertObjs)[m_inertPerm]->name().size()-4,4)=="PERM") m_inertPerm++;
+  }
   
   // find object's span with tolerance for the alignment 
   if (!m_stationSpan) m_stationSpan = findVolumesSpan(m_stations, 100.*m_alignTolerance, m_alignTolerance*deg);
@@ -744,12 +746,32 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    const Trk::TrackingVolume* detector = m_trackingVolumeHelper->glueTrackingVolumeArrays(*posEndcap, Trk::negativeFaceXY, 
 											  *negDet, Trk::positiveFaceXY,
 											  m_exitVolume);
-//
+// blend material
+   if (m_blendInertMaterial) blendMaterial();
+
+// tracking geometry 
    Trk::TrackingGeometry* trackingGeometry = new Trk::TrackingGeometry(detector,Trk::globalSearch);
 
-   if (m_blendInertMaterial) blendMaterial();
-   //log << MSG::INFO << name() << " print volume hierarchy" << endreq;
-   //trackingGeometry->printVolumeHierarchy(log);
+// clean-up
+   if (m_stationSpan) {
+     for (size_t i = 0; i < m_stationSpan->size(); i++)
+       delete (*m_stationSpan)[i];
+     delete m_stationSpan; m_stationSpan = 0;
+   }
+   if (m_inertSpan) {
+     for (size_t i = 0; i < m_inertSpan->size(); i++)
+       delete (*m_inertSpan)[i];
+     delete m_inertSpan; m_inertSpan = 0;
+   }
+   
+   for (size_t i = 0; i < m_spans.size(); i++) delete m_spans[i];
+   
+   for (std::map<const Trk::DetachedTrackingVolume*,std::vector<const Trk::TrackingVolume*>* >::iterator it = m_blendMap.begin();
+	it != m_blendMap.end();
+	++it)
+     {
+       delete it->second;
+     }   
 
    m_chronoStatSvc->chronoStop("MS::build-up");
 
@@ -769,30 +791,13 @@ StatusCode Muon::MuonTrackingGeometryBuilder::finalize()
       delete m_stations; m_stations = 0;
     } 
     if (m_inertObjs) {
-      for (size_t i = 0; i < m_inertObjs->size(); i++)
+      unsigned int inLim = (m_blendInertMaterial && m_removeBlended) ? m_inertPerm : m_inertObjs->size();
+      for (size_t i = 0; i < inLim; i++) {
 	if ((*m_inertObjs)[i])	delete (*m_inertObjs)[i];
         else log << MSG::DEBUG << name() << " inert object pointer corrupted ! " << endreq; 
+      }
       delete m_inertObjs; m_inertObjs = 0;
     } 
-    if (m_stationSpan) {
-      for (size_t i = 0; i < m_stationSpan->size(); i++)
-        delete (*m_stationSpan)[i];
-      delete m_stationSpan; m_stationSpan = 0;
-    }
-    if (m_inertSpan) {
-      for (size_t i = 0; i < m_inertSpan->size(); i++)
-        delete (*m_inertSpan)[i];
-      delete m_inertSpan; m_inertSpan = 0;
-    }
-
-    for (size_t i = 0; i < m_spans.size(); i++) delete m_spans[i];
-
-    for (std::map<const Trk::DetachedTrackingVolume*,std::vector<const Trk::TrackingVolume*>* >::iterator it = m_blendMap.begin();
-         it != m_blendMap.end();
-         ++it)
-    {
-      delete it->second;
-    }
 
     m_chronoStatSvc->chronoPrint("MS::build-up");
 
@@ -1061,6 +1066,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
   unsigned int colorCode = m_colorCode;
 
+  std::vector<const Trk::DetachedTrackingVolume*> blendVols; 
+
   // partitions ? include protection against wrong setup
   if (etaN < 1 || phiN < 1) {
     log << MSG::ERROR << name() << "wrong partition setup" << endreq;
@@ -1097,24 +1104,22 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         const Trk::Volume* subVol= new Trk::Volume(*protVol, transf);     
         // enclosed muon objects ?   
 	std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) ; 
-        std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol);
+        blendVols.clear();
+        std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol, blendVols);
         const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( *subVol,
 								   m_muonMaterial,
 								   m_muonMagneticField,
 								   detVols,
 								   volName );
         // prepare blending
-        if (m_blendInertMaterial && detVols) {
-          for (unsigned int id=0;id<detVols->size();id++) {
-            if (!(*detVols)[id]->layerRepresentation() && (*detVols)[id]->constituents() && 
-		 (*detVols)[id]->name().substr((*detVols)[id]->name().size()-4,4)!="PERM" ){
-	      if (!m_blendMap[(*detVols)[id]]) 
-		m_blendMap[(*detVols)[id]] = new std::vector<const Trk::TrackingVolume*>;
-	      m_blendMap[(*detVols)[id]]->push_back(sVol);
-	    }
+        if (m_blendInertMaterial && blendVols.size()) {
+          for (unsigned int id=0;id<blendVols.size();id++) {
+	    if (!m_blendMap[blendVols[id]]) 
+	      m_blendMap[blendVols[id]] = new std::vector<const Trk::TrackingVolume*>;
+	    m_blendMap[blendVols[id]]->push_back(sVol);
 	  }
 	}  
-        //delete subVol;
+        //
         sVol->registerColorCode(colorCode); 
 	// reference position 
 	HepPoint3D gp(subBds->outerRadius(),0.,0.);
@@ -1156,7 +1161,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
   } else {
     // enclosed muon objects ? 
-    std::vector<const Trk::DetachedTrackingVolume*>* muonObjs = getDetachedObjects( vol);
+    blendVols.clear();
+    std::vector<const Trk::DetachedTrackingVolume*>* muonObjs = getDetachedObjects( vol, blendVols);
 
     tVol = new Trk::TrackingVolume( *vol,
                                     m_muonMaterial,
@@ -1164,14 +1170,11 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 				    muonObjs,
 				    volumeName);
     // prepare blending
-    if (m_blendInertMaterial && muonObjs) {
-      for (unsigned int id=0;id<muonObjs->size();id++) {
-	if (!(*muonObjs)[id]->layerRepresentation() && (*muonObjs)[id]->constituents() &&
-		 (*muonObjs)[id]->name().substr((*muonObjs)[id]->name().size()-4,4)!="PERM" ){
-	  if (!m_blendMap[(*muonObjs)[id]]) 
-	    m_blendMap[(*muonObjs)[id]] = new std::vector<const Trk::TrackingVolume*>;
-	  m_blendMap[(*muonObjs)[id]]->push_back(tVol);
-	}
+    if (m_blendInertMaterial && blendVols.size()) {
+      for (unsigned int id=0;id<blendVols.size();id++) {
+	if (!m_blendMap[blendVols[id]]) 
+	  m_blendMap[blendVols[id]] = new std::vector<const Trk::TrackingVolume*>;
+	m_blendMap[blendVols[id]]->push_back(tVol);
       }
     }  
   }
@@ -1192,6 +1195,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
   const Trk::TrackingVolume* tVol = 0;
 
   unsigned int colorCode = m_colorCode;
+
+  std::vector<const Trk::DetachedTrackingVolume* > blendVols;
 
   //getPartitionFromMaterial(vol);
 
@@ -1320,24 +1325,21 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
        
 	  // enclosed muon objects ? also adjusts material properties in case of material blend  
 	  std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) +MuonGM::buildString(h,2) ; 
-	  std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol);
+          blendVols.clear(); 
+	  std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol, blendVols);
 
 	  const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( *subVol,
 								     m_muonMaterial,
 								     m_muonMagneticField,
 								     detVols,
 								     volName );
-                                                                      
-        
+                                                                              
 	  // prepare blending
-	  if (m_blendInertMaterial && detVols) {
-	    for (unsigned int id=0;id<detVols->size();id++) {
-	      if (!(*detVols)[id]->layerRepresentation() && (*detVols)[id]->constituents() &&
-		  (*detVols)[id]->name().substr((*detVols)[id]->name().size()-4,4)!="PERM" ){
-		if (!m_blendMap[(*detVols)[id]]) 
-		  m_blendMap[(*detVols)[id]] = new std::vector<const Trk::TrackingVolume*>;
-		m_blendMap[(*detVols)[id]]->push_back(sVol);
-	      }
+	  if (m_blendInertMaterial && blendVols.size()) {
+	    for (unsigned int id=0;id<blendVols.size();id++) {
+	      if (!m_blendMap[blendVols[id]]) 
+		m_blendMap[blendVols[id]] = new std::vector<const Trk::TrackingVolume*>;
+	      m_blendMap[blendVols[id]]->push_back(sVol);
 	    }
 	  }  
           //
@@ -1472,21 +1474,19 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) ; 
 
 	Trk::MaterialProperties mat=m_muonMaterial;
-        std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( &subVol);
+        blendVols.clear();
+        std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( &subVol, blendVols);
         const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( subVol,
 								   m_muonMaterial,
 								   m_muonMagneticField,
 								   detVols,
 								   volName );
         // prepare blending
-        if (m_blendInertMaterial && detVols) {
-          for (unsigned int id=0;id<detVols->size();id++) {
-            if (!(*detVols)[id]->layerRepresentation() && (*detVols)[id]->constituents() && 
-		 (*detVols)[id]->name().substr((*detVols)[id]->name().size()-4,4)!="PERM" ){
-	      if (!m_blendMap[(*detVols)[id]]) 
-		m_blendMap[(*detVols)[id]] = new std::vector<const Trk::TrackingVolume*>;
-	      m_blendMap[(*detVols)[id]]->push_back(sVol);
-	    }
+        if (m_blendInertMaterial && blendVols.size()) {
+          for (unsigned int id=0;id<blendVols.size();id++) {
+	    if (!m_blendMap[blendVols[id]]) 
+	      m_blendMap[blendVols[id]] = new std::vector<const Trk::TrackingVolume*>;
+	    m_blendMap[blendVols[id]]->push_back(sVol);
 	  }
 	}  
         //delete subVol;
@@ -1534,7 +1534,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
   } else {
     // enclosed muon objects ? 
-    std::vector<const Trk::DetachedTrackingVolume*>* muonObjs = getDetachedObjects( vol);
+    blendVols.clear();
+    std::vector<const Trk::DetachedTrackingVolume*>* muonObjs = getDetachedObjects( vol, blendVols);
 
     tVol = new Trk::TrackingVolume( *vol,
                                     m_muonMaterial,
@@ -1542,14 +1543,11 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 				    muonObjs,
 				    volumeName);
     // prepare blending
-    if (m_blendInertMaterial && muonObjs) {
-      for (unsigned int id=0;id<muonObjs->size();id++) {
-	if (!(*muonObjs)[id]->layerRepresentation() && (*muonObjs)[id]->constituents() &&
-		 (*muonObjs)[id]->name().substr((*muonObjs)[id]->name().size()-4,4)!="PERM" ){
-	  if (!m_blendMap[(*muonObjs)[id]]) 
-	    m_blendMap[(*muonObjs)[id]] = new std::vector<const Trk::TrackingVolume*>;
-	  m_blendMap[(*muonObjs)[id]]->push_back(tVol);
-	}
+    if (m_blendInertMaterial && blendVols.size()) {
+      for (unsigned int id=0;id<blendVols.size();id++) {
+	if (!m_blendMap[blendVols[id]]) 
+	  m_blendMap[blendVols[id]] = new std::vector<const Trk::TrackingVolume*>;
+	m_blendMap[blendVols[id]]->push_back(tVol);
       }
     }  
   }
@@ -1565,6 +1563,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
   const Trk::TrackingVolume* tVol = 0;
 
   unsigned int colorCode = m_colorCode;
+
+  std::vector<const Trk::DetachedTrackingVolume*> blendVols;
 
   //getPartitionFromMaterial(vol);
 
@@ -1641,7 +1641,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
       
       // enclosed muon objects ? also adjusts material properties in case of material blend  
       std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) +MuonGM::buildString(h,2) ; 
-      std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( &subVol);
+      blendVols.clear();
+      std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( &subVol, blendVols);
       
       const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( subVol,
 								 m_muonMaterial,
@@ -1650,14 +1651,11 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
 								 volName );
       
       // prepare blending
-      if (m_blendInertMaterial && detVols) {
-	for (unsigned int id=0;id<detVols->size();id++) {
-	  if (!(*detVols)[id]->layerRepresentation() && (*detVols)[id]->constituents() &&
-		 (*detVols)[id]->name().substr((*detVols)[id]->name().size()-4,4)!="PERM" ){
-	    if (!m_blendMap[(*detVols)[id]]) 
-	      m_blendMap[(*detVols)[id]] = new std::vector<const Trk::TrackingVolume*>;
-	    m_blendMap[(*detVols)[id]]->push_back(sVol);
-	  }
+      if (m_blendInertMaterial && blendVols.size()) {
+	for (unsigned int id=0;id<blendVols.size();id++) {
+	  if (!m_blendMap[blendVols[id]]) 
+	    m_blendMap[blendVols[id]] = new std::vector<const Trk::TrackingVolume*>;
+	  m_blendMap[blendVols[id]]->push_back(sVol);
 	}
       }  
       //
@@ -1716,7 +1714,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
   return tVol;
 } 
 
-std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuilder::getDetachedObjects(const Trk::Volume* vol, int mode ) const
+std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuilder::getDetachedObjects(const Trk::Volume* vol, std::vector<const Trk::DetachedTrackingVolume*>& blendVols, int mode ) const
 {
   // mode : 0 all, 1 active only, 2 inert only
 
@@ -1805,18 +1803,24 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
       //bool rail = ( (*m_inertObjs)[i]->name() == "Rail" ) ? true : false; 
       bool rLimit = (!m_static3d || ( (*s)[4] <= rMax && (*s)[5] >= rMin ) ); 
       if ( rLimit && (*s)[0] < zMax && (*s)[1] > zMin ) {
+        bool accepted = false;
 	if (phiLim) {
 	  if (pMin>=0 && pMax<=2*M_PI) {
-	    if ( (*s)[2]<=(*s)[3] && (*s)[2] <= pMax && (*s)[3] >= pMin )  detached.push_back(inert);
-	    if ( (*s)[2]>(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin) ) detached.push_back(inert);
+	    if ( (*s)[2]<=(*s)[3] && (*s)[2] <= pMax && (*s)[3] >= pMin )  accepted = true;
+	    if ( (*s)[2]>(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin) ) accepted = true;
 	  } else if (pMin < 0) {
-	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin+2*M_PI) ) detached.push_back(inert);
-	    if ( (*s)[2]>(*s)[3]  ) detached.push_back(inert);
+	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin+2*M_PI) ) accepted = true;
+	    if ( (*s)[2]>(*s)[3]  ) accepted = true;
 	  } else if (pMax > 2*M_PI) {
-	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax-2*M_PI || (*s)[3] >= pMin) ) detached.push_back(inert);
-	    if ( (*s)[2]>(*s)[3]  ) detached.push_back(inert);
+	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax-2*M_PI || (*s)[3] >= pMin) ) accepted = true;
+	    if ( (*s)[2]>(*s)[3]  ) accepted = true;
 	  }
-	} else  detached.push_back(inert);
+	} else  accepted = true;
+	if (accepted) {
+          bool perm = inert->name().substr(inert->name().size()-4,4)=="PERM";
+          if ( !m_blendInertMaterial || !m_removeBlended || perm ) detached.push_back(inert);
+          if ( m_blendInertMaterial && !perm ) blendVols.push_back(inert);
+	}
       } 
     }
   }
@@ -2459,5 +2463,6 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
 	log << MSG::DEBUG << "diluting factor:"<< dil<<" for "<< (*mIter).first->name()<<","<<ic<<endreq;
       }
     }
+    if ( m_removeBlended ) {  log << MSG::DEBUG << "deleting "<< (*mIter).first->name()<< endreq; delete (*mIter).first; }
   }
 }

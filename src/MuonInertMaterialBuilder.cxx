@@ -194,7 +194,9 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
  const
 {
   MsgStream log(msgSvc(), name());
-  std::vector<const Trk::DetachedTrackingVolume*> mInert;
+
+  // split output into objects to be kept and objects which may be released from memory (blended)
+  std::pair<std::vector<const Trk::DetachedTrackingVolume*>,std::vector<const Trk::DetachedTrackingVolume*> > mInert;
 
   // retrieve muon station prototypes from GeoModel
   const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* msTypes = buildDetachedTrackingVolumeTypes();
@@ -210,14 +212,16 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
       protMass += calculateVolume((*((*msTypeIter).first->constituents()))[ic].first)
 	*(*((*msTypeIter).first->constituents()))[ic].second.first;
     }
-    if (msTypeName.substr(0,1)!="J" && m_blendLimit>0 && protMass > m_blendLimit ) msTypeName = msTypeName + "PERM";
+    bool perm = msTypeName.substr(0,1)!="J" && m_blendLimit>0 && protMass > m_blendLimit;
+    if (perm) msTypeName = msTypeName + "PERM";
     log << MSG::DEBUG << name() << msTypeName<<" volume estimate:"<<","<< protMass << endreq;
     //
     const Trk::DetachedTrackingVolume* msTV = (*msTypeIter).first;
     for (unsigned int it=0 ;it<(*msTypeIter).second.size(); it++)  { 
       HepTransform3D combTr((*msTypeIter).second[it]); 
       const Trk::DetachedTrackingVolume* newStat = msTV->clone(msTypeName,combTr);
-      mInert.push_back(newStat);
+      if (perm) mInert.first.push_back(newStat);
+      else mInert.second.push_back(newStat);
     }
   }
 
@@ -225,12 +229,18 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
   for (unsigned int it = 0; it < msTypes->size(); it++) delete (*msTypes)[it].first;
   delete msTypes;   
  
-  const std::vector<const Trk::DetachedTrackingVolume*>* muonObjects=new std::vector<const Trk::DetachedTrackingVolume*>(mInert);
+  // merge
+  const std::vector<const Trk::DetachedTrackingVolume*>* muonObjects=0;
+  if ( !mInert.first.size() )
+    muonObjects=new std::vector<const Trk::DetachedTrackingVolume*>(mInert.second);
+  else {
+    for (unsigned int i=0;i<mInert.second.size();i++) mInert.first.push_back(mInert.second[i]);
+    muonObjects=new std::vector<const Trk::DetachedTrackingVolume*>(mInert.first);
+  }
 
   log << MSG::INFO << name() << " returns  " << (*muonObjects).size() << " objects (detached volumes)" << endreq;
 
   return muonObjects;
-
 }
 
 const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* Muon::MuonInertMaterialBuilder::buildDetachedTrackingVolumeTypes() const

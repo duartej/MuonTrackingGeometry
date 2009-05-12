@@ -75,7 +75,7 @@ namespace Muon {
       /** Private method to check volume properties */
       void checkVolume(const Trk::TrackingVolume*) const;
       /** Private method to find detached volumes */
-      std::vector<const Trk::DetachedTrackingVolume*>* getDetachedObjects(const Trk::Volume*, int mode=0) const;
+      std::vector<const Trk::DetachedTrackingVolume*>* getDetachedObjects(const Trk::Volume*, std::vector<const Trk::DetachedTrackingVolume*>& ,int mode=0) const;
       /** Private method to check if constituent enclosed */
       bool enclosed(const Trk::Volume*, const Muon::Span*) const;
       /** Private method to retrieve z partition */
@@ -138,6 +138,8 @@ namespace Muon {
       mutable bool                        m_adjustStatic;
       mutable bool                        m_static3d;
       bool                                m_blendInertMaterial; 
+      bool                                m_removeBlended;
+      mutable unsigned int                m_inertPerm;                  // number of perm objects
       mutable double                      m_alignTolerance;
       int                                 m_colorCode;
       mutable int                         m_activeAdjustLevel;

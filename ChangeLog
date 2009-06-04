@@ -1,3 +1,7 @@
+2009-06-04 Sarka Todorova <sarka.todorova@cern.ch>
+	* bugfixes (averaged layer material, span )
+	* tagged as MuonTrackingGeometry-00-05-07
+
 2009-05-12 Sarka Todorova <sarka.todorova@cern.ch>
 	* release blended material objects from memory (option)
 	* tagged as MuonTrackingGeometry-00-05-06

@@ -1944,9 +1944,8 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(cons
           xthick = 2*fmin(x_array[il]-currX,halfZ-x_array[il]);
         }
 	x_thickness.push_back(xthick);
-	double scale = xthick/thickness;
-	Trk::ExtendedMaterialProperties xmatCSC(scale*matCSC.thickness(),scale*matCSC.x0(),scale*matCSC.l0(),
-					      matCSC.averageA(),matCSC.averageZ(),matCSC.averageRho()/scale); 
+	Trk::ExtendedMaterialProperties xmatCSC(xthick,matCSC.x0(),matCSC.l0(),
+					      matCSC.averageA(),matCSC.averageZ(),matCSC.averageRho()); 
         x_mat.push_back(xmatCSC);
         currX = x_array[il]+0.5*x_thickness.back();
         x_active.push_back(1);
@@ -2074,10 +2073,9 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCDiamondComponent(
           xthick = 2*fmin(x_array[il]-currX,halfZ-x_array[il]);
 	  x_thickness.push_back(xthick);
         }
-        double scale = xthick/thickness;
-        Trk::ExtendedMaterialProperties xmatCSC(scale*matCSC.thickness(),scale*matCSC.x0(),
-						scale*matCSC.l0(),matCSC.averageA(),
-						matCSC.averageZ(),matCSC.averageRho()/scale); 
+        Trk::ExtendedMaterialProperties xmatCSC(xthick,matCSC.x0(),
+						matCSC.l0(),matCSC.averageA(),
+						matCSC.averageZ(),matCSC.averageRho()); 
         x_mat.push_back(xmatCSC);
         currX = x_array[il]+0.5*x_thickness.back();
         x_active.push_back(1); 
@@ -2220,9 +2218,8 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processTGCComponent(const G
 					   matTGC.averageA(),matTGC.averageZ(),matTGC.averageRho()/scale);
 
   for (unsigned int il=0; il < x_array.size(); il++) {
-    scale = x_thickness[il]/activeThick; 
-    Trk::ExtendedMaterialProperties xmatTGC(scale*matTGC.thickness(),scale*matTGC.x0(),scale*matTGC.l0(),
-					    matTGC.averageA(),matTGC.averageZ(),matTGC.averageRho()/scale);
+    Trk::ExtendedMaterialProperties xmatTGC(x_thickness[il],matTGC.x0(),matTGC.l0(),
+					    matTGC.averageA(),matTGC.averageZ(),matTGC.averageRho());
     x_mat.push_back(xmatTGC);
     //std::cout << "tgc active layers:" << il << "," << x_array[il]<< ","<<x_thickness[il] << std::endl;
   }    
@@ -2499,7 +2496,7 @@ Trk::ExtendedMaterialProperties Muon::MuonStationTypeBuilder::collectStationMate
           if (mLay) { 
 	    double totalD = mat.thickness()+mLay->thickness();
 	    double f1 = mat.thickness()/totalD; double f2 = mLay->thickness()/totalD;  
-	    mat = Trk::ExtendedMaterialProperties(totalD, f1*mat.x0()+f2*mLay->x0(), f1*mat.l0()+f2*mLay->l0(),
+	    mat = Trk::ExtendedMaterialProperties(totalD, 1./(f1/mat.x0()+f2/mLay->x0()), 1./(f1/mat.l0()+f2/mLay->l0()),
 						  f1*mat.averageA()+f2*mLay->averageA(),f1*mat.averageZ()+f2*mLay->averageZ(),
 						  f1*mat.averageRho()+f2*mLay->averageRho());
 	  }
@@ -2516,7 +2513,7 @@ Trk::ExtendedMaterialProperties Muon::MuonStationTypeBuilder::collectStationMate
 	    double scale = 4*rect->halflengthX()*rect->halflengthY()/sf;
 	    double totalD = mat.thickness()+scale*mLay->thickness();
 	    double f1 = mat.thickness()/totalD; double f2 = scale*mLay->thickness()/totalD;  
-	    mat = Trk::ExtendedMaterialProperties(totalD, f1*mat.x0()+f2*mLay->x0(), f1*mat.l0()+f2*mLay->l0(),
+	    mat = Trk::ExtendedMaterialProperties(totalD, 1./(f1/mat.x0()+f2/mLay->x0()),1./(f1/mat.l0()+f2/mLay->l0()),
 						  f1*mat.averageA()+f2*mLay->averageA(),f1*mat.averageZ()+f2*mLay->averageZ(),
 						  f1*mat.averageRho()+f2*mLay->averageRho());
 	  }

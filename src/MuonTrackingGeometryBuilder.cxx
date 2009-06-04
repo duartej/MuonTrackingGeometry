@@ -898,31 +898,13 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
   }
   if (bcyl) {
     double minrad = bcyl->innerRadius(); double maxrad = bcyl->outerRadius(); double hphi = bcyl->halfPhiSector();
-    edges.push_back( Trk::GlobalPosition(minrad*cos(hphi),minrad*sin(hphi), bcyl->halflengthZ()) );
-    Trk::GlobalPosition gp = transform.getRotation()*edges.back();
-    //cylZcorr = bcyl->outerRadius()*sqrt(gp[0]*gp[0]+gp[1]*gp[1])/bcyl->halflengthZ(); 
-    edges.push_back( Trk::GlobalPosition(minrad*cos(hphi),minrad*sin(hphi), -bcyl->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(minrad*cos(hphi),minrad*sin(-hphi), bcyl->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(minrad*cos(hphi),minrad*sin(-hphi), -bcyl->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(maxrad*cos(hphi),maxrad*sin(hphi),  bcyl->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(maxrad*cos(hphi),maxrad*sin(hphi), -bcyl->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(maxrad*cos(hphi),maxrad*sin(-hphi), bcyl->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(maxrad*cos(hphi),maxrad*sin(-hphi), -bcyl->halflengthZ()) );
-    if ( hphi>M_PI-0.001 && transform.getTranslation().perp()<m_beamPipeRadius ) {minPhi=0.; maxPhi=2*M_PI;}
+    edges.push_back( Trk::GlobalPosition(0.,0.,bcyl->halflengthZ()));
+    edges.push_back( Trk::GlobalPosition(0.,0.,-bcyl->halflengthZ()));
   }
   if (cyl) {
     double minrad = cyl->innerRadius(); double maxrad = cyl->outerRadius(); double hphi = cyl->halfPhiSector();
-    edges.push_back( Trk::GlobalPosition(minrad*cos(hphi),minrad*sin(hphi), cyl->halflengthZ()) );
-    Trk::GlobalPosition gp = transform.getRotation()*edges.back();
-    //cylZcorr = cyl->outerRadius()*sqrt(gp[0]*gp[0]+gp[1]*gp[1])/cyl->halflengthZ();
-    edges.push_back( Trk::GlobalPosition(minrad*cos(hphi),minrad*sin(hphi), -cyl->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(minrad*cos(hphi),minrad*sin(-hphi), cyl->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(minrad*cos(hphi),minrad*sin(-hphi), -cyl->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(maxrad*cos(hphi),maxrad*sin(hphi),  cyl->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(maxrad*cos(hphi),maxrad*sin(hphi), -cyl->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(maxrad*cos(hphi),maxrad*sin(-hphi), cyl->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(maxrad*cos(hphi),maxrad*sin(-hphi), -cyl->halflengthZ()) );
-    if ( hphi>M_PI-0.001 && transform.getTranslation().perp()<m_beamPipeRadius ) {minPhi=0.; maxPhi=2*M_PI;}
+    edges.push_back( Trk::GlobalPosition(0.,0.,cyl->halflengthZ()));
+    edges.push_back( Trk::GlobalPosition(0.,0.,-cyl->halflengthZ()));
   }
   if (spb) {
 #ifdef TRKDETDESCR_USEFLOATPRECISON
@@ -957,16 +939,34 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     double phi = gp.phi()+M_PI; 
     //log << MSG::DEBUG << "edges:"<< ie<<","<<gp<<","<< phi<< endreq;
     double rad = gp.perp();
-    if ( gp[2]<minZ ) minZ = gp[2];
-    if ( gp[2]>maxZ ) maxZ = gp[2];
-    if ( phi<M_PI && phi < minP0 ) minP0 = phi; 
-    if ( phi<M_PI && phi > maxP0 ) maxP0 = phi; 
-    if ( phi>M_PI && phi < minP1 ) minP1 = phi; 
-    if ( phi>M_PI && phi > maxP1 ) maxP1 = phi; 
-    //if ( phi < minPhi ) minPhi = phi; 
-    //if ( phi > maxPhi ) maxPhi = phi; 
-    if ( rad < minR ) minR = rad; 
-    if ( rad > maxR ) maxR = rad; 
+    if (cyl || bcyl) {
+      double radius = 0.; double hz = 0.;
+      if (cyl) { radius = cyl->outerRadius(); hz = cyl->halflengthZ();}
+      if (bcyl) { radius = bcyl->outerRadius(); hz = bcyl->halflengthZ();}
+      if ( gp[2]-radius <minZ ) minZ = gp[2]-radius;
+      if ( gp[2]+radius >maxZ ) maxZ = gp[2]+radius;
+      if ( rad-radius < minR )  minR = rad>radius ? rad-radius: 0;
+      if ( rad>hz ) {
+	if (rad*cos(asin(hz/rad))< minR) minR = rad*cos(asin(hz/rad));
+      } else { minR = 0.;}
+      if ( rad+radius > maxR )  maxR = rad+radius;
+      double dph = atan(radius/rad);
+      if ( phi-dph <M_PI && phi-dph < minP0 ) minP0 = phi-dph;
+      if ( phi+dph <M_PI && phi+dph > maxP0 ) maxP0 = phi+dph;
+      if ( phi-dph >M_PI && phi-dph < minP1 ) minP1 = phi-dph;
+      if ( phi+dph >M_PI && phi+dph > maxP1 ) maxP1 = phi+dph;      
+    } else {
+      if ( gp[2]<minZ ) minZ = gp[2];
+      if ( gp[2]>maxZ ) maxZ = gp[2];
+      if ( phi<M_PI && phi < minP0 ) minP0 = phi; 
+      if ( phi<M_PI && phi > maxP0 ) maxP0 = phi; 
+      if ( phi>M_PI && phi < minP1 ) minP1 = phi; 
+      if ( phi>M_PI && phi > maxP1 ) maxP1 = phi; 
+      //if ( phi < minPhi ) minPhi = phi; 
+      //if ( phi > maxPhi ) maxPhi = phi; 
+      if ( rad < minR ) minR = rad; 
+      if ( rad > maxR ) maxR = rad;
+    } 
     /*
     if (cyl || bcyl ) {
       double radius = 0.;
@@ -1801,7 +1801,7 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
       const Muon::Span* s = (*((*m_inertSpan)[gMode]))[i].second;
       const Trk::DetachedTrackingVolume* inert = (*((*m_inertSpan)[gMode]))[i].first;
       //bool rail = ( (*m_inertObjs)[i]->name() == "Rail" ) ? true : false; 
-      bool rLimit = (!m_static3d || ( (*s)[4] <= rMax && (*s)[5] >= rMin ) ); 
+      bool rLimit = (!m_static3d || ( (*s)[4] <= rMaxc && (*s)[5] >= rMin ) ); 
       if ( rLimit && (*s)[0] < zMax && (*s)[1] > zMin ) {
         bool accepted = false;
 	if (phiLim) {

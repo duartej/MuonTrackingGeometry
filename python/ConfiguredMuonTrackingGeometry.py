@@ -27,4 +27,4 @@ MuonTrackingGeometryBuilder.ExitVolumeName  = TrkDetFlags.MuonSystemContainerNam
 MuonTrackingGeometryBuilder.MagneticFieldMode = TrkDetFlags.MagneticFieldMode()
 ToolSvc += MuonTrackingGeometryBuilder
 
-print MuonTrackingGeometryBuilder
+#print MuonTrackingGeometryBuilder

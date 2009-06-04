@@ -1,3 +1,8 @@
+2009-06-04  David Rousseau  <droussea@lxbuild084.cern.ch>
+
+	* python/ConfiguredMuonTrackingGeometry.py : no more printout of Configurable 
+	* tagged as MuonTrackingGeometry-00-05-08
+	
 2009-06-04 Sarka Todorova <sarka.todorova@cern.ch>
 	* bugfixes (averaged layer material, span )
 	* tagged as MuonTrackingGeometry-00-05-07

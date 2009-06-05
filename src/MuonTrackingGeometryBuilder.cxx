@@ -897,12 +897,10 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     edges.push_back( Trk::GlobalPosition(0., 2*dtrd->halflengthY2(),0.) );
   }
   if (bcyl) {
-    double minrad = bcyl->innerRadius(); double maxrad = bcyl->outerRadius(); double hphi = bcyl->halfPhiSector();
     edges.push_back( Trk::GlobalPosition(0.,0.,bcyl->halflengthZ()));
     edges.push_back( Trk::GlobalPosition(0.,0.,-bcyl->halflengthZ()));
   }
   if (cyl) {
-    double minrad = cyl->innerRadius(); double maxrad = cyl->outerRadius(); double hphi = cyl->halfPhiSector();
     edges.push_back( Trk::GlobalPosition(0.,0.,cyl->halflengthZ()));
     edges.push_back( Trk::GlobalPosition(0.,0.,-cyl->halflengthZ()));
   }
@@ -1987,8 +1985,8 @@ void Muon::MuonTrackingGeometryBuilder::getZParts() const
   if (m_inertAdjustLevel>1) { m_zPartitions.push_back(-3300.);  m_zPartitionsType.push_back(0); }   //  
   if (m_activeAdjustLevel>0){ m_zPartitions.push_back(-2600.);  m_zPartitionsType.push_back(0); }   //  
   if (m_inertAdjustLevel>0) { m_zPartitions.push_back(-2078.);  m_zPartitionsType.push_back(1); }   // BT  
-  if (m_inertAdjustLevel>0) { m_zPartitions.push_back(-1347.);  m_zPartitionsType.push_back(0); }   //   
-  if (m_activeAdjustLevel>0){ m_zPartitions.push_back(-800.);   m_zPartitionsType.push_back(0); }  //   
+  if (m_inertAdjustLevel>0) { m_zPartitions.push_back(-1347.);  m_zPartitionsType.push_back(1); }   //  cryoring 
+  if (m_activeAdjustLevel>0){ m_zPartitions.push_back(-800.);   m_zPartitionsType.push_back(1); }  //  cryoring 
   if (m_inertAdjustLevel>1) { m_zPartitions.push_back(-300.);   m_zPartitionsType.push_back(0); }   //   
   if (m_inertAdjustLevel+m_activeAdjustLevel<1) { m_zPartitions.push_back(-0.7*m_diskShieldZ);   m_zPartitionsType.push_back(0); }   //
 
@@ -2103,7 +2101,7 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   // BT sector
   std::vector<std::pair<int,double> >  barrelZ1F0;
   barrelZ1F0.push_back( std::pair<int,double>(0,m_innerBarrelRadius) );
-  if (m_activeAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,double>(0,4450.) );                
+  if (m_activeAdjustLevel+m_inertAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,double>(0,4450.) );                
   if (m_inertAdjustLevel>0) {
     barrelZ1F0.push_back( std::pair<int,double>(1,5800.) );
     barrelZ1F0.push_back( std::pair<int,double>(1,6500.) );
@@ -2112,8 +2110,8 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
     barrelZ1F0.push_back( std::pair<int,double>(1,6750.) );
     barrelZ1F0.push_back( std::pair<int,double>(1,8400.) );
   }
-  if (m_activeAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,double>(0,8900.) );
-  if (m_inertAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,double>(1,9600.) );
+  if (m_activeAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,double>(0,8750.) );  // adapted for cryoring (from 8900)
+  if (m_inertAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,double>(1,9850.) );   // adapted for cryoring (from 9600)
   barrelZ1F0.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
 
   std::vector<std::pair<int,double> >  barrelZ1F1;
@@ -2142,8 +2140,8 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   swZ0F0.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
   if (m_activeAdjustLevel>1) {
     swZ0F0.push_back( std::pair<int,double>(0,2700.) );                
-    swZ0F0.push_back( std::pair<int,double>(0,4600.) );                
   }
+  if (m_activeAdjustLevel+m_inertAdjustLevel>0) swZ0F0.push_back( std::pair<int,double>(0,4450.) );                
   if (m_activeAdjustLevel>0) {
     swZ0F0.push_back( std::pair<int,double>(0,6560.) );                // BI/BM
     swZ0F0.push_back( std::pair<int,double>(0,8900.) );                // BM/BO
@@ -2154,10 +2152,8 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   std::vector<std::pair<int,double> >  swZ0F1;
   swZ0F1.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
   if (m_activeAdjustLevel>1) swZ0F1.push_back( std::pair<int,double>(0,2700.) );               
-  if (m_inertAdjustLevel>0) {
-    swZ0F1.push_back( std::pair<int,double>(1,4700.) );
-    swZ0F1.push_back( std::pair<int,double>(1,5900.) );
-  }
+  if (m_inertAdjustLevel+m_activeAdjustLevel>0) swZ0F1.push_back( std::pair<int,double>(0,4450.) );
+  if (m_inertAdjustLevel>0) swZ0F1.push_back( std::pair<int,double>(1,5900.) );
   if (m_activeAdjustLevel>0) swZ0F1.push_back( std::pair<int,double>(0,6560.) );
   if (m_inertAdjustLevel>0) {
     swZ0F1.push_back( std::pair<int,double>(1,8900.) );
@@ -2209,7 +2205,7 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
     innerZ0F2.push_back( std::pair<int,double>(1,1685.) );
   }
   if (m_inertAdjustLevel>0) {
-    innerZ0F2.push_back( std::pair<int,double>(1,4700.) );
+    innerZ0F2.push_back( std::pair<int,double>(1,4450.) );
     innerZ0F2.push_back( std::pair<int,double>(1,5900.) );
   }
   if (m_activeAdjustLevel>0) innerZ0F2.push_back( std::pair<int,double>(0,6500.) );
@@ -2260,8 +2256,8 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   if (m_inertAdjustLevel>1) {
     innerZ1F2.push_back( std::pair<int,double>(1,1400.) );
     innerZ1F2.push_back( std::pair<int,double>(1,1685.) );
-    innerZ1F2.push_back( std::pair<int,double>(1,4000.) );    // limit leaking Cryo
   }
+  innerZ1F2.push_back( std::pair<int,double>(0,4150.) );
   if (m_inertAdjustLevel>0) {
     innerZ1F2.push_back( std::pair<int,double>(1,4700.) );
     innerZ1F2.push_back( std::pair<int,double>(1,5900.) );

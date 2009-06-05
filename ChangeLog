@@ -1,4 +1,8 @@
 2009-06-05 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix calculation of span for cylinders
+	* tagged as MuonTrackingGeometry-00-05-11
+
+2009-06-05 Sarka Todorova <sarka.todorova@cern.ch>
 	* adjust hardcoded partition ( cryoring leaking ...)
 	* tagged as MuonTrackingGeometry-00-05-10
 

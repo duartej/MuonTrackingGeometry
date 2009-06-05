@@ -935,19 +935,25 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
   for (unsigned int ie=0; ie < edges.size() ; ie++) {
     Trk::GlobalPosition gp = transform*edges[ie];
     double phi = gp.phi()+M_PI; 
-    //log << MSG::DEBUG << "edges:"<< ie<<","<<gp<<","<< phi<< endreq;
+    log << MSG::DEBUG << "edges:"<< ie<<","<<gp<<","<< phi<< endreq;
     double rad = gp.perp();
     if (cyl || bcyl) {
       double radius = 0.; double hz = 0.;
+      Trk::GlobalDirection dir = (transform*Trk::GlobalDirection(0.,0.,1.));
+      double thAx = dir.theta();
       if (cyl) { radius = cyl->outerRadius(); hz = cyl->halflengthZ();}
       if (bcyl) { radius = bcyl->outerRadius(); hz = bcyl->halflengthZ();}
-      if ( gp[2]-radius <minZ ) minZ = gp[2]-radius;
-      if ( gp[2]+radius >maxZ ) maxZ = gp[2]+radius;
-      if ( rad-radius < minR )  minR = rad>radius ? rad-radius: 0;
-      if ( rad>hz ) {
-	if (rad*cos(asin(hz/rad))< minR) minR = rad*cos(asin(hz/rad));
-      } else { minR = 0.;}
-      if ( rad+radius > maxR )  maxR = rad+radius;
+      if ( gp[2]-radius*sin(thAx) <minZ ) minZ = gp[2]-radius*sin(thAx);
+      if ( gp[2]+radius*sin(thAx) >maxZ ) maxZ = gp[2]+radius*sin(thAx);
+      if ( rad-radius*fabs(cos(thAx)) < minR )  minR = rad>radius ? rad-radius*fabs(cos(thAx)): 0;
+      if ( rad+radius*fabs(cos(thAx)) > maxR )  maxR = rad+radius*fabs(cos(thAx));
+      // distance of cylinder axis and global axis
+      if (dir.perp()>0.) {
+        // distance to minimal approach
+        double dMA = fabs(dir[0]*gp[0]+dir[1]*gp[1])/dir.perp()/dir.perp();
+        double dMD = sqrt (gp.perp()*gp.perp()-dMA*dMA);
+        if (dMA<2*hz && dMD-radius < minR ) minR = fmax(0.,dMD-radius); 
+      }
       double dph = atan(radius/rad);
       if ( phi-dph <M_PI && phi-dph < minP0 ) minP0 = phi-dph;
       if ( phi+dph <M_PI && phi+dph > maxP0 ) maxP0 = phi+dph;
@@ -965,21 +971,6 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
       if ( rad < minR ) minR = rad; 
       if ( rad > maxR ) maxR = rad;
     } 
-    /*
-    if (cyl || bcyl ) {
-      double radius = 0.;
-      if (cyl) radius = cyl->outerRadius();
-      if (bcyl) radius = bcyl->outerRadius();
-      if ( gp.perp() < radius ) {
-	minPhi = 0.;
-	maxPhi = 2*M_PI;
-      } else {
-	double dPhi = asin(radius/gp.perp());
-	minPhi = fmin(minPhi, phi - dPhi);
-	maxPhi = fmax(maxPhi, phi + dPhi);
-      }
-    }
-    */
   }
   if (maxPhi<minPhi) {
     if (maxP0>=minP0 && maxP1<minP1) { minPhi = minP0; maxPhi = maxP0; }
@@ -987,11 +978,6 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     else if ( maxP1 - minP0 < (maxP0 - minP1+2*M_PI) ) { minPhi = minP0; maxPhi = maxP1; }
     else { minPhi = minP1 ; maxPhi = maxP0; }  
   }
-  //if ( maxPhi-minPhi > M_PI  &&  maxPhi-minPhi < 2*M_PI ) {
-  //  double medPhi = minPhi;
-  //  minPhi = maxPhi;
-  //  maxPhi = medPhi;
-  //}
   if ( box || trd || dtrd || spb ) {
     span.push_back( minZ - zTol );  
     span.push_back( maxZ + zTol );  
@@ -1026,8 +1012,8 @@ const std::vector<std::vector<std::pair<const Trk::DetachedTrackingVolume*,const
   for (unsigned int iobj=0; iobj<objs->size(); iobj++) {
     HepTransform3D  transform = (*objs)[iobj]->trackingVolume()->transform();
     const Muon::Span* span = findVolumeSpan(&((*objs)[iobj]->trackingVolume()->volumeBounds()), transform, zTol, phiTol);
-    //std::cout << "span:"<<(*objs)[iobj]->name()<< ","<<(*span)[0]<<","<< (*span)[1]<<","<<(*span)[2]<<","
-    //<< (*span)[3]<<","<< (*span)[4]<<","<< (*span)[5]<<std::endl;  
+    log << MSG::DEBUG << "span:"<<(*objs)[iobj]->name()<< ","<<(*span)[0]<<","<< (*span)[1]<<","<<(*span)[2]<<","
+    << (*span)[3]<<","<< (*span)[4]<<","<< (*span)[5] << endreq;  
     // negative outer wheel
     if ( (*span)[0] < -m_bigWheel ) (*spans)[0]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
     // negative big wheen

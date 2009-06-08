@@ -1,3 +1,7 @@
+2009-06-08 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix thickness of spacer beam
+	* tagged as MuonTrackingGeometry-00-05-12
+
 2009-06-05 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix calculation of span for cylinders
 	* tagged as MuonTrackingGeometry-00-05-11

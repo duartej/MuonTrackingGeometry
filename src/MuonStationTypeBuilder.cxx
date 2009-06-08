@@ -1290,15 +1290,15 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
       HepTransform3D* cTr = 0;
       if (zs <= xs && zs <= ys ) { // x-y plane
 	rbounds = new Trk::RectangleBounds(xs,ys); 
-	thickness = zs;
+	thickness = 2*zs;
         cTr = new HepTransform3D(transf[ic]);
       } else if (xs <= ys && xs <= zs ) { // x-y plane -> y-z plane
 	rbounds = new Trk::RectangleBounds(ys,zs); 
-	thickness = xs; 
+	thickness = 2*xs; 
 	cTr = new HepTransform3D( transf[ic] * HepRotateY3D(90*deg) * HepRotateZ3D(90*deg));
       } else {  // x-y plane -> x-z plane
 	rbounds = new Trk::RectangleBounds(xs,zs); 
-	thickness = ys; 
+	thickness = 2*ys; 
 	cTr = new HepTransform3D( transf[ic] * HepRotateX3D(90*deg));
       } 
       Trk::ExtendedMaterialProperties material(thickness,cmat.x0(),cmat.l0(),cmat.averageA(),
@@ -1319,7 +1319,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
         const GeoBox* boxA = dynamic_cast<const GeoBox*> (sub->getOpA());
         const GeoBox* boxB = dynamic_cast<const GeoBox*> (sub->getOpB());
 	Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(boxA->getYHalfLength(),boxA->getZHalfLength());
-        double thickness = 0.5*(boxA->getXHalfLength()-boxB->getXHalfLength());
+        double thickness = (boxA->getXHalfLength()-boxB->getXHalfLength());
         double shift     = 0.5*(boxA->getXHalfLength()+boxB->getXHalfLength());
 	Trk::ExtendedMaterialProperties material;
 	Trk::HomogenousLayerMaterial spacerMaterial;
@@ -1335,7 +1335,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 	  layers.push_back(layxx) ; layxx->setLayerType(0);
 	}
 	rbounds = new Trk::RectangleBounds(boxB->getXHalfLength(),boxA->getZHalfLength());
-        thickness = 0.5*(boxA->getYHalfLength()-boxB->getYHalfLength());
+        thickness = (boxA->getYHalfLength()-boxB->getYHalfLength());
         if (thickness>0.) {
 	  material = Trk::ExtendedMaterialProperties(thickness,cmat.x0(),cmat.l0(),cmat.averageA(),
 						     cmat.averageZ(),cmat.averageRho());  
@@ -1348,7 +1348,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 	  layers.push_back(layy) ; layy->setLayerType(0);
 	}
 	rbounds = new Trk::RectangleBounds(boxB->getXHalfLength(),boxB->getYHalfLength());
-        thickness = 0.5*(boxA->getZHalfLength()-boxB->getZHalfLength());
+        thickness = (boxA->getZHalfLength()-boxB->getZHalfLength());
         if (thickness>0.) {
 	  material = Trk::ExtendedMaterialProperties(thickness,cmat.x0(),cmat.l0(),cmat.averageA(),cmat.averageZ(),cmat.averageRho());  
 	  spacerMaterial = Trk::HomogenousLayerMaterial(material);
@@ -1387,7 +1387,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
           const GeoBox* boxB = dynamic_cast<const GeoBox*> (subVs[2].first);
           if (boxB && v1 && v2) {
 	    Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(box->getYHalfLength(),box->getZHalfLength());
-	    double thickness = 0.5*(box->getXHalfLength()-boxB->getXHalfLength());
+	    double thickness = (box->getXHalfLength()-boxB->getXHalfLength());
 	    double shift     = 0.5*(box->getXHalfLength()+boxB->getXHalfLength());
 	    Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds);
 	    Trk::Volume* cVol = new Trk::Volume(new HepTranslateX3D(-shift),
@@ -1404,7 +1404,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 	    layers.push_back(layxx) ; layxx->setLayerType(0);
 
 	    rbounds = new Trk::RectangleBounds(boxB->getXHalfLength(),box->getZHalfLength());
-	    thickness = subVs[2].second.getTranslation().mag();
+	    thickness = 2*subVs[2].second.getTranslation().mag();
 	    Trk::VolumeExcluder* volEx=new Trk::VolumeExcluder(new Trk::Volume(*cVol, 
 									       HepTranslateX3D(2*shift)));
 	    bounds = Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);

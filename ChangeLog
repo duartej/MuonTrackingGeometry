@@ -1,3 +1,8 @@
+2009-06-09 Sarka Todorova <sarka.todorova@cern.ch>
+	* reorganize active material options
+	* add statistics for frame partition
+	* tagged as MuonTrackingGeometry-00-05-13
+
 2009-06-08 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix thickness of spacer beam
 	* tagged as MuonTrackingGeometry-00-05-12

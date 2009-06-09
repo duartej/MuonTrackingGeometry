@@ -90,7 +90,7 @@ Muon::MuonStationBuilder::MuonStationBuilder(const std::string& t, const std::st
   m_buildEndcap(true),
   m_buildCsc(true),
   m_buildTgc(true),
-  m_identifyActive(true)
+  m_resolveActiveLayers(true)
 {
   declareInterface<Trk::IDetachedTrackingVolumeBuilder>(this);
   declareProperty("StationTypeBuilder",               m_muonStationTypeBuilder);
@@ -100,7 +100,7 @@ Muon::MuonStationBuilder::MuonStationBuilder(const std::string& t, const std::st
   declareProperty("BuildEndcapStations",              m_buildEndcap);
   declareProperty("BuildCSCStations",                 m_buildCsc);
   declareProperty("BuildTGCStations",                 m_buildTgc);
-  declareProperty("IdentifyActiveLayers",             m_identifyActive);
+  declareProperty("ResolveActiveLayers",              m_resolveActiveLayers);
 }
 
 // destructor
@@ -196,7 +196,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
     // retrieve muon station prototypes from GeoModel
     const std::vector<const Trk::DetachedTrackingVolume*>* msTypes = buildDetachedTrackingVolumeTypes();
     std::vector<const Trk::DetachedTrackingVolume*>::const_iterator msTypeIter = msTypes->begin();
-
+    
     // position MDT chambers by repeating loop over muon tree
     // link to top tree
     const GeoVPhysVol* top = &(*(m_muonMgr->getTreeTop(0)));
@@ -315,10 +315,13 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	      const Trk::DetachedTrackingVolume* newStat = msTV->clone(vname,transf);
               // identify layer representation
               newStat->layerRepresentation()->setLayerType(iD);
-	      // glue components
-	      glueComponents(newStat);
-	      // identify layers
-	      if (m_identifyActive) identifyLayers(newStat,eta,phi);  
+              // resolved stations only:
+              if (m_resolveActiveLayers) {
+		// glue components
+		glueComponents(newStat);
+		// identify layers
+		identifyLayers(newStat,eta,phi); 
+	      } 
 	      mStations.push_back(newStat);
             }
 	  }
@@ -420,6 +423,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		    m_muonStationTypeBuilder->createLayerRepresentation(csc_station);
 		  // create prototype as detached tracking volume
 		  const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(name,csc_station,layerRepr.first,layerRepr.second);
+                  if (!m_resolveActiveLayers) typeStat->trackingVolume()->clear();
 		  stations.push_back(typeStat); 
                 } else {
                   std::vector<const Trk::TrackingVolume*> tgc_stations = m_muonStationTypeBuilder->processTgcStation(cv);   
@@ -429,6 +433,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		      m_muonStationTypeBuilder->createLayerRepresentation(tgc_stations[i]);
 		    // create prototype as detached tracking volume
 		    const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(name,tgc_stations[i],layerRepr.first,layerRepr.second);
+		    if (!m_resolveActiveLayers) typeStat->trackingVolume()->clear();
                     stations.push_back(typeStat); 
                   }
                 }
@@ -511,7 +516,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		delete envelope; 
 		
 		// identify prototype
-		if (m_identifyActive && ( name.substr(0,1)=="B" || name.substr(0,1)=="E") ) identifyPrototype(newType,eta,phi,gmStation->getTransform());
+		if (m_resolveActiveLayers && ( name.substr(0,1)=="B" || name.substr(0,1)=="E") ) identifyPrototype(newType,eta,phi,gmStation->getTransform());
 		
 		// create layer representation
 		std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> layerRepr 
@@ -520,6 +525,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		// create prototype as detached tracking volume
 		const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(name,newType,layerRepr.first,layerRepr.second);
 		
+		if (!m_resolveActiveLayers) typeStat->trackingVolume()->clear();
 		stations.push_back(typeStat); 
 	      }
 	    }

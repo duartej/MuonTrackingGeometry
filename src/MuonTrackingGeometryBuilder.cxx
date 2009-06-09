@@ -102,6 +102,8 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_colorCode(0),
   m_activeAdjustLevel(2),
   m_inertAdjustLevel(1),
+  m_frameNum(0),
+  m_frameStat(0),
   m_entryVolume("MuonSpectrometerEntrance"),
   m_exitVolume("All::Container::CompleteDetector"),
   m_chronoStatSvc( "ChronoStatSvc", n )
@@ -776,6 +778,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    m_chronoStatSvc->chronoStop("MS::build-up");
 
    log << MSG::INFO  << name() <<" returning tracking geometry " << endreq;    
+   log << MSG::INFO  << name() <<" with "<< m_frameNum<<" subvolumes at navigation level" << endreq;    
+   log << MSG::INFO  << name() <<"( mean number of enclosed detached volumes:"<< float(m_frameStat)/m_frameNum<<")" << endreq;    
    return trackingGeometry;  
 }
 
@@ -1095,6 +1099,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 								   m_muonMagneticField,
 								   detVols,
 								   volName );
+        // statistics
+        m_frameNum++ ; if (detVols) m_frameStat += detVols->size();  
         // prepare blending
         if (m_blendInertMaterial && blendVols.size()) {
           for (unsigned int id=0;id<blendVols.size();id++) {
@@ -1153,6 +1159,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 				    m_muonMagneticField,
 				    muonObjs,
 				    volumeName);
+    // statistics
+    m_frameNum++ ; if (muonObjs) m_frameStat += muonObjs->size();  
     // prepare blending
     if (m_blendInertMaterial && blendVols.size()) {
       for (unsigned int id=0;id<blendVols.size();id++) {
@@ -1318,6 +1326,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 								     detVols,
 								     volName );
                                                                               
+	  // statistics
+	  m_frameNum++ ; if (detVols) m_frameStat += detVols->size();  
 	  // prepare blending
 	  if (m_blendInertMaterial && blendVols.size()) {
 	    for (unsigned int id=0;id<blendVols.size();id++) {
@@ -1465,6 +1475,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 								   m_muonMagneticField,
 								   detVols,
 								   volName );
+        // statistics
+        m_frameNum++ ; if (detVols) m_frameStat += detVols->size();  
         // prepare blending
         if (m_blendInertMaterial && blendVols.size()) {
           for (unsigned int id=0;id<blendVols.size();id++) {
@@ -1526,6 +1538,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 				    m_muonMagneticField,
 				    muonObjs,
 				    volumeName);
+    // statistics
+    m_frameNum++ ; if (muonObjs) m_frameStat += muonObjs->size();  
     // prepare blending
     if (m_blendInertMaterial && blendVols.size()) {
       for (unsigned int id=0;id<blendVols.size();id++) {
@@ -1634,6 +1648,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
 								 detVols,
 								 volName );
       
+      // statistics
+      m_frameNum++ ; if (detVols) m_frameStat += detVols->size();  
       // prepare blending
       if (m_blendInertMaterial && blendVols.size()) {
 	for (unsigned int id=0;id<blendVols.size();id++) {

@@ -144,7 +144,10 @@ namespace Muon {
       int                                 m_colorCode;
       mutable int                         m_activeAdjustLevel;
       mutable int                         m_inertAdjustLevel;
-     
+
+      mutable unsigned int                m_frameNum;      
+      mutable unsigned int                m_frameStat;      
+
       std::string                         m_entryVolume;
       std::string                         m_exitVolume;
       

@@ -1,3 +1,7 @@
+2009-06-12 Sarka Todorova <sarka.todorova@cern.ch>
+	* memory leak in spacer
+	* tagged as MuonTrackingGeometry-00-05-14
+
 2009-06-09 Sarka Todorova <sarka.todorova@cern.ch>
 	* reorganize active material options
 	* add statistics for frame partition

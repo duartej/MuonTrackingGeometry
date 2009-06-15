@@ -81,6 +81,7 @@ Muon::MuonStationTypeBuilder::MuonStationTypeBuilder(const std::string& t, const
   AlgTool(t,n,p),
   m_muonMgrLocation("MuonMgr"),
   m_multilayerRepresentation(true), 
+  m_resolveSpacer(false), 
   m_trackingVolumeArrayCreator("Trk::TrackingVolumeArrayCreator/TrackingVolumeArrayCreator"),
   m_magFieldMode(Trk::RealisticField),  
   m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
@@ -104,6 +105,7 @@ Muon::MuonStationTypeBuilder::MuonStationTypeBuilder(const std::string& t, const
   declareProperty("MagneticFieldMode",                m_magFieldMode);  
   declareProperty("MuonDetManagerLocation",           m_muonMgrLocation);
   declareProperty("BuildMultilayerRepresentation",    m_multilayerRepresentation);
+  declareProperty("ResolveSpacerBeams",               m_resolveSpacer);
 }
 
 // destructor
@@ -1404,7 +1406,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 	    layers.push_back(layxx) ; layxx->setLayerType(0);
 
 	    rbounds = new Trk::RectangleBounds(boxB->getXHalfLength(),box->getZHalfLength());
-	    thickness = 2*subVs[2].second.getTranslation().mag();
+	    thickness = subVs[2].second.getTranslation().mag();
 	    Trk::VolumeExcluder* volEx=new Trk::VolumeExcluder(new Trk::Volume(*cVol, 
 									       HepTranslateX3D(2*shift)));
 	    bounds = Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);
@@ -1436,6 +1438,20 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 							     m_muonMagneticField,
 							     spacerLayers,
 							     name);         
+
+  if (!m_resolveSpacer) {       // average into a single material layer
+    std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> laySpacer = createLayerRepresentation(spacer);    
+    delete spacer;
+    layers.clear();
+    layers.push_back(laySpacer.first); 
+    std::vector<const Trk::Layer*>* spacerLayers = new std::vector<const Trk::Layer*>(layers); 
+    spacer= new Trk::TrackingVolume(*vol,
+				    *m_muonMaterial,
+				    m_muonMagneticField,
+				    spacerLayers,
+				    name);         
+  }
+
   //std::cout << "spacer processed with" << layers.size() << " layers" << std::endl;
   return spacer;
 }

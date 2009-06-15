@@ -1,6 +1,6 @@
 2009-06-15 Sarka Todorova <sarka.todorova@cern.ch>
 	* averaged spacer option 
-	* tagged as MuonTrackingGeometry-00-05-15
+	* tagged as MuonTrackingGeometry-00-05-15/16
 
 2009-06-12 Sarka Todorova <sarka.todorova@cern.ch>
 	* memory leak in spacer

@@ -2488,8 +2488,10 @@ Trk::ExtendedMaterialProperties Muon::MuonStationTypeBuilder::collectStationMate
       const Trk::ExtendedMaterialProperties* mLay = dynamic_cast<const Trk::ExtendedMaterialProperties*> (mProp);
       // scaling factor
       const Trk::RectangleBounds* rect = dynamic_cast<const Trk::RectangleBounds*> (&(lays[il]->surfaceRepresentation().bounds()));
-      if (rect && mLay) {
-	double scale = 4*rect->halflengthX()*rect->halflengthY()/sf;
+      const Trk::TrapezoidBounds* trap = dynamic_cast<const Trk::TrapezoidBounds*> (&(lays[il]->surfaceRepresentation().bounds()));
+      if ((rect || trap) && mLay) {
+	double scale = rect ? 4*rect->halflengthX()*rect->halflengthY()/sf 
+	  : 2*(trap->minHalflengthX()+trap->maxHalflengthX())*trap->halflengthY()/sf;
 	double totalD = mat.thickness()+scale*mLay->thickness();
 	double f1 = mat.thickness()/totalD; double f2 = scale*mLay->thickness()/totalD;  
 	mat = Trk::ExtendedMaterialProperties(totalD,1./(f1/mat.x0()+f2/mLay->x0()),
@@ -2525,8 +2527,10 @@ Trk::ExtendedMaterialProperties Muon::MuonStationTypeBuilder::collectStationMate
 	  const Trk::ExtendedMaterialProperties* mLay = dynamic_cast<const Trk::ExtendedMaterialProperties*> (mProp);
 	  // scaling factor
 	  const Trk::RectangleBounds* rect = dynamic_cast<const Trk::RectangleBounds*> (&(lays[il]->surfaceRepresentation().bounds()));
-	  if (rect && mLay) {
-	    double scale = 4*rect->halflengthX()*rect->halflengthY()/sf;
+	  const Trk::TrapezoidBounds* trap = dynamic_cast<const Trk::TrapezoidBounds*> (&(lays[il]->surfaceRepresentation().bounds()));
+	  if ((rect || trap) && mLay) {
+	    double scale = rect ? 4*rect->halflengthX()*rect->halflengthY()/sf
+	      : 2*(trap->minHalflengthX()+trap->maxHalflengthX())*trap->halflengthY()/sf;
 	    double totalD = mat.thickness()+scale*mLay->thickness();
 	    double f1 = mat.thickness()/totalD; double f2 = scale*mLay->thickness()/totalD;  
 	    mat = Trk::ExtendedMaterialProperties(totalD, 1./(f1/mat.x0()+f2/mLay->x0()),1./(f1/mat.l0()+f2/mLay->l0()),

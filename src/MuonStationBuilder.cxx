@@ -239,7 +239,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
           gmStation = m_muonMgr->getMuonStation(vname.substr(0,3),eta,phi);
         }
         //
-        if (!gmStation) log << MSG::ERROR << "Muon station not found! "<<vname<<","<<eta<<","<<phi  <<std::endl; 
+        if (!gmStation) log << MSG::WARNING << "Muon station not found! "<<vname<<","<<eta<<","<<phi  <<std::endl; 
         std::string stName = (clv->getName()).substr(0,vname.size()-8);
         if (stName.substr(0,1)=="B" && eta < 0 ) {
           stName = (clv->getName()).substr(0,vname.size()-8) + "-";
@@ -309,7 +309,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
               } else if (stName.substr(0,1)!="C" ) {
 		stId = m_mdtIdHelper->elementID(vname.substr(0,3),eta,phi);
               }
-              if (!stId) log << MSG::ERROR << "identifier of the station not found:"<<vname <<","<<eta<<","<<phi<<endreq;
+              if (!stId) log << MSG::WARNING << "identifier of the station not found:"<<vname <<","<<eta<<","<<phi<<endreq;
               unsigned int iD = stId;
 	      // clone station from prototype
 	      const Trk::DetachedTrackingVolume* newStat = msTV->clone(vname,transf);
@@ -452,7 +452,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		  const GeoShapeUnion* uni = dynamic_cast<const GeoShapeUnion*> (shapeS); 
                   shapeS = uni->getOpA();
 		} else {
-		  log << MSG::ERROR << "unexpected station shape ? "<< shapeS->type() << ", station not built" << std::endl;
+		  log << MSG::WARNING << "unexpected station shape ? "<< shapeS->type() << ", station not built" << std::endl;
 		  break; 
 		}
 	      }
@@ -699,7 +699,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
         }
       }
     } else {
-      log << MSG::ERROR << name() << "tgcROE not found for :" << stationName <<","<<eta<<","<<phi<<endreq;         
+      log << MSG::WARNING << name() << "tgcROE not found for :" << stationName <<","<<eta<<","<<phi<<endreq;         
       /*
       for (unsigned int e=0; e < 10 ; e++) {
 	for (unsigned int p=0; p < 48; p++) {

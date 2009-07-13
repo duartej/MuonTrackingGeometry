@@ -720,13 +720,29 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
       for (unsigned int i=0; i<cVols.size() ; i++) {
 	if (cVols[i]->confinedLayers()) {
 	  const std::vector<const Trk::Layer*> cLays = cVols[i]->confinedLayers()->arrayObjects();
+          const MuonGM::MdtReadoutElement* mdtROE = 0;
 	  for (unsigned int il=0; il<cLays.size() ; il++) {
 	    Identifier id(cLays[il]->layerType());
 	    if (id>0 && m_mdtIdHelper->is_mdt(id)) {
               Identifier newId = m_mdtIdHelper->channelID(nameIndex,eta,phi,
 							  m_mdtIdHelper->multilayer(id),m_mdtIdHelper->tubeLayer(id),m_mdtIdHelper->tube(id));
+              if (!mdtROE) mdtROE=m_muonMgr->getMdtReadoutElement(newId);
               int newid = newId;
               cLays[il]->setLayerType(newid); 
+              // check reference position
+              if (mdtROE) {
+		double ref = cLays[il]->getRef();
+		//double loc = mdtROE->localROPos(newId)[2];     // this does not take into account ROE shift wrt TG station/layer
+		double loc = (cLays[il]->surfaceRepresentation().transform().inverse()*mdtROE->tubePos(newId))[1];
+		if (fabs(ref)>10e6) {
+		  double sign = (ref>0.) ? 1.:-1.;
+		  int dec = int(ref/1e5);
+		  ref = ref - dec*1e5 -0.5*(sign+1)*1e5;                  
+                  if (fabs(ref-loc)>0.001) {    // re-pack
+                    cLays[il]->setRef(loc+dec*1e5+0.5*(sign+1)*1e5);
+		  }
+		} else if ( fabs(ref-loc) > 0.001 )  cLays[il]->setRef(loc);
+	      }
             }
 	  }
         }

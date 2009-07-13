@@ -1,3 +1,7 @@
+2009-07-13 Sarka Todorova <sarka.todorova@cern.ch>
+	* mdt id fixed (ROE shift wrt station) 
+	* tagged as MuonTrackingGeometry-00-05-18
+
 2009-06-22 Sarka Todorova <sarka.todorova@cern.ch>
 	* downscale messages 
 	* tagged as MuonTrackingGeometry-00-05-17

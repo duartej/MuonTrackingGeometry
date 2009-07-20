@@ -958,7 +958,7 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
         double dMD = sqrt (gp.perp()*gp.perp()-dMA*dMA);
         if (dMA<2*hz && dMD-radius < minR ) minR = fmax(0.,dMD-radius); 
       }
-      double dph = rad>0.? atan(radius/rad) : M_PI;
+      double dph = rad>0.001 ? atan(radius/rad) : M_PI;
       if ( phi-dph <M_PI && phi-dph < minP0 ) minP0 = phi-dph;
       if ( phi+dph <M_PI && phi+dph > maxP0 ) maxP0 = phi+dph;
       if ( phi-dph >M_PI && phi-dph < minP1 ) minP1 = phi-dph;

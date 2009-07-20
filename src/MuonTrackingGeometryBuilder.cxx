@@ -952,12 +952,12 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
       if ( rad-radius*fabs(cos(thAx)) < minR )  minR = rad>radius ? rad-radius*fabs(cos(thAx)): 0;
       if ( rad+radius*fabs(cos(thAx)) > maxR )  maxR = rad+radius*fabs(cos(thAx));
       // distance of cylinder axis and global axis
-      if (dir.perp()>0.) {
+      if (dir.perp()>0.001) {
         // distance to minimal approach
         double dMA = fabs(dir[0]*gp[0]+dir[1]*gp[1])/dir.perp()/dir.perp();
-        double dMD = sqrt (gp.perp()*gp.perp()-dMA*dMA);
+        double dMD = sqrt (fmax(0.,gp.perp()*gp.perp()-dMA*dMA));
         if (dMA<2*hz && dMD-radius < minR ) minR = fmax(0.,dMD-radius); 
-      }
+      } 
       double dph = rad>0.001 ? atan(radius/rad) : M_PI;
       if ( phi-dph <M_PI && phi-dph < minP0 ) minP0 = phi-dph;
       if ( phi+dph <M_PI && phi+dph > maxP0 ) maxP0 = phi+dph;

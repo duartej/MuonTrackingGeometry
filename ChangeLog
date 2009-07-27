@@ -1,3 +1,8 @@
+2009-07-27 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix unidentified RPC layers
+	* averaged spacer beams had an active label - fixed !
+	* tagged as MuonTrackingGeometry-00-05-22
+
 2009-07-20 Sarka Todorova <sarka.todorova@cern.ch>
 	* fpe fix 
 	* tagged as MuonTrackingGeometry-00-05-19/20/21

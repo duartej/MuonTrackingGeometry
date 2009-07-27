@@ -1442,6 +1442,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
   if (!m_resolveSpacer) {       // average into a single material layer
     std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> laySpacer = createLayerRepresentation(spacer);    
     delete spacer;
+    laySpacer.first->setLayerType(0);
     layers.clear();
     layers.push_back(laySpacer.first); 
     std::vector<const Trk::Layer*>* spacerLayers = new std::vector<const Trk::Layer*>(layers); 

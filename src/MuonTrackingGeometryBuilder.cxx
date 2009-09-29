@@ -980,6 +980,7 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     if (maxP0>=minP0 && maxP1<minP1) { minPhi = minP0; maxPhi = maxP0; }
     else if ( maxP1>=minP1 && maxP0<minP0) { minPhi = minP1; maxPhi = maxP1; }
     else if ( maxP1 - minP0 < (maxP0 - minP1+2*M_PI) ) { minPhi = minP0; maxPhi = maxP1; }
+    else if (minPhi-maxPhi>M_PI) { minPhi=0.; maxPhi=2*M_PI; }
     else { minPhi = minP1 ; maxPhi = maxP0; }  
   }
   if ( box || trd || dtrd || spb ) {
@@ -1031,7 +1032,7 @@ const std::vector<std::vector<std::pair<const Trk::DetachedTrackingVolume*,const
 	 ((*span)[5]> m_innerBarrelRadius || (*span)[0]<-m_barrelZ || (*span)[1]>m_barrelZ)  )
                                                                   (*spans)[4]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
     // pos.small whell
-    if ( (*span)[0] < m_ectZ && (*span)[1]> m_barrelZ )            (*spans)[5]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+    if ( (*span)[0] < m_ectZ && (*span)[1]> m_diskShieldZ )            (*spans)[5]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
     // pos.ect
     if ( (*span)[0] < m_innerEndcapZ && (*span)[1]> m_ectZ )       (*spans)[6]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
     // positive big wheel
@@ -1556,7 +1557,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(const Trk::Volume* vol, int type,std::string volumeName) const
 {
   MsgStream log(msgSvc(), name());
-  log << MSG::DEBUG << name() << "processing shield volume in mode:"<< type << endreq;
+  log << MSG::DEBUG << name() << "processing shield volume "<< volumeName<<"  in mode:"<< type << endreq;
 
   const Trk::TrackingVolume* tVol = 0;
 
@@ -1759,67 +1760,79 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
     phiLim = true;
   } 
 
-  // define detector region
-  int gMode = (zMax <= -m_bigWheel) ? 0 : 1;
-  if ( zMin >= m_bigWheel ) gMode = 8;
-  else if ( zMin >= m_innerEndcapZ ) gMode = 7;
-  else if ( zMin >= m_ectZ )         gMode = 6;
-  else if ( zMin >= m_diskShieldZ )      gMode = 5;
-  else if ( zMin >=-m_diskShieldZ )      gMode = 4;
-  else if ( zMin >=-m_ectZ )         gMode = 3;
-  else if ( zMin >=-m_innerEndcapZ ) gMode = 2;
+  // define detector region : can extend over several
+  int gMin = (zMax <= -m_bigWheel) ? 0 : 1;
+  if ( zMin >= m_bigWheel ) gMin = 8;
+  else if ( zMin >= m_innerEndcapZ ) gMin = 7;
+  else if ( zMin >= m_ectZ )         gMin = 6;
+  else if ( zMin >= m_diskShieldZ )      gMin = 5;
+  else if ( zMin >=-m_diskShieldZ )      gMin = 4;
+  else if ( zMin >=-m_ectZ )         gMin = 3;
+  else if ( zMin >=-m_innerEndcapZ ) gMin = 2;
+  int gMax = (zMax >= m_bigWheel) ? 8 : 7;
+  if ( zMax <= -m_bigWheel ) gMax = 0;
+  else if ( zMax <= -m_innerEndcapZ ) gMax = 1;
+  else if ( zMax <= -m_ectZ )         gMax = 2;
+  else if ( zMax <= -m_diskShieldZ )      gMax = 3;
+  else if ( zMax <= m_diskShieldZ )      gMax = 4;
+  else if ( zMax <= m_ectZ )         gMax = 5;
+  else if ( zMax <= m_innerEndcapZ ) gMax = 6;
    
   std::list<const Trk::DetachedTrackingVolume*> detached;
   // active, use corrected rMax
   if (mode <2 && m_stationSpan) {
-    for (unsigned int i=0; i<(*m_stationSpan)[gMode]->size() ; i++) {
-      const Muon::Span* s = (*((*m_stationSpan)[gMode]))[i].second;          // span
-      const Trk::DetachedTrackingVolume* station = (*((*m_stationSpan)[gMode]))[i].first;   // station
-      bool rLimit = !m_static3d || ( (*s)[4] <= rMaxc && (*s)[5] >= rMin );
-   
-      if ( rLimit && (*s)[0] < zMax && (*s)[1] > zMin ) {
-	if (phiLim) {
-	  if (pMin>=0 && pMax<=2*M_PI) {
-	    if ( (*s)[2]<=(*s)[3] && (*s)[2] <= pMax && (*s)[3] >= pMin ) detached.push_back(station);
-	    if ( (*s)[2]>(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin) ) detached.push_back(station);
-	  } else if (pMin < 0) {
-	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin+2*M_PI) ) detached.push_back(station);
-	    if ( (*s)[2]>(*s)[3]  ) detached.push_back(station);
-	  } else if (pMax > 2*M_PI) {
-	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax-2*M_PI || (*s)[3] >= pMin) ) detached.push_back(station);
-	    if ( (*s)[2]>(*s)[3]  ) detached.push_back(station);
+    for (int gMode=gMin; gMode<=gMax; gMode++) {
+      for (unsigned int i=0; i<(*m_stationSpan)[gMode]->size() ; i++) {
+	const Muon::Span* s = (*((*m_stationSpan)[gMode]))[i].second;          // span
+	const Trk::DetachedTrackingVolume* station = (*((*m_stationSpan)[gMode]))[i].first;   // station
+	bool rLimit = !m_static3d || ( (*s)[4] <= rMaxc && (*s)[5] >= rMin );
+	
+	if ( rLimit && (*s)[0] < zMax && (*s)[1] > zMin ) {
+	  if (phiLim) {
+	    if (pMin>=0 && pMax<=2*M_PI) {
+	      if ( (*s)[2]<=(*s)[3] && (*s)[2] <= pMax && (*s)[3] >= pMin ) detached.push_back(station);
+	      if ( (*s)[2]>(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin) ) detached.push_back(station);
+	    } else if (pMin < 0) {
+	      if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin+2*M_PI) ) detached.push_back(station);
+	      if ( (*s)[2]>(*s)[3]  ) detached.push_back(station);
+	    } else if (pMax > 2*M_PI) {
+	      if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax-2*M_PI || (*s)[3] >= pMin) ) detached.push_back(station);
+	      if ( (*s)[2]>(*s)[3]  ) detached.push_back(station);
+	    }
+	  } else {
+	    detached.push_back(station);
 	  }
-	} else {
-	  detached.push_back(station);
-	}
-      } 
+	} 
+      }
     }
   }
   // passive 
   if (mode !=1 && m_inertSpan) {
-    for (unsigned int i=0; i<(*m_inertSpan)[gMode]->size() ; i++) {
-      const Muon::Span* s = (*((*m_inertSpan)[gMode]))[i].second;
-      const Trk::DetachedTrackingVolume* inert = (*((*m_inertSpan)[gMode]))[i].first;
-      //bool rail = ( (*m_inertObjs)[i]->name() == "Rail" ) ? true : false; 
-      bool rLimit = (!m_static3d || ( (*s)[4] <= rMaxc && (*s)[5] >= rMin ) ); 
-      if ( rLimit && (*s)[0] < zMax && (*s)[1] > zMin ) {
-        bool accepted = false;
-	if (phiLim) {
-	  if (pMin>=0 && pMax<=2*M_PI) {
-	    if ( (*s)[2]<=(*s)[3] && (*s)[2] <= pMax && (*s)[3] >= pMin )  accepted = true;
-	    if ( (*s)[2]>(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin) ) accepted = true;
-	  } else if (pMin < 0) {
-	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin+2*M_PI) ) accepted = true;
-	    if ( (*s)[2]>(*s)[3]  ) accepted = true;
-	  } else if (pMax > 2*M_PI) {
-	    if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax-2*M_PI || (*s)[3] >= pMin) ) accepted = true;
-	    if ( (*s)[2]>(*s)[3]  ) accepted = true;
+    for (int gMode=gMin; gMode<=gMax; gMode++) {
+      for (unsigned int i=0; i<(*m_inertSpan)[gMode]->size() ; i++) {
+	const Muon::Span* s = (*((*m_inertSpan)[gMode]))[i].second;
+	const Trk::DetachedTrackingVolume* inert = (*((*m_inertSpan)[gMode]))[i].first;
+	//bool rail = ( (*m_inertObjs)[i]->name() == "Rail" ) ? true : false; 
+	bool rLimit = (!m_static3d || ( (*s)[4] <= rMaxc && (*s)[5] >= rMin ) ); 
+	if ( rLimit && (*s)[0] < zMax && (*s)[1] > zMin ) {
+	  bool accepted = false;
+	  if (phiLim) {
+	    if (pMin>=0 && pMax<=2*M_PI) {
+	      if ( (*s)[2]<=(*s)[3] && (*s)[2] <= pMax && (*s)[3] >= pMin )  accepted = true;
+	      if ( (*s)[2]>(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin) ) accepted = true;
+	    } else if (pMin < 0) {
+	      if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin+2*M_PI) ) accepted = true;
+	      if ( (*s)[2]>(*s)[3]  ) accepted = true;
+	    } else if (pMax > 2*M_PI) {
+	      if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax-2*M_PI || (*s)[3] >= pMin) ) accepted = true;
+	      if ( (*s)[2]>(*s)[3]  ) accepted = true;
+	    }
+	  } else  accepted = true;
+	  if (accepted) {
+	    bool perm = inert->name().substr(inert->name().size()-4,4)=="PERM";
+	    if ( !m_blendInertMaterial || !m_removeBlended || perm ) detached.push_back(inert);
+	    if ( m_blendInertMaterial && !perm ) blendVols.push_back(inert);
 	  }
-	} else  accepted = true;
-	if (accepted) {
-          bool perm = inert->name().substr(inert->name().size()-4,4)=="PERM";
-          if ( !m_blendInertMaterial || !m_removeBlended || perm ) detached.push_back(inert);
-          if ( m_blendInertMaterial && !perm ) blendVols.push_back(inert);
 	}
       } 
     }

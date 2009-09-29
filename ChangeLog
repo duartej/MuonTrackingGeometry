@@ -1,3 +1,7 @@
+2009-09-30 Sarka Todorova <sarka.todorova@cern.ch>
+	* shield material fixed (span regions)
+	* tagged as MuonTrackingGeometry-00-05-25
+
 2009-08-31 Sarka Todorova <sarka.todorova@cern.ch>
 	* correct typo in 64-bit id
 	* tagged as MuonTrackingGeometry-00-05-24

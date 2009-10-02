@@ -579,9 +579,9 @@ const Trk::Volume* Muon::MuonInertMaterialBuilder::createEnvelope(const HepTrans
   std::vector<Trk::GlobalPosition> edges;
   bool cylinder = false;
 
-  double cVol = 0.;
+  //double cVol = 0.;
   while (sIter!= constituents.end()) {
-    cVol +=(*sIter).second * calculateVolume((*sIter).first);
+    //cVol +=(*sIter).second * calculateVolume((*sIter).first);
     const Trk::SimplePolygonBrepVolumeBounds* spbBounds = dynamic_cast<const Trk::SimplePolygonBrepVolumeBounds*> (&((*sIter).first->volumeBounds()));
     const Trk::CylinderVolumeBounds*          cylBounds = dynamic_cast<const Trk::CylinderVolumeBounds*>  (&((*sIter).first->volumeBounds()));
     const Trk::CuboidVolumeBounds*            cubBounds = dynamic_cast<const Trk::CuboidVolumeBounds*>    (&((*sIter).first->volumeBounds()));
@@ -669,11 +669,12 @@ const Trk::Volume* Muon::MuonInertMaterialBuilder::createEnvelope(const HepTrans
   
   if ( cylinder && fabs(xSize-ySize)/fmax(xSize,ySize)<0.1) { // make it a cylinder
     envelope = new Trk::Volume(new HepTransform3D(transf*HepTranslate3D(Trk::GlobalPosition(0.5*(xMin+xMax),0.5*(yMin+yMax),0.5*(zMin+zMax)))),
-			     new Trk::CylinderVolumeBounds(fmax(xSize,ySize),zSize));
+			     new Trk::CylinderVolumeBounds(sqrt(xSize*xSize+ySize*ySize),zSize));
   } else {
     envelope = new Trk::Volume(new HepTransform3D(transf*HepTranslate3D(Trk::GlobalPosition(0.5*(xMin+xMax),0.5*(yMin+yMax),0.5*(zMin+zMax)))),
 			     new Trk::CuboidVolumeBounds(xSize,ySize,zSize));
   }  
+  
   /*
   // check if all edges really confined:
   for (unsigned int ie=0; ie < edges.size(); ie++) {

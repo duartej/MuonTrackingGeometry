@@ -980,7 +980,6 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     if (maxP0>=minP0 && maxP1<minP1) { minPhi = minP0; maxPhi = maxP0; }
     else if ( maxP1>=minP1 && maxP0<minP0) { minPhi = minP1; maxPhi = maxP1; }
     else if ( maxP1 - minP0 < (maxP0 - minP1+2*M_PI) ) { minPhi = minP0; maxPhi = maxP1; }
-    else if (minPhi-maxPhi>M_PI) { minPhi=0.; maxPhi=2*M_PI; }
     else { minPhi = minP1 ; maxPhi = maxP0; }  
   }
   if ( box || trd || dtrd || spb ) {
@@ -1894,13 +1893,13 @@ bool Muon::MuonTrackingGeometryBuilder::enclosed(const Trk::Volume* vol, const M
   if ( rLimit && (*s)[0] < zMax-tol && (*s)[1] > zMin+tol ) {
     if (phiLim) {
       if (pMin>=0 && pMax<=2*M_PI) {
-	if ( (*s)[2]<=(*s)[3] && (*s)[2] < pMax-ptol && (*s)[3] > pMin+ptol )  return true;
+	if ( (*s)[2]<=(*s)[3] && (*s)[2] < pMax+ptol && (*s)[3] > pMin-ptol )  return true;
 	if ( (*s)[2]>(*s)[3] && ((*s)[2] < pMax-ptol || (*s)[3] > pMin+ptol) ) return true;
       } else if (pMin < 0) {
-	if ( (*s)[2]<=(*s)[3] && ((*s)[2] < pMax-ptol || (*s)[3] > pMin+ptol+2*M_PI) ) return true;
+	if ( (*s)[2]<=(*s)[3] && ((*s)[2] < pMax+ptol || (*s)[3] > pMin-ptol+2*M_PI) ) return true;
 	if ( (*s)[2]>(*s)[3]  ) return true;
       } else if (pMax > 2*M_PI) {
-	if ( (*s)[2]<=(*s)[3] && ((*s)[2] < pMax-ptol-2*M_PI || (*s)[3] > pMin+ptol) ) return true;
+	if ( (*s)[2]<=(*s)[3] && ((*s)[2] < pMax+ptol-2*M_PI || (*s)[3] > pMin-ptol) ) return true;
 	if ( (*s)[2]>(*s)[3]  ) return true;
       }
     } else {
@@ -2435,7 +2434,7 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
   // loop over map
   std::map<const Trk::DetachedTrackingVolume*,std::vector<const Trk::TrackingVolume*>* >::iterator mIter = m_blendMap.begin();
 
-  std::vector<std::pair<const Trk::Volume*,std::pair<double,double> > >* cs = 0;
+  std::vector<std::pair<const Trk::Volume*,float> >* cs = 0;
   
   for ( ; mIter!= m_blendMap.end(); mIter++) {
     cs = (*mIter).first->constituents();     
@@ -2445,7 +2444,7 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
     if ( (*mIter).first->trackingVolume()->confinedDenseVolumes()) detMat = (*(*mIter).first->trackingVolume()->confinedDenseVolumes())[0];
     for (unsigned int ic=0; ic<cs->size(); ic++) {
       const Trk::Volume* nCs = new Trk::Volume(*((*cs)[ic].first),(*mIter).first->trackingVolume()->transform());
-      double fraction = (*cs)[ic].second.second>0 ? 1. : (*cs)[ic].second.first;
+      double fraction = (*cs)[ic].second;
       double csVol = fraction*calculateVolume(nCs);      
       const Muon::Span* s = findVolumeSpan(&(nCs->volumeBounds()), nCs->transform(), 0.,0.) ;
       if (s) log << MSG::DEBUG << "constituent:"<<ic<<":z:"<< (*s)[0]<<","<<(*s)[1]<<":r:"<< (*s)[4]<<","<<(*s)[5]

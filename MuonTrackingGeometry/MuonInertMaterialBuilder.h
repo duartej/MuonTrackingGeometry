@@ -85,9 +85,9 @@ namespace Muon {
       /** Simplification of GeoModel object + envelope */
       const Trk::TrackingVolume* simplifyShape(const Trk::TrackingVolume* tr) const;
       /** Envelope creation & material fraction calculation */
-      const Trk::Volume* createEnvelope(const HepTransform3D transf, std::vector<std::pair<const Trk::Volume*,double> > ) const;
+      const Trk::Volume* createEnvelope(const HepTransform3D transf, std::vector<std::pair<const Trk::Volume*,std::pair<float,float> > > ) const;
       /** Simplification of objects, material fraction calculation */
-      std::vector<std::pair<const Trk::Volume*,double> > splitComposedVolume(const Trk::Volume*,bool) const; 
+      std::vector<std::pair<const Trk::Volume*,std::pair<float,float> > > splitComposedVolume(const Trk::Volume*,bool) const; 
       /** Scan point generation for 'hit&miss' sampling */
       Trk::GlobalPosition getScanPoint(const Trk::Volume* vol) const;
       /** Volume calculation */
@@ -117,7 +117,7 @@ namespace Muon {
       Rndm::Numbers*                       m_flatDist;
       
       mutable std::vector<Trk::Volume*>    m_garbage;      
-      mutable std::vector<std::vector<std::pair<const Trk::Volume*,std::pair<double,double> > >* >   m_constituents;
+      mutable std::vector<std::vector<std::pair<const Trk::Volume*,float> >* >   m_constituents;
     };
 
 

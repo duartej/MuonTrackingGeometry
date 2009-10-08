@@ -64,8 +64,8 @@ namespace Muon {
       /** AlgTool finalize method */
       StatusCode finalize();
 
-      const std::vector<const Trk::DetachedTrackingVolume*>* buildDetachedTrackingVolumes() const; 
-      const std::vector<const Trk::DetachedTrackingVolume*>* buildDetachedTrackingVolumeTypes() const; 
+      const std::vector<const Trk::DetachedTrackingVolume*>* buildDetachedTrackingVolumes(bool blend=false) const; 
+      const std::vector<const Trk::DetachedTrackingVolume*>* buildDetachedTrackingVolumeTypes(bool blend) const; 
 
     private:
 

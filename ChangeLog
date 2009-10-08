@@ -1,3 +1,8 @@
+2009-10-08 Sarka Todorova <sarka.todorova@cern.ch>
+	* pass constituents info only if needed ( for blending )
+        * fix span 
+	* tagged as MuonTrackingGeometry-00-05-28
+
 2009-10-05 Sarka Todorova <sarka.todorova@cern.ch>
 	* simplify constituent info for DetachedTV
 	* distinguish cutouts and overlaps

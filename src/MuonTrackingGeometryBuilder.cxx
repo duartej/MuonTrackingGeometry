@@ -251,7 +251,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
   }
   // process muon material objects
   if (m_muonActive && m_stationBuilder && !m_stations) m_stations = m_stationBuilder->buildDetachedTrackingVolumes();
-  if (m_muonInert && m_inertBuilder && !m_inertObjs) m_inertObjs = m_inertBuilder->buildDetachedTrackingVolumes();
+  if (m_muonInert && m_inertBuilder && !m_inertObjs) m_inertObjs = m_inertBuilder->buildDetachedTrackingVolumes(m_blendInertMaterial);
   if (m_inertObjs && m_blendInertMaterial && m_removeBlended) {
     while ( m_inertPerm<m_inertObjs->size() 
 	    && (*m_inertObjs)[m_inertPerm]->name().substr((*m_inertObjs)[m_inertPerm]->name().size()-4,4)=="PERM") m_inertPerm++;
@@ -824,11 +824,11 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
   const Trk::SimplePolygonBrepVolumeBounds* spb = dynamic_cast<const Trk::SimplePolygonBrepVolumeBounds*> (volBounds);
   const Trk::PrismVolumeBounds* prism = dynamic_cast<const Trk::PrismVolumeBounds*> (volBounds);
 
-  if (sub) return findVolumeSpan(&(sub->outer()->volumeBounds()),sub->outer()->transform(),zTol,phiTol);
+  if (sub) return findVolumeSpan(&(sub->outer()->volumeBounds()),transform*sub->outer()->transform(),zTol,phiTol);
 
   if (comb) {
-    const Muon::Span* s1 = findVolumeSpan(&(comb->first()->volumeBounds()),comb->first()->transform(),zTol,phiTol);     
-    const Muon::Span* s2 = findVolumeSpan(&(comb->second()->volumeBounds()),comb->second()->transform(),zTol,phiTol);     
+    const Muon::Span* s1 = findVolumeSpan(&(comb->first()->volumeBounds()),transform*comb->first()->transform(),zTol,phiTol);     
+    const Muon::Span* s2 = findVolumeSpan(&(comb->second()->volumeBounds()),transform*comb->second()->transform(),zTol,phiTol);     
     Muon::Span scomb;
     scomb.reserve(6); 
     scomb.push_back(fmin((*s1)[0],(*s2)[0]));
@@ -981,6 +981,7 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     else if ( maxP1>=minP1 && maxP0<minP0) { minPhi = minP1; maxPhi = maxP1; }
     else if ( maxP1 - minP0 < (maxP0 - minP1+2*M_PI) ) { minPhi = minP0; maxPhi = maxP1; }
     else { minPhi = minP1 ; maxPhi = maxP0; }  
+    if (maxPhi<0.001 && minPhi>2*M_PI-0.001) {minPhi=0; maxPhi=2*M_PI;}
   }
   if ( box || trd || dtrd || spb ) {
     span.push_back( minZ - zTol );  

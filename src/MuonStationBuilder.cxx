@@ -185,7 +185,7 @@ StatusCode Muon::MuonStationBuilder::initialize()
   return StatusCode::SUCCESS;
 }
 
-const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder::buildDetachedTrackingVolumes()
+const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder::buildDetachedTrackingVolumes(bool blend)
  const
 {
   MsgStream log(msgSvc(), name());
@@ -194,7 +194,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 
   if (m_muonMgr) { 
     // retrieve muon station prototypes from GeoModel
-    const std::vector<const Trk::DetachedTrackingVolume*>* msTypes = buildDetachedTrackingVolumeTypes();
+    const std::vector<const Trk::DetachedTrackingVolume*>* msTypes = buildDetachedTrackingVolumeTypes(blend);
     std::vector<const Trk::DetachedTrackingVolume*>::const_iterator msTypeIter = msTypes->begin();
     
     // position MDT chambers by repeating loop over muon tree
@@ -341,7 +341,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
   return muonStations; 
 }
 
-const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder::buildDetachedTrackingVolumeTypes() const 
+const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder::buildDetachedTrackingVolumeTypes(bool blend) const 
 {
     MsgStream log( msgSvc(), name() );
 

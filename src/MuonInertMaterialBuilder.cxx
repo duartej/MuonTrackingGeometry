@@ -184,13 +184,15 @@ StatusCode Muon::MuonInertMaterialBuilder::initialize()
     if (m_simplifyToLayers) {
       log << MSG::INFO  << name() <<" option Simplify(Muon)GeometryToLayers no longer maintained " << endreq;
     }
+ 
+    m_constituents.clear();   
 
     log << MSG::INFO  << name() <<" initialize() successful" << endreq;
     
   return StatusCode::SUCCESS;
 }
 
-const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBuilder::buildDetachedTrackingVolumes()
+const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBuilder::buildDetachedTrackingVolumes(bool blend)
  const
 {
   MsgStream log(msgSvc(), name());
@@ -199,20 +201,23 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
   std::pair<std::vector<const Trk::DetachedTrackingVolume*>,std::vector<const Trk::DetachedTrackingVolume*> > mInert;
 
   // retrieve muon station prototypes from GeoModel
-  const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* msTypes = buildDetachedTrackingVolumeTypes();
+  const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* msTypes = buildDetachedTrackingVolumeTypes(blend);
   log << MSG::INFO << name() <<" obtained " << msTypes->size() << " prototypes" << endreq;
   
   std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >::const_iterator msTypeIter = msTypes->begin();
   
   for (; msTypeIter != msTypes->end(); ++msTypeIter) {
     std::string msTypeName = (*msTypeIter).first->name();
-    // decide if object suitable for blending; does not concern shields
-    double protMass=0.;
-    for (unsigned int ic = 0; ic<(*msTypeIter).first->constituents()->size(); ic++) {         
-      protMass += calculateVolume((*((*msTypeIter).first->constituents()))[ic].first)
-	*(*((*msTypeIter).first->constituents()))[ic].second;
+    bool perm = true;
+    if ( blend ) {
+      // decide if object suitable for blending; does not concern shields
+      double protMass=0.;
+      for (unsigned int ic = 0; ic<(*msTypeIter).first->constituents()->size(); ic++) {         
+	protMass += calculateVolume((*((*msTypeIter).first->constituents()))[ic].first)
+	  *(*((*msTypeIter).first->constituents()))[ic].second;
+      }
+     perm = msTypeName.substr(0,1)!="J" && m_blendLimit>0 && protMass > m_blendLimit;
     }
-    bool perm = msTypeName.substr(0,1)!="J" && m_blendLimit>0 && protMass > m_blendLimit;
     if (perm) msTypeName = msTypeName + "PERM";
     //
     const Trk::DetachedTrackingVolume* msTV = (*msTypeIter).first;
@@ -242,7 +247,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
   return muonObjects;
 }
 
-const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* Muon::MuonInertMaterialBuilder::buildDetachedTrackingVolumeTypes() const
+const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* Muon::MuonInertMaterialBuilder::buildDetachedTrackingVolumeTypes(bool blend) const
 {
     MsgStream log( msgSvc(), name() );
 
@@ -318,9 +323,9 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
 	    if (trObject) {  
 	      Trk::MaterialProperties mat = m_materialConverter->convert( vols[ish].first->getMaterial() );
 	      const Trk::TrackingVolume* newType= new Trk::TrackingVolume( *trObject, mat, m_muonMagneticField,0,0,protoName);
-	      const Trk::TrackingVolume* simType = simplifyShape(newType);
+	      const Trk::TrackingVolume* simType = simplifyShape(newType,blend);
 	      const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(protoName,simType);
-              typeStat->saveConstituents(m_constituents.back());
+              if (blend) typeStat->saveConstituents(m_constituents.back());
 	      objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> >(typeStat,vols[ish].second));
               delete trObject;
 	    }  else {
@@ -335,12 +340,7 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
     const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* mObjects = new std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >(objs);
 
     int count = 0;
-    //double massEstimate = 0.;
-    for (unsigned int i=0;i<mObjects->size();i++) {        
-       for (unsigned int j=0;j<(*mObjects)[i].second.size();j++) 
-       	 log << MSG::DEBUG << j<< "th  position at "<<((*mObjects)[i].second)[j].getTranslation()<<","<<((*mObjects)[i].second)[j].getRotation()<< endreq;      
-       count += (*mObjects)[i].second.size();
-    }
+    for (unsigned int i=0;i<mObjects->size();i++) count += (*mObjects)[i].second.size();
 
     log << MSG::INFO << name() << " returns " << mObjects->size() << " prototypes, to be cloned into "<< count <<" objects" << endreq;   
 
@@ -396,12 +396,12 @@ void Muon::MuonInertMaterialBuilder::printChildren(const GeoVPhysVol* pv) const
    
 }
 
-const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const Trk::TrackingVolume* trVol) const
+const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const Trk::TrackingVolume* trVol, bool blend) const
 {
   // envelope
   const Trk::Volume* envelope = 0;
   // resolve composed volumes (returns constituents with material fraction accounting for subtractions & overlaps)
-  std::vector<std::pair<const Trk::Volume*,std::pair<float,float> > > constituents = splitComposedVolume(trVol,true);
+  std::vector<std::pair<const Trk::Volume*,std::pair<float,float> > > constituents = splitComposedVolume(trVol,m_simplify||blend);
 
   //std::cout << "simplifying shape for:"<<trVol->volumeName()<<","<< constituents[0].second.first<<","<<constituents[0].second.second << std::endl;
   //for (unsigned int i=0;i<constituents.size(); i++) std::cout << "constituent:"<< calculateVolume(constituents[i].first)<<","<< constituents[i].second.first<<","<< constituents[i].second.second << std::endl;   
@@ -453,16 +453,17 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
     newVol = new Trk::TrackingVolume( *envelope, m_muonMaterial, m_muonMagneticField, confinedVols, envName);    
     Trk::TrackingVolumeManipulator::confineVolume(*trVol,newVol);
   }
-  
-  
-  // save calculable volumes for blending
-  std::vector<std::pair<const Trk::Volume*,float> > confinedConst;
-  for (unsigned int ic=0;ic<constituents.size();ic++) {
-    float scale = simpleMode==2 ? 1 : constituents[ic].second.first;
-    confinedConst.push_back(std::pair<const Trk::Volume*,float>
-			    ( new Trk::Volume(*(constituents[ic].first),newVol->transform().inverse()), scale ) );
+    
+  if (blend) {
+    // save calculable volumes for blending
+    std::vector<std::pair<const Trk::Volume*,float> > confinedConst;
+    for (unsigned int ic=0;ic<constituents.size();ic++) {
+      float scale = simpleMode==2 ? 1 : constituents[ic].second.first;
+      confinedConst.push_back(std::pair<const Trk::Volume*,float>
+			      ( new Trk::Volume(*(constituents[ic].first),newVol->transform().inverse()), scale ) );
+    }
+    m_constituents.push_back(new std::vector<std::pair<const Trk::Volume*,float> >(confinedConst));
   }
-  m_constituents.push_back(new std::vector<std::pair<const Trk::Volume*,float> >(confinedConst));
 
   delete envelope;
   return newVol;

@@ -293,6 +293,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		if (msName.substr(7,2)=="19") eta = az ? 5 : 4;
 		if (msName.substr(7,2)=="20") eta = az ? 5 : 4;
 		if (msName.substr(7,2)=="21") eta = az ? 5 : 4;
+		if (msName.substr(7,2)=="22") eta = az ? 5 : 4;
 	      }     
               if (stName.substr(0,1)=="T") {
 		int etaSt = eta - 4;

@@ -1,3 +1,7 @@
+2009-11-11 Sarka Todorova <sarka.todorova@cern.ch>
+	* new TGC station taken into account in identification
+	* tagged as MuonTrackingGeometry-00-05-29
+
 2009-10-08 Sarka Todorova <sarka.todorova@cern.ch>
 	* pass constituents info only if needed ( for blending )
         * fix span 

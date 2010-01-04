@@ -939,7 +939,7 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
   for (unsigned int ie=0; ie < edges.size() ; ie++) {
     Trk::GlobalPosition gp = transform*edges[ie];
     double phi = gp.phi()+M_PI; 
-    log << MSG::DEBUG << "edges:"<< ie<<","<<gp<<","<< phi<< endreq;
+    log << MSG::VERBOSE << "edges:"<< ie<<","<<gp<<","<< phi<< endreq;
     double rad = gp.perp();
     if (cyl || bcyl) {
       double radius = 0.; double hz = 0.;
@@ -1017,7 +1017,7 @@ const std::vector<std::vector<std::pair<const Trk::DetachedTrackingVolume*,const
   for (unsigned int iobj=0; iobj<objs->size(); iobj++) {
     HepTransform3D  transform = (*objs)[iobj]->trackingVolume()->transform();
     const Muon::Span* span = findVolumeSpan(&((*objs)[iobj]->trackingVolume()->volumeBounds()), transform, zTol, phiTol);
-    log << MSG::DEBUG << "span:"<<(*objs)[iobj]->name()<< ","<<(*span)[0]<<","<< (*span)[1]<<","<<(*span)[2]<<","
+    log << MSG::VERBOSE << "span:"<<(*objs)[iobj]->name()<< ","<<(*span)[0]<<","<< (*span)[1]<<","<<(*span)[2]<<","
     << (*span)[3]<<","<< (*span)[4]<<","<< (*span)[5] << endreq;  
     // negative outer wheel
     if ( (*span)[0] < -m_bigWheel ) (*spans)[0]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
@@ -1178,7 +1178,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(const Trk::Volume* vol, int mode , std::string volumeName) const
 {
   MsgStream log(msgSvc(), name());
-  log << MSG::DEBUG << name() << "processing volume in mode:"<< mode << endreq;
+  log << MSG::VERBOSE << name() << "processing volume in mode:"<< mode << endreq;
 
   // mode : -1 ( adjusted z/phi partition )
   //         0 ( -"- plus barrel H binning )            
@@ -1431,7 +1431,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     log << MSG::ERROR << name() << "wrong partition setup" << endreq;
     phiN = 1;
   } else {
-    log << MSG::DEBUG << name() << "partition setup:(z,phi):"<<etaN<<","<<phiN << endreq;
+    log << MSG::VERBOSE << name() << "partition setup:(z,phi):"<<etaN<<","<<phiN << endreq;
   }
 
   if ( etaN * phiN > 1 ) {  // partition
@@ -1557,7 +1557,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(const Trk::Volume* vol, int type,std::string volumeName) const
 {
   MsgStream log(msgSvc(), name());
-  log << MSG::DEBUG << name() << "processing shield volume "<< volumeName<<"  in mode:"<< type << endreq;
+  log << MSG::VERBOSE << name() << "processing shield volume "<< volumeName<<"  in mode:"<< type << endreq;
 
   const Trk::TrackingVolume* tVol = 0;
 
@@ -1888,7 +1888,7 @@ bool Muon::MuonTrackingGeometryBuilder::enclosed(const Trk::Volume* vol, const M
   //
   //const Muon::Span* s = findVolumeSpan(&(cs->volumeBounds()), cs->transform(), 0.,0.) ;
   //std::auto_ptr<const Muon::Span> s (findVolumeSpan(&(cs->volumeBounds()), cs->transform(), 0.,0.) );
-  log << MSG::DEBUG << "enclosing volume:z:"<< zMin<<","<<zMax<<":r:"<< rMin<<","<<rMax<<":phi:"<<pMin<<","<<pMax<< endreq;
+  log << MSG::VERBOSE << "enclosing volume:z:"<< zMin<<","<<zMax<<":r:"<< rMin<<","<<rMax<<":phi:"<<pMin<<","<<pMax<< endreq;
   //
   bool rLimit = (!m_static3d || ( (*s)[4] < rMax-tol && (*s)[5] > rMin+tol ) ); 
   if ( rLimit && (*s)[0] < zMax-tol && (*s)[1] > zMin+tol ) {
@@ -2448,7 +2448,7 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
       double fraction = (*cs)[ic].second;
       double csVol = fraction*calculateVolume(nCs);      
       const Muon::Span* s = findVolumeSpan(&(nCs->volumeBounds()), nCs->transform(), 0.,0.) ;
-      if (s) log << MSG::DEBUG << "constituent:"<<ic<<":z:"<< (*s)[0]<<","<<(*s)[1]<<":r:"<< (*s)[4]<<","<<(*s)[5]
+      if (s) log << MSG::VERBOSE << "constituent:"<<ic<<":z:"<< (*s)[0]<<","<<(*s)[1]<<":r:"<< (*s)[4]<<","<<(*s)[5]
 	    <<":phi:"<<(*s)[2]<<","<<(*s)[3]<< endreq;      
       double enVol = 0.;
       // loop over frame volumes, check if confined
@@ -2467,13 +2467,13 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
       if (dil>0.) { 
 	for ( fIter=(*mIter).second->begin(); fIter!=(*mIter).second->end(); fIter++) { 
 	  if (fEncl[fIter-(*mIter).second->begin()]) { (*fIter)->addMaterial(*detMat,dil); if (m_colorCode==0) (*fIter)->registerColorCode(12) ; 
-	  log << MSG::DEBUG << (*fIter)->volumeName()<<" acquires material from "<<  (*mIter).first->name()<< endreq;  }
+	  log << MSG::VERBOSE << (*fIter)->volumeName()<<" acquires material from "<<  (*mIter).first->name()<< endreq;  }
 	}
-	log << MSG::DEBUG << "diluting factor:"<< dil<<" for "<< (*mIter).first->name()<<","<<ic<<endreq;
+	log << MSG::VERBOSE << "diluting factor:"<< dil<<" for "<< (*mIter).first->name()<<","<<ic<<endreq;
       } else {
-	log << MSG::DEBUG << "diluting factor:"<< dil<<" for "<< (*mIter).first->name()<<","<<ic<<endreq;
+	log << MSG::VERBOSE << "diluting factor:"<< dil<<" for "<< (*mIter).first->name()<<","<<ic<<endreq;
       }
     }
-    if ( m_removeBlended ) {  log << MSG::DEBUG << "deleting "<< (*mIter).first->name()<< endreq; delete (*mIter).first; }
+    if ( m_removeBlended ) {  log << MSG::VERBOSE << "deleting "<< (*mIter).first->name()<< endreq; delete (*mIter).first; }
   }
 }

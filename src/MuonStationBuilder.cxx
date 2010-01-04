@@ -412,8 +412,8 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
           // if (is==0 ) std::cout << "station shape type:"<< name<< ","<<clv->getShape()->type()<<std::endl; 
           if (is==0 )          
           {
-            log << MSG::DEBUG <<" new station type " << name << "," << clv->getShape()->type() << endreq;    
-            log << MSG::DEBUG <<" prototype built from eta, phi:" << eta << "," << phi << endreq;    
+            log << MSG::VERBOSE <<" new station type " << name << "," << clv->getShape()->type() << endreq;    
+            log << MSG::VERBOSE <<" prototype built from eta, phi:" << eta << "," << phi << endreq;    
              
             if (name.substr(0,2)=="CS" || name.substr(0,1)=="T") {
               if (m_muonStationTypeBuilder) {
@@ -603,10 +603,10 @@ void Muon::MuonStationBuilder::glueComponents(const Trk::DetachedTrackingVolume*
 void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume* station, int eta, int phi ) const
 {
   MsgStream log(msgSvc(), name());
-  log << MSG::DEBUG  << name() <<" identifying layers " << endreq;    
+  log << MSG::VERBOSE  << name() <<" identifying layers " << endreq;    
 
   std::string stationName = station->trackingVolume()->volumeName();
-  log << MSG::DEBUG  << " in station " << station->name() << endreq;    
+  log << MSG::VERBOSE  << " in station " << station->name() << endreq;    
 
   
   if (stationName.substr(0,1)=="C") { 
@@ -894,10 +894,10 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* station, int eta, int phi, HepTransform3D transf ) const
 {
   MsgStream log(msgSvc(), name());
-  log << MSG::DEBUG  << name() <<" identifying prototype " << endreq;    
+  log << MSG::VERBOSE  << name() <<" identifying prototype " << endreq;    
 
   std::string stationName = station->volumeName();
-  log << MSG::DEBUG  << " for station " << stationName << endreq;    
+  log << MSG::VERBOSE  << " for station " << stationName << endreq;    
 
   if (stationName.substr(0,1)=="B" || stationName.substr(0,1)=="E" ) { 
     // MDT

@@ -1793,8 +1793,8 @@ Trk::ExtendedMaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerM
   // loop through the whole hierarchy; collect material
   Trk::ExtendedMaterialProperties* total=new Trk::ExtendedMaterialProperties(0.,10.e8,10.e8,0.,0.,0.);
   collectMaterial( pv, total, volume/thickness);
-  *m_log << MSG::DEBUG << name() << " combined material thickness: "<< total->thickness() << std::endl; 
-  *m_log << MSG::DEBUG << name() << " actual layer thickness: "<< thickness << std::endl; 
+  *m_log << MSG::VERBOSE << name() << " combined material thickness: "<< total->thickness() << std::endl; 
+  *m_log << MSG::VERBOSE << name() << " actual layer thickness: "<< thickness << std::endl; 
   // scaled material properties to the actual layer thickness
   if (total->thickness() > 0 ) { 
     double scale = thickness/total->thickness();
@@ -1807,7 +1807,7 @@ Trk::ExtendedMaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerM
 					  total->averageZ(),
 					  total->averageRho()/scale);
     delete total;    
-    *m_log<< MSG::DEBUG << "averaged material:d,x0,dInX0:"<<scaled->thickness()<<","<<scaled->x0()<<","<<scaled->thicknessInX0()<<endreq;
+    *m_log<< MSG::VERBOSE << "averaged material:d,x0,dInX0:"<<scaled->thickness()<<","<<scaled->x0()<<","<<scaled->thicknessInX0()<<endreq;
 
     return scaled;
   }  

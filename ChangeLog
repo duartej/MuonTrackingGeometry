@@ -1,3 +1,7 @@
+2010-01-04 Sarka Todorova <sarka.todorova@cern.ch>
+	* reshuffle printout (DEBUG->VERBOSE)
+	* tagged as MuonTrackingGeometry-00-05-30
+
 2009-11-11 Sarka Todorova <sarka.todorova@cern.ch>
 	* new TGC station taken into account in identification
 	* tagged as MuonTrackingGeometry-00-05-29

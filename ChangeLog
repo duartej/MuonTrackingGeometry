@@ -1,3 +1,7 @@
+2010-10-19 Andreas Salzburger <Andreas.Salzburger -at- cern.ch >
+	* update to new CMT version
+	* tagged as MuonTrackingGeometry-00-05-31
+
 2010-01-04 Sarka Todorova <sarka.todorova@cern.ch>
 	* reshuffle printout (DEBUG->VERBOSE)
 	* tagged as MuonTrackingGeometry-00-05-30

@@ -342,7 +342,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
   return muonStations; 
 }
 
-const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder::buildDetachedTrackingVolumeTypes(bool blend) const 
+const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder::buildDetachedTrackingVolumeTypes(bool /*blend*/) const 
 {
     MsgStream log( msgSvc(), name() );
 

@@ -7,23 +7,17 @@ manager Sarka Todorova, <Sarka.Todorova@cern.ch>
 use AtlasPolicy         AtlasPolicy-*
 use GaudiInterface      GaudiInterface-*      External
 use AtlasCLHEP          AtlasCLHEP-*          External
-use StoreGate           StoreGate-*           Control
 
-use BFieldAth		   BFieldAth-*	              MagneticField 
 
 use GeoModelKernel         GeoModelKernel-*           DetectorDescription/GeoModel 
 use TrkDetDescrInterfaces  TrkDetDescrInterfaces-*    Tracking/TrkDetDescr
 use TrkDetDescrUtils       TrkDetDescrUtils-*         Tracking/TrkDetDescr
 use TrkGeometry            TrkGeometry-*              Tracking/TrkDetDescr
-use TrkSurfaces            TrkSurfaces-*              Tracking/TrkDetDescr 
-use TrkGeometrySurfaces    TrkGeometrySurfaces-*      Tracking/TrkDetDescr 
 use TrkVolumes             TrkVolumes-*               Tracking/TrkDetDescr
 use TrkDetDescrGeoModelCnv TrkDetDescrGeoModelCnv-*   Tracking/TrkDetDescr
-use TrkMagFieldUtils       TrkMagFieldUtils-*         Tracking/TrkMagneticField      
-use TrkMagFieldInterfaces  TrkMagFieldInterfaces-*    Tracking/TrkMagneticField      
+    
+    
 
-use MuonReadoutGeometry    MuonReadoutGeometry-*      MuonSpectrometer/MuonDetDescr
-use MuonIdHelpers          MuonIdHelpers-*            MuonSpectrometer
 
 library MuonTrackingGeometry *.cxx components/*.cxx
 apply_pattern component_library
@@ -36,3 +30,13 @@ private
 
 macro DOXYGEN_IMAGE_PATH "../doc/images"
 macro DOXYGEN_INLINE_INHERITED_MEMB "YES"
+
+
+use BFieldAth		   BFieldAth-*	              MagneticField 
+use MuonIdHelpers          MuonIdHelpers-*            MuonSpectrometer
+use MuonReadoutGeometry    MuonReadoutGeometry-*      MuonSpectrometer/MuonDetDescr
+use StoreGate           StoreGate-*           Control
+use TrkGeometrySurfaces    TrkGeometrySurfaces-*      Tracking/TrkDetDescr 
+use TrkMagFieldUtils       TrkMagFieldUtils-*         Tracking/TrkMagneticField 
+use TrkSurfaces            TrkSurfaces-*              Tracking/TrkDetDescr 
+use TrkMagFieldInterfaces  TrkMagFieldInterfaces-*    Tracking/TrkMagneticField  

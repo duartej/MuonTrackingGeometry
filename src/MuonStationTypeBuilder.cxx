@@ -382,8 +382,8 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
             mdtVol = new Trk::Volume(new HepTransform3D(HepTranslateZ3D(-zShift)*compVol[i]->transform()),mdtBounds);
 	  } else {
             if ( fabs(lowX-currX)>0.002 ) { 
-	      *m_log << MSG::WARNING  << "Mdt volume size does not match the envelope:lowX,currX:" << lowX <<","<<currX << std::endl;
-	      *m_log << MSG::WARNING  << "adjusting Mdt volume " << std::endl;
+	      *m_log << MSG::DEBUG  << "Mdt volume size does not match the envelope:lowX,currX:" << lowX <<","<<currX << std::endl;
+	      *m_log << MSG::DEBUG  << "adjusting Mdt volume " << std::endl;
 	    }
 	    mdtBounds = new Trk::CuboidVolumeBounds(compBounds->halflengthX()+0.5*(lowX-currX),envY,envZ);
             mdtVol = new Trk::Volume(new HepTransform3D(HepTranslateX3D(0.5*(currX-lowX))
@@ -674,8 +674,8 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
             mdtVol = new Trk::Volume(new HepTransform3D(compVol[i]->transform()),mdtBounds);
 	  } else {
             if (fabs(lowX-currX)>0.002 ) {
-	      *m_log << MSG::WARNING  << "Mdt volume size does not match the envelope:lowX,currX:" << lowX <<","<<currX << std::endl;
-	      *m_log << MSG::WARNING  << "adjusting Mdt volume " << std::endl;
+	      *m_log << MSG::DEBUG  << "Mdt volume size does not match the envelope:lowX,currX:" << lowX <<","<<currX << std::endl;
+	      *m_log << MSG::DEBUG  << "adjusting Mdt volume " << std::endl;
 	    }
 	    mdtBounds = new Trk::TrapezoidVolumeBounds(envX1,envX2,envY,compTrdBounds->halflengthZ()+0.5*(lowX-currX));
             mdtVol = new Trk::Volume(new HepTransform3D(HepTranslateZ3D(0.5*(currX-lowX))*compVol[i]->transform()),mdtBounds);

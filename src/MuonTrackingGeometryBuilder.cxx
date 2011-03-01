@@ -113,6 +113,7 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_stations = 0;
   m_inertObjs = 0;
   m_blendMap.clear();
+  m_blendVols.clear(); 
 
   declareInterface<Trk::IGeometryBuilder>(this);
 
@@ -1105,8 +1106,10 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         // prepare blending
         if (m_blendInertMaterial && blendVols.size()) {
           for (unsigned int id=0;id<blendVols.size();id++) {
-	    if (!m_blendMap[blendVols[id]]) 
+	    if (!m_blendMap[blendVols[id]]) {
 	      m_blendMap[blendVols[id]] = new std::vector<const Trk::TrackingVolume*>;
+              m_blendVols.push_back(blendVols[id]);
+	    }
 	    m_blendMap[blendVols[id]]->push_back(sVol);
 	  }
 	}  
@@ -1165,8 +1168,10 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     // prepare blending
     if (m_blendInertMaterial && blendVols.size()) {
       for (unsigned int id=0;id<blendVols.size();id++) {
-	if (!m_blendMap[blendVols[id]]) 
+	if (!m_blendMap[blendVols[id]]) {
 	  m_blendMap[blendVols[id]] = new std::vector<const Trk::TrackingVolume*>;
+	  m_blendVols.push_back(blendVols[id]);
+	}
 	m_blendMap[blendVols[id]]->push_back(tVol);
       }
     }  
@@ -1332,8 +1337,10 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	  // prepare blending
 	  if (m_blendInertMaterial && blendVols.size()) {
 	    for (unsigned int id=0;id<blendVols.size();id++) {
-	      if (!m_blendMap[blendVols[id]]) 
+	      if (!m_blendMap[blendVols[id]]) {
 		m_blendMap[blendVols[id]] = new std::vector<const Trk::TrackingVolume*>;
+                m_blendVols.push_back(blendVols[id]);
+	      }
 	      m_blendMap[blendVols[id]]->push_back(sVol);
 	    }
 	  }  
@@ -1481,8 +1488,10 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         // prepare blending
         if (m_blendInertMaterial && blendVols.size()) {
           for (unsigned int id=0;id<blendVols.size();id++) {
-	    if (!m_blendMap[blendVols[id]]) 
+	    if (!m_blendMap[blendVols[id]]) {
 	      m_blendMap[blendVols[id]] = new std::vector<const Trk::TrackingVolume*>;
+              m_blendVols.push_back(blendVols[id]);
+	    }
 	    m_blendMap[blendVols[id]]->push_back(sVol);
 	  }
 	}  
@@ -1544,8 +1553,10 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     // prepare blending
     if (m_blendInertMaterial && blendVols.size()) {
       for (unsigned int id=0;id<blendVols.size();id++) {
-	if (!m_blendMap[blendVols[id]]) 
+	if (!m_blendMap[blendVols[id]]) {
 	  m_blendMap[blendVols[id]] = new std::vector<const Trk::TrackingVolume*>;
+	  m_blendVols.push_back(blendVols[id]);
+	}
 	m_blendMap[blendVols[id]]->push_back(tVol);
       }
     }  
@@ -1654,8 +1665,10 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
       // prepare blending
       if (m_blendInertMaterial && blendVols.size()) {
 	for (unsigned int id=0;id<blendVols.size();id++) {
-	  if (!m_blendMap[blendVols[id]]) 
+	  if (!m_blendMap[blendVols[id]]) {
 	    m_blendMap[blendVols[id]] = new std::vector<const Trk::TrackingVolume*>;
+	    m_blendVols.push_back(blendVols[id]);
+	  }
 	  m_blendMap[blendVols[id]]->push_back(sVol);
 	}
       }  
@@ -2433,18 +2446,24 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
 {
   MsgStream log(msgSvc(), name());
   // loop over map
-  std::map<const Trk::DetachedTrackingVolume*,std::vector<const Trk::TrackingVolume*>* >::iterator mIter = m_blendMap.begin();
+  //std::map<const Trk::DetachedTrackingVolume*,std::vector<const Trk::TrackingVolume*>* >::iterator mIter = m_blendMap.begin();
+  std::vector<const Trk::DetachedTrackingVolume*>::iterator viter = m_blendVols.begin();
 
   std::vector<std::pair<const Trk::Volume*,float> >* cs = 0;
   
-  for ( ; mIter!= m_blendMap.end(); mIter++) {
-    cs = (*mIter).first->constituents();     
+  //  for ( ; mIter!= m_blendMap.end(); mIter++) {
+  //  cs = (*mIter).first->constituents();     
+  for (;viter!= m_blendVols.end();++viter) {
+    cs = (*viter)->constituents();
     if (!cs) continue;
     // find material source
-    const Trk::MaterialProperties* detMat = (*mIter).first->trackingVolume();
-    if ( (*mIter).first->trackingVolume()->confinedDenseVolumes()) detMat = (*(*mIter).first->trackingVolume()->confinedDenseVolumes())[0];
+    //const Trk::MaterialProperties* detMat = (*mIter).first->trackingVolume();
+    const Trk::MaterialProperties* detMat = (*viter)->trackingVolume();
+    //if ( (*mIter).first->trackingVolume()->confinedDenseVolumes()) detMat = (*(*mIter).first->trackingVolume()->confinedDenseVolumes())[0];
+    if ( (*viter)->trackingVolume()->confinedDenseVolumes()) detMat = (*(*viter)->trackingVolume()->confinedDenseVolumes())[0];
     for (unsigned int ic=0; ic<cs->size(); ic++) {
-      const Trk::Volume* nCs = new Trk::Volume(*((*cs)[ic].first),(*mIter).first->trackingVolume()->transform());
+      //const Trk::Volume* nCs = new Trk::Volume(*((*cs)[ic].first),(*mIter).first->trackingVolume()->transform());
+      const Trk::Volume* nCs = new Trk::Volume(*((*cs)[ic].first),(*viter)->trackingVolume()->transform());
       double fraction = (*cs)[ic].second;
       double csVol = fraction*calculateVolume(nCs);      
       const Muon::Span* s = findVolumeSpan(&(nCs->volumeBounds()), nCs->transform(), 0.,0.) ;
@@ -2452,11 +2471,14 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
 	    <<":phi:"<<(*s)[2]<<","<<(*s)[3]<< endreq;      
       double enVol = 0.;
       // loop over frame volumes, check if confined
-      std::vector<const Trk::TrackingVolume*>::iterator fIter = (*mIter).second->begin(); 
+      //std::vector<const Trk::TrackingVolume*>::iterator fIter = (*mIter).second->begin(); 
+      std::vector<const Trk::TrackingVolume*>* vv =m_blendMap[*viter]; 
+      std::vector<const Trk::TrackingVolume*>::iterator fIter=vv->begin(); 
       std::vector<bool> fEncl; 
       fEncl.clear();
       // blending factors can be saved, and not recalculated for each clone
-      for ( ; fIter!=(*mIter).second->end(); fIter++) {
+      //for ( ; fIter!=(*mIter).second->end(); fIter++) {
+      for ( ; fIter!=vv->end(); fIter++) {
         fEncl.push_back(enclosed(*fIter,s));
         if ( fEncl.back() ) enVol += calculateVolume(*fIter);
       }
@@ -2465,15 +2487,18 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
       double dil =  enVol>0. ?  csVol/enVol : 0.;
       //std::cout << "const:dil:"<< ic<<","<<dil<< std::endl;
       if (dil>0.) { 
-	for ( fIter=(*mIter).second->begin(); fIter!=(*mIter).second->end(); fIter++) { 
-	  if (fEncl[fIter-(*mIter).second->begin()]) { (*fIter)->addMaterial(*detMat,dil); if (m_colorCode==0) (*fIter)->registerColorCode(12) ; 
-	  log << MSG::VERBOSE << (*fIter)->volumeName()<<" acquires material from "<<  (*mIter).first->name()<< endreq;  }
+	//for ( fIter=(*mIter).second->begin(); fIter!=(*mIter).second->end(); fIter++) { 
+	for ( fIter=vv->begin(); fIter!=vv->end(); fIter++) { 
+	  //if (fEncl[fIter-(*mIter).second->begin()]) { (*fIter)->addMaterial(*detMat,dil); if (m_colorCode==0) (*fIter)->registerColorCode(12) ; 
+	  if (fEncl[fIter-vv->begin()]) { (*fIter)->addMaterial(*detMat,dil); if (m_colorCode==0) (*fIter)->registerColorCode(12) ; 
+	    //log << MSG::VERBOSE << (*fIter)->volumeName()<<" acquires material from "<<  (*mIter).first->name()<< endreq;  }
+	    log << MSG::VERBOSE << (*fIter)->volumeName()<<" acquires material from "<<  (*viter)->name()<< endreq;  }
 	}
-	log << MSG::VERBOSE << "diluting factor:"<< dil<<" for "<< (*mIter).first->name()<<","<<ic<<endreq;
+	log << MSG::VERBOSE << "diluting factor:"<< dil<<" for "<< (*viter)->name()<<","<<ic<<endreq;
       } else {
-	log << MSG::VERBOSE << "diluting factor:"<< dil<<" for "<< (*mIter).first->name()<<","<<ic<<endreq;
+	log << MSG::VERBOSE << "diluting factor:"<< dil<<" for "<< (*viter)->name()<<","<<ic<<endreq;
       }
     }
-    if ( m_removeBlended ) {  log << MSG::VERBOSE << "deleting "<< (*mIter).first->name()<< endreq; delete (*mIter).first; }
+    if ( m_removeBlended ) {  log << MSG::VERBOSE << "deleting "<< (*viter)->name()<< endreq; delete *viter; }
   }
 }

@@ -1,3 +1,8 @@
+2011-03-01 Sarka Todorova <sarka.todorova@cern.ch>
+	* Scott Snyder's fix for blended material (->reproducibility )
+	* warning messages in MSTB->debug level  
+	* tagged as MuonTrackingGeometry-00-05-33
+
 2010-05-11 Felix Rauscher <rauscher@cern.ch>
 	* fix checkreq warnings
 	* fix compiler warnings

@@ -166,7 +166,7 @@ namespace Muon {
       //mutable std::vector<std::pair<std::string,std::pair<double, unsigned int> > >   m_dilFact;
       mutable std::vector<Trk::MaterialProperties>               m_matProp;
       mutable std::map<const Trk::DetachedTrackingVolume*,std::vector<const Trk::TrackingVolume*>* > m_blendMap;
-
+      mutable std::vector<const Trk::DetachedTrackingVolume*>  m_blendVols;
       typedef ServiceHandle<IChronoStatSvc> IChronoStatSvc_t;
       IChronoStatSvc_t              m_chronoStatSvc;      
  };

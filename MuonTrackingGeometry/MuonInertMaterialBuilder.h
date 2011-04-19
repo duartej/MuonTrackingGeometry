@@ -14,7 +14,7 @@
 #include "TrkGeometry/TrackingVolumeManipulator.h"
 #include "TrkDetDescrGeoModelCnv/GeoShapeConverter.h"
 // Gaudi
-#include "GaudiKernel/AlgTool.h"
+#include "AthenaBaseComps/AthAlgTool.h"
 #include "GaudiKernel/ToolHandle.h"
 #include "GaudiKernel/IRndmGenSvc.h"
 #include "GaudiKernel/RndmGenerators.h"
@@ -57,7 +57,7 @@ namespace Muon {
       by Sarka.Todorova@cern.ch, Marcin.Wolter@cern.ch
     */
     
-  class MuonInertMaterialBuilder : public AlgTool,
+  class MuonInertMaterialBuilder : public AthAlgTool,
                                    public Trk::TrackingVolumeManipulator,
                              virtual public Trk::IDetachedTrackingVolumeBuilder {
   public:

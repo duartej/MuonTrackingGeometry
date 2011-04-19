@@ -12,7 +12,7 @@
 #include "TrkGeometry/DetachedTrackingVolume.h"
 #include "TrkGeometry/TrackingVolume.h"
 // Gaudi
-#include "GaudiKernel/AlgTool.h"
+#include "AthenaBaseComps/AthAlgTool.h"
 #include "GaudiKernel/ToolHandle.h"
 
 #include "GeoModelKernel/GeoVPhysVol.h"
@@ -52,7 +52,7 @@ namespace Muon {
       by Sarka.Todorova@cern.ch
     */
     
-  class MuonStationBuilder : public AlgTool,
+  class MuonStationBuilder : public AthAlgTool,
                              virtual public Trk::IDetachedTrackingVolumeBuilder {
   public:
       /** Constructor */

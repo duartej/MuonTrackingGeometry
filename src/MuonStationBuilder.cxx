@@ -68,9 +68,6 @@
 // STD
 #include <map>
 
-// Gaudi
-#include "GaudiKernel/MsgStream.h"
-
 #include "GeoModelKernel/GeoShape.h"
 #include "GeoModelKernel/GeoShapeShift.h"
 #include "GeoModelKernel/GeoShapeSubtraction.h"
@@ -80,7 +77,7 @@
 
 // constructor
 Muon::MuonStationBuilder::MuonStationBuilder(const std::string& t, const std::string& n, const IInterface* p) :
-  AlgTool(t,n,p),
+  AthAlgTool(t,n,p),
   m_muonMgrLocation("MuonMgr"),
   m_magFieldMode(Trk::RealisticField),
   m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
@@ -111,23 +108,18 @@ Muon::MuonStationBuilder::~MuonStationBuilder()
 // initialize
 StatusCode Muon::MuonStationBuilder::initialize()
 {
-    
-    MsgStream log(msgSvc(), name());
-
-    StatusCode s = AlgTool::initialize();
-    if (s.isFailure()) log << MSG::INFO << "failing to initialize?" << endreq; 
 
     // Get DetectorStore service
     //
     StoreGateSvc* m_detStore=0;
     StatusCode ds = service("DetectorStore",m_detStore);
     if (ds.isFailure()) {
-        log << MSG::FATAL << "DetectorStore service not found !" << endreq;
+      ATH_MSG_FATAL( "DetectorStore service not found !");
     }
     // get Muon Spectrometer Description Manager
     ds = m_detStore->retrieve(m_muonMgr);
     if (ds.isFailure()) {
-        log << MSG::ERROR << "Could not get MuonDetectorManager, no layers for muons will be built. " << endreq;
+      ATH_MSG_ERROR("Could not get MuonDetectorManager, no layers for muons will be built. " );
     }
     
     m_mdtIdHelper = m_muonMgr-> mdtIdHelper(); 
@@ -135,32 +127,32 @@ StatusCode Muon::MuonStationBuilder::initialize()
     m_cscIdHelper = m_muonMgr-> cscIdHelper();
     m_tgcIdHelper = m_muonMgr-> tgcIdHelper();
 
-    log << MSG::INFO << m_muonMgr->geometryVersion() << endreq; 
+    ATH_MSG_INFO( m_muonMgr->geometryVersion() ); 
     
     // Retrieve the magnetic field tool   ----------------------------------------------------    
     if (m_magFieldMode && m_magFieldTool.retrieve().isFailure())
     {
-      log << MSG::FATAL << "Failed to retrieve tool " << m_magFieldTool << endreq;
+      ATH_MSG_FATAL(  "Failed to retrieve tool " << m_magFieldTool );
       return StatusCode::FAILURE;
     } else
-      log << MSG::INFO << "Retrieved tool " << m_magFieldTool << endreq;
+      ATH_MSG_INFO( "Retrieved tool " << m_magFieldTool );
 
 
     // Retrieve the tracking volume helper   -------------------------------------------------    
     if (m_trackingVolumeHelper.retrieve().isFailure())
     {
-      log << MSG::FATAL << "Failed to retrieve tool " << m_trackingVolumeHelper << endreq;
+      ATH_MSG_FATAL( "Failed to retrieve tool " << m_trackingVolumeHelper );
       return StatusCode::FAILURE;
     } else
-      log << MSG::INFO << "Retrieved tool " << m_trackingVolumeHelper << endreq;
+      ATH_MSG_INFO( "Retrieved tool " << m_trackingVolumeHelper );
 
     // Retrieve muon station builder tool   -------------------------------------------------    
    if (m_muonStationTypeBuilder.retrieve().isFailure())
     {
-      log << MSG::FATAL << "Failed to retrieve tool " << m_muonStationTypeBuilder << endreq;
+      ATH_MSG_FATAL( "Failed to retrieve tool " << m_muonStationTypeBuilder );
       return StatusCode::FAILURE;
     } else
-      log << MSG::INFO << "Retrieved tool " << m_muonStationTypeBuilder << endreq;
+     ATH_MSG_INFO( "Retrieved tool " << m_muonStationTypeBuilder );
 
     // if no muon materials are declared, take default ones
     if (m_muonMaterialProperties.size() < 3){
@@ -180,7 +172,7 @@ StatusCode Muon::MuonStationBuilder::initialize()
     else                                            
         m_muonMagneticField = Trk::MagneticFieldProperties(&(*m_magFieldTool), Trk::RealisticField);    
 
-    log << MSG::INFO  << name() <<" initialize() successful" << endreq;    
+    ATH_MSG_INFO( name() <<" initialize() successful" );    
     
   return StatusCode::SUCCESS;
 }
@@ -188,7 +180,6 @@ StatusCode Muon::MuonStationBuilder::initialize()
 const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder::buildDetachedTrackingVolumes(bool blend)
  const
 {
-  MsgStream log(msgSvc(), name());
 
   std::vector<const Trk::DetachedTrackingVolume*> mStations;
 
@@ -239,7 +230,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
           gmStation = m_muonMgr->getMuonStation(vname.substr(0,3),eta,phi);
         }
         //
-        if (!gmStation) log << MSG::WARNING << "Muon station not found! "<<vname<<","<<eta<<","<<phi  <<std::endl; 
+        if (!gmStation) ATH_MSG_WARNING( "Muon station not found! "<<vname<<","<<eta<<","<<phi ); 
         std::string stName = (clv->getName()).substr(0,vname.size()-8);
         if (stName.substr(0,1)=="B" && eta < 0 ) {
           stName = (clv->getName()).substr(0,vname.size()-8) + "-";
@@ -310,7 +301,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
               } else if (stName.substr(0,1)!="C" ) {
 		stId = m_mdtIdHelper->elementID(vname.substr(0,3),eta,phi);
               }
-              if (!(stId.get_compact())) log << MSG::WARNING << "identifier of the station not found:"<<vname <<","<<eta<<","<<phi<<endreq;
+              if (!(stId.get_compact())) ATH_MSG_WARNING( "identifier of the station not found:"<<vname <<","<<eta<<","<<phi );
               unsigned int iD = stId.get_identifier32().get_compact();
 	      // clone station from prototype
 	      const Trk::DetachedTrackingVolume* newStat = msTV->clone(vname,transf);
@@ -327,7 +318,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
             }
 	  }
 	}  
-	if (!msTV)  log << MSG::DEBUG  << name() <<" this station has no prototype: " << vname << endreq;    
+	if (!msTV)  ATH_MSG_DEBUG( name() <<" this station has no prototype: " << vname );    
       }
       vol.next();      
     }
@@ -338,15 +329,14 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
   const std::vector<const Trk::DetachedTrackingVolume*>* muonStations=new std::vector<const Trk::DetachedTrackingVolume*>(mStations);
 
   //
-  log << MSG::INFO  << name() << "returns " << (*muonStations).size() << " stations" << endreq;	 
+  ATH_MSG_INFO( name() << "returns " << (*muonStations).size() << " stations" );	 
   return muonStations; 
 }
 
 const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder::buildDetachedTrackingVolumeTypes(bool /*blend*/) const 
 {
-    MsgStream log( msgSvc(), name() );
 
-    log << MSG::INFO  << name() <<" building station types" << endreq;    
+  ATH_MSG_INFO( name() <<" building station types" );    
 ///////////////////////////////////////////////////////////////////////////////////////////////////
       std::vector<const Trk::DetachedTrackingVolume*> stations;
 
@@ -412,8 +402,8 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
           // if (is==0 ) std::cout << "station shape type:"<< name<< ","<<clv->getShape()->type()<<std::endl; 
           if (is==0 )          
           {
-            log << MSG::VERBOSE <<" new station type " << name << "," << clv->getShape()->type() << endreq;    
-            log << MSG::VERBOSE <<" prototype built from eta, phi:" << eta << "," << phi << endreq;    
+            ATH_MSG_VERBOSE(" new station type " << name << "," << clv->getShape()->type() );    
+            ATH_MSG_VERBOSE(" prototype built from eta, phi:" << eta << "," << phi );    
              
             if (name.substr(0,2)=="CS" || name.substr(0,1)=="T") {
               if (m_muonStationTypeBuilder) {
@@ -453,7 +443,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		  const GeoShapeUnion* uni = dynamic_cast<const GeoShapeUnion*> (shapeS); 
                   shapeS = uni->getOpA();
 		} else {
-		  log << MSG::WARNING << "unexpected station shape ? "<< shapeS->type() << ", station not built" << std::endl;
+		  ATH_MSG_WARNING( "unexpected station shape ? "<< shapeS->type() << ", station not built" );
 		  break; 
 		}
 	      }
@@ -534,7 +524,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	} // end if "Shift" (station)
 	vol.next();      
       }      
-      log << MSG::INFO  << name() << stations.size() <<" station prototypes built " << endreq;    
+      ATH_MSG_INFO( name() << stations.size() <<" station prototypes built " );    
    }
    
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -545,9 +535,8 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 // finalize
 StatusCode Muon::MuonStationBuilder::finalize()
 {
-    MsgStream log(msgSvc(), name());
-    log << MSG::INFO  << name() <<" finalize() successful" << endreq;
-    return StatusCode::SUCCESS;
+  ATH_MSG_INFO(  name() <<" finalize() successful" );
+  return StatusCode::SUCCESS;
 }
 //
 void Muon::MuonStationBuilder::glueComponents(const Trk::DetachedTrackingVolume* stat) const
@@ -603,10 +592,10 @@ void Muon::MuonStationBuilder::glueComponents(const Trk::DetachedTrackingVolume*
 void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume* station, int eta, int phi ) const
 {
   MsgStream log(msgSvc(), name());
-  log << MSG::VERBOSE  << name() <<" identifying layers " << endreq;    
+  ATH_MSG_VERBOSE( name() <<" identifying layers " );    
 
   std::string stationName = station->trackingVolume()->volumeName();
-  log << MSG::VERBOSE  << " in station " << station->name() << endreq;    
+  ATH_MSG_VERBOSE( " in station " << station->name() );    
 
   
   if (stationName.substr(0,1)=="C") { 
@@ -627,7 +616,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 	if (assocLay) assocLay->setRef((assocLay->surfaceRepresentation().transform().inverse()*gpi)[1]);
       }
     } else {
-      log<< MSG::DEBUG << "cscRE not found:"<<st<<","<<eta<<","<<phi<<std::endl;
+      ATH_MSG_DEBUG( "cscRE not found:"<<st<<","<<eta<<","<<phi );
     }
   }
   
@@ -678,7 +667,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
       Identifier wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,1,0,1);
       const HepPoint3D gp = tgc->channelPos(wireId);
       const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gp);
-      if (!assocVol) log << MSG::DEBUG << "wrong tgcROE?" << stationName <<"," << eta <<"," << phi << endreq;
+      if (!assocVol) ATH_MSG_DEBUG( "wrong tgcROE?" << stationName <<"," << eta <<"," << phi );
       if (assocVol && assocVol->confinedLayers()) {
 	const std::vector<const Trk::Layer*> layers = assocVol->confinedLayers()->arrayObjects();           
 	for (unsigned int il=0;il<layers.size();il++) {
@@ -688,8 +677,8 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 	  // strip plane surface
 	  const Trk::PlaneSurface* stripSurf = dynamic_cast<const Trk::PlaneSurface*> (&(tgc->surface(wireId)));
 	  if ( (layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center()).mag()>0.001)   
-	    log<< MSG::INFO << "TGC strip plane shifted:"<<st<<","<<eta<<","<<phi<<":" <<
-	      layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center()<< std::endl;
+	    ATH_MSG_INFO( "TGC strip plane shifted:"<<st<<","<<eta<<","<<phi<<":" <<
+			  layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center());
           /*
 	  Identifier s1 = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,il+1,1,1); 
 	  HepPoint3D lw1 = (layers[il]->surfaceRepresentation().transform().inverse()) * (tgc->channelPos(wireId));
@@ -700,7 +689,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
         }
       }
     } else {
-      log << MSG::WARNING << name() << "tgcROE not found for :" << stationName <<","<<eta<<","<<phi<<endreq;         
+      ATH_MSG_WARNING( name() << "tgcROE not found for :" << stationName <<","<<eta<<","<<phi );         
       /*
       for (unsigned int e=0; e < 10 ; e++) {
 	for (unsigned int p=0; p < 48; p++) {
@@ -776,7 +765,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
       const MuonGM::MdtReadoutElement* multilayer = m_muonMgr->getMdtReadoutElement(nameIndexC,eta+8,phi-1,multi);
       if (multilayer) {
         const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(multilayer->center());
-        if (!assocVol ) log << MSG::WARNING << "valid multilayer outside station:" << stationName <<endreq;
+        if (!assocVol ) ATH_MSG_WARNING( "valid multilayer outside station:" << stationName );
         if (assocVol) {
 	  int nLayers = multilayer->getNLayers();
 	  for (int layer =1; layer <= nLayers ; layer++) {
@@ -868,14 +857,14 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
         const std::vector<const Trk::Layer*> cLays = cVols[i]->confinedLayers()->arrayObjects();
         for (unsigned int il=0; il<cLays.size() ; il++) {
           Identifier id(cLays[il]->layerType());
-          if (id==1) log << MSG::DEBUG << station->name()<<","<< cVols[i]->volumeName()<<", unidentified active layer:"<<il<<endreq;
+          if (id==1) ATH_MSG_DEBUG(station->name()<<","<< cVols[i]->volumeName()<<", unidentified active layer:"<<il );
         }
       }
       if (cVols[i]->confinedArbitraryLayers()) {
         const std::vector<const Trk::Layer*>* cLays = cVols[i]->confinedArbitraryLayers();
         for (unsigned int il=0; il<cLays->size() ; il++) {
           Identifier id((*cLays)[il]->layerType());
-          if (id==1) log << MSG::DEBUG << station->name()<<","<< cVols[i]->volumeName()<<", unidentified active layer:"<<il<<endreq;
+          if (id==1) ATH_MSG_DEBUG( station->name()<<","<< cVols[i]->volumeName()<<", unidentified active layer:"<<il );
         }
       }
     }
@@ -884,7 +873,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
     const std::vector<const Trk::Layer*> cLays = station->trackingVolume()->confinedLayers()->arrayObjects();
     for (unsigned int il=0; il<cLays.size() ; il++) {
       Identifier id(cLays[il]->layerType());
-      if (id==1) log << MSG::DEBUG << station->name()<<","<< station->name()<<", unidentified active layer:"<<il<<endreq;
+      if (id==1) ATH_MSG_DEBUG( station->name()<<","<< station->name()<<", unidentified active layer:"<<il );
     }
   }
   // end identification check
@@ -894,10 +883,10 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* station, int eta, int phi, HepTransform3D transf ) const
 {
   MsgStream log(msgSvc(), name());
-  log << MSG::VERBOSE  << name() <<" identifying prototype " << endreq;    
+  ATH_MSG_VERBOSE( name() <<" identifying prototype " );    
 
   std::string stationName = station->volumeName();
-  log << MSG::VERBOSE  << " for station " << stationName << endreq;    
+  ATH_MSG_VERBOSE( " for station " << stationName );    
 
   if (stationName.substr(0,1)=="B" || stationName.substr(0,1)=="E" ) { 
     // MDT
@@ -909,7 +898,7 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
       const MuonGM::MdtReadoutElement* multilayer = m_muonMgr->getMdtReadoutElement(nameIndexC,eta+8,phi-1,multi);
       if (multilayer) {
         const Trk::TrackingVolume* assocVol = station->associatedSubVolume(transf.inverse()*multilayer->center());
-        if (!assocVol ) log << MSG::WARNING << "valid multilayer outside station:" << stationName <<endreq;
+        if (!assocVol ) ATH_MSG_WARNING( "valid multilayer outside station:" << stationName );
         if (assocVol) {
 	  int nLayers = multilayer->getNLayers();
 	  for (int layer =1; layer <= nLayers ; layer++) {
@@ -985,14 +974,14 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
         const std::vector<const Trk::Layer*> cLays = cVols[i]->confinedLayers()->arrayObjects();
         for (unsigned int il=0; il<cLays.size() ; il++) {
           Identifier id(cLays[il]->layerType());
-          if (id==1) log << MSG::DEBUG << station->volumeName()<<","<< cVols[i]->volumeName()<<", unidentified active layer:"<<il<<endreq;
+          if (id==1) ATH_MSG_DEBUG(station->volumeName()<<","<< cVols[i]->volumeName()<<", unidentified active layer:"<<il );
         }
       }
       if (cVols[i]->confinedArbitraryLayers()) {
         const std::vector<const Trk::Layer*>* cLays = cVols[i]->confinedArbitraryLayers();
         for (unsigned int il=0; il<cLays->size() ; il++) {
           Identifier id((*cLays)[il]->layerType());
-          if (id==1) log << MSG::DEBUG << station->volumeName()<<","<< cVols[i]->volumeName()<<", unidentified active layer:"<<il<<endreq;
+          if (id==1) ATH_MSG_DEBUG(station->volumeName()<<","<< cVols[i]->volumeName()<<", unidentified active layer:"<<il );
         }
       }
     }
@@ -1001,7 +990,7 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
     const std::vector<const Trk::Layer*> cLays = station->confinedLayers()->arrayObjects();
     for (unsigned int il=0; il<cLays.size() ; il++) {
       Identifier id(cLays[il]->layerType());
-      if (id==1) log << MSG::DEBUG << station->volumeName()<<","<< station->volumeName()<<", unidentified active layer:"<<il<<endreq;
+      if (id==1) ATH_MSG_DEBUG( station->volumeName()<<","<< station->volumeName()<<", unidentified active layer:"<<il );
     }
   }
   // end identification check

@@ -12,10 +12,8 @@
 #include "TrkDetDescrUtils/SharedObject.h"
 #include "TrkDetDescrGeoModelCnv/GeoMaterialConverter.h"
 // Gaudi
-#include "GaudiKernel/AlgTool.h"
+#include "AthenaBaseComps/AthAlgTool.h"
 #include "GaudiKernel/ToolHandle.h"
-#include "GaudiKernel/MsgStream.h"
-
 
 #include "GeoModelKernel/GeoVPhysVol.h"
 #include "GeoModelKernel/GeoMaterial.h"
@@ -55,7 +53,7 @@ namespace Muon {
       by Sarka.Todorova@cern.ch
     */
     
-  class MuonStationTypeBuilder : public AlgTool{
+  class MuonStationTypeBuilder : public AthAlgTool{
   public:
       /** Constructor */
       MuonStationTypeBuilder(const std::string&,const std::string&,const IInterface*);
@@ -120,7 +118,6 @@ namespace Muon {
       mutable Trk::ExtendedMaterialProperties*    m_matTGC06;                  //
       Trk::GeoMaterialConverter*                  m_materialConverter;
 
-      MsgStream* m_log;  
     };
 
 

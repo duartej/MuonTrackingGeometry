@@ -58,8 +58,6 @@
 
 #include <iostream>
 #include <fstream>
-// Gaudi
-#include "GaudiKernel/MsgStream.h"
 
 #include "GeoModelKernel/GeoShape.h"
 #include "GeoModelKernel/GeoShapeShift.h"
@@ -81,7 +79,7 @@
 
 // constructor
 Muon::MuonInertMaterialBuilder::MuonInertMaterialBuilder(const std::string& t, const std::string& n, const IInterface* p) :
-  AlgTool(t,n,p),
+  AthAlgTool(t,n,p),
   Trk::TrackingVolumeManipulator(),
   m_muonMgrLocation("MuonMgr"),
   m_simplify(false),
@@ -121,27 +119,22 @@ Muon::MuonInertMaterialBuilder::~MuonInertMaterialBuilder()
 StatusCode Muon::MuonInertMaterialBuilder::initialize()
 {
     
-    MsgStream log(msgSvc(), name());
-
-    StatusCode s = AlgTool::initialize();
-    if (s.isFailure() ) log<< MSG::INFO << "failing to initialize?" << endreq;
-
     // Get DetectorStore service
     //
     StoreGateSvc* m_detStore=0;
     StatusCode ds = service("DetectorStore",m_detStore);
     if (ds.isFailure()) {
-        log << MSG::FATAL << "DetectorStore service not found !" << endreq;
+      ATH_MSG_FATAL( "DetectorStore service not found !" );
     }
 
 
     ds = m_detStore->retrieve(m_muonMgr);
 
     if (ds.isFailure()) {
-        log << MSG::ERROR << "Could not get MuonDetectorManager, no layers for muons will be built. " << endreq;
+       ATH_MSG_ERROR("Could not get MuonDetectorManager, no layers for muons will be built. ");
     }
 
-    log << MSG::INFO << m_muonMgr->geometryVersion() << endreq; 
+    ATH_MSG_INFO( m_muonMgr->geometryVersion()); 
  
     // if no muon materials are declared, take default ones
     if (m_muonMaterialProperties.size() < 3){
@@ -160,10 +153,10 @@ StatusCode Muon::MuonInertMaterialBuilder::initialize()
     // Retrieve the magnetic field tool   ----------------------------------------------------    
     if (m_magFieldTool.retrieve().isFailure())
     {
-      log << MSG::FATAL << "Failed to retrieve tool " << m_magFieldTool << endreq;
+      ATH_MSG_FATAL( "Failed to retrieve tool " << m_magFieldTool);
       return StatusCode::FAILURE;
     } else
-      log << MSG::INFO << "Retrieved tool " << m_magFieldTool << endreq;
+	ATH_MSG_INFO( "Retrieved tool " << m_magFieldTool );
 
 
 
@@ -176,18 +169,18 @@ StatusCode Muon::MuonInertMaterialBuilder::initialize()
 
     // random number generator
     if ( m_rndmGenSvc.retrieve().isFailure() ){
-      log << MSG::FATAL << "Could not retrieve " << m_rndmGenSvc << endreq;
+      ATH_MSG_FATAL(  "Could not retrieve " << m_rndmGenSvc );
       return StatusCode::FAILURE;
     }
     m_flatDist = new Rndm::Numbers( &(*m_rndmGenSvc), Rndm::Flat(0.,1.) );
 
     if (m_simplifyToLayers) {
-      log << MSG::INFO  << name() <<" option Simplify(Muon)GeometryToLayers no longer maintained " << endreq;
+      ATH_MSG_INFO( name() <<" option Simplify(Muon)GeometryToLayers no longer maintained " );
     }
  
     m_constituents.clear();   
-
-    log << MSG::INFO  << name() <<" initialize() successful" << endreq;
+    
+    ATH_MSG_INFO( name() <<" initialize() successful" );
     
   return StatusCode::SUCCESS;
 }
@@ -195,14 +188,13 @@ StatusCode Muon::MuonInertMaterialBuilder::initialize()
 const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBuilder::buildDetachedTrackingVolumes(bool blend)
  const
 {
-  MsgStream log(msgSvc(), name());
 
   // split output into objects to be kept and objects which may be released from memory (blended)
   std::pair<std::vector<const Trk::DetachedTrackingVolume*>,std::vector<const Trk::DetachedTrackingVolume*> > mInert;
 
   // retrieve muon station prototypes from GeoModel
   const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* msTypes = buildDetachedTrackingVolumeTypes(blend);
-  log << MSG::INFO << name() <<" obtained " << msTypes->size() << " prototypes" << endreq;
+  ATH_MSG_INFO( name() <<" obtained " << msTypes->size() << " prototypes");
   
   std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >::const_iterator msTypeIter = msTypes->begin();
   
@@ -242,16 +234,15 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
     muonObjects=new std::vector<const Trk::DetachedTrackingVolume*>(mInert.first);
   }
 
-  log << MSG::INFO << name() << " returns  " << (*muonObjects).size() << " objects (detached volumes)" << endreq;
+  ATH_MSG_INFO( name() << " returns  " << (*muonObjects).size() << " objects (detached volumes)" );
 
   return muonObjects;
 }
 
 const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* Muon::MuonInertMaterialBuilder::buildDetachedTrackingVolumeTypes(bool blend) const
 {
-    MsgStream log( msgSvc(), name() );
 
-    log << MSG::INFO  << name() <<" building muon object types" << endreq;
+    ATH_MSG_INFO( name() <<" building muon object types" );
     std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > > objs;
 
     std::vector<std::string> objName;
@@ -329,7 +320,7 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
 	      objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> >(typeStat,vols[ish].second));
               delete trObject;
 	    }  else {
-	      log << MSG::WARNING << name()<< " volume not translated: " << vname << std::endl;
+	      ATH_MSG_WARNING( name()<< " volume not translated: " << vname );
 	    }            
 	  } // end new object
 	}
@@ -342,7 +333,7 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
     int count = 0;
     for (unsigned int i=0;i<mObjects->size();i++) count += (*mObjects)[i].second.size();
 
-    log << MSG::INFO << name() << " returns " << mObjects->size() << " prototypes, to be cloned into "<< count <<" objects" << endreq;   
+    ATH_MSG_INFO( name() << " returns " << mObjects->size() << " prototypes, to be cloned into "<< count <<" objects" );   
 
     return mObjects;
 }
@@ -350,7 +341,6 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
 // finalize
 StatusCode Muon::MuonInertMaterialBuilder::finalize()
 {
-    MsgStream log(msgSvc(), name());
     delete m_materialConverter;
     delete m_geoShapeConverter;
     delete m_flatDist;
@@ -358,7 +348,7 @@ StatusCode Muon::MuonInertMaterialBuilder::finalize()
       for (unsigned int iv=0;iv<m_constituents[i]->size();iv++) delete (*(m_constituents[i]))[iv].first;
       delete m_constituents[i];
     }
-    log << MSG::INFO  << name() <<" finalize() successful" << endreq;
+    ATH_MSG_INFO( name() <<" finalize() successful" );
     return StatusCode::SUCCESS;
 }
 //

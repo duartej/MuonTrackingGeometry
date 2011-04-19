@@ -57,13 +57,10 @@
 // STD
 #include <map>
 
-// Gaudi
-#include "GaudiKernel/MsgStream.h"
-
 
 // constructor
 Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string& t, const std::string& n, const IInterface* p) :
-  AlgTool(t,n,p),
+  AthAlgTool(t,n,p),
   m_magFieldMode(Trk::RealisticField),
   m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
   m_stationBuilder("Muon::MuonStationBuilder/MuonStationBuilder"),
@@ -155,80 +152,72 @@ Muon::MuonTrackingGeometryBuilder::~MuonTrackingGeometryBuilder()
 // initialize
 StatusCode Muon::MuonTrackingGeometryBuilder::initialize()
 {
+  
+  // Retrieve the magnetic field tool   ----------------------------------------------------    
+  if (m_magFieldMode && m_magFieldTool.retrieve().isFailure())
+    {
+      ATH_MSG_FATAL("Failed to retrieve tool " << m_magFieldTool );
+      return StatusCode::FAILURE;
+    } else
+    ATH_MSG_INFO( "Retrieved tool " << m_magFieldTool );
+  
+  
+  // Retrieve the tracking volume helper   -------------------------------------------------    
+  if (m_trackingVolumeHelper.retrieve().isFailure())
+    {
+      ATH_MSG_FATAL( "Failed to retrieve tool " << m_trackingVolumeHelper );
+      return StatusCode::FAILURE;
+    } else
+    ATH_MSG_INFO( "Retrieved tool " << m_trackingVolumeHelper );
+  
+  // Retrieve the tracking volume array creator   -------------------------------------------    
+  if (m_trackingVolumeArrayCreator.retrieve().isFailure())
+    {
+      ATH_MSG_FATAL( "Failed to retrieve tool " << m_trackingVolumeArrayCreator );
+      return StatusCode::FAILURE;
+    } else
+    ATH_MSG_INFO( "Retrieved tool " << m_trackingVolumeArrayCreator );
+  
+  
+  // Retrieve the station builder (if configured) -------------------------------------------    
+  if (m_muonActive) { 
     
-    MsgStream log(msgSvc(), name());
-
-    StatusCode s = AlgTool::initialize();
-    if (s.isFailure()) log << MSG::INFO << " failing to initialize ?" << endreq;
-
-
-    // Retrieve the magnetic field tool   ----------------------------------------------------    
-    if (m_magFieldMode && m_magFieldTool.retrieve().isFailure())
-    {
-      log << MSG::FATAL << "Failed to retrieve tool " << m_magFieldTool << endreq;
-      return StatusCode::FAILURE;
-    } else
-      log << MSG::INFO << "Retrieved tool " << m_magFieldTool << endreq;
-
-
-    // Retrieve the tracking volume helper   -------------------------------------------------    
-    if (m_trackingVolumeHelper.retrieve().isFailure())
-    {
-      log << MSG::FATAL << "Failed to retrieve tool " << m_trackingVolumeHelper << endreq;
-      return StatusCode::FAILURE;
-    } else
-      log << MSG::INFO << "Retrieved tool " << m_trackingVolumeHelper << endreq;
-
-    // Retrieve the tracking volume array creator   -------------------------------------------    
-    if (m_trackingVolumeArrayCreator.retrieve().isFailure())
-    {
-      log << MSG::FATAL << "Failed to retrieve tool " << m_trackingVolumeArrayCreator << endreq;
-      return StatusCode::FAILURE;
-    } else
-      log << MSG::INFO << "Retrieved tool " << m_trackingVolumeArrayCreator << endreq;
-
-    
-    // Retrieve the station builder (if configured) -------------------------------------------    
-    if (m_muonActive) { 
-
-      if (m_stationBuilder.retrieve().isFailure())
+    if (m_stationBuilder.retrieve().isFailure())
       {
-          log << MSG::ERROR << "Failed to retrieve tool " << m_stationBuilder << endreq;
-          log <<" Creation of stations might fail." << endreq;
+	ATH_MSG_ERROR( "Failed to retrieve tool " << m_stationBuilder <<" Creation of stations might fail." );
       } else
-          log << MSG::INFO << "Retrieved tool " << m_trackingVolumeArrayCreator << endreq;
-    } else {
-      m_activeAdjustLevel = 0;                // no active material to consider
-    }
-
-    // Retrieve the inert material builder builder (if configured) -------------------------------------------    
-
-    if (m_muonInert || m_blendInertMaterial) {
-
-      if (m_inertBuilder.retrieve().isFailure())
-      {
-          log << MSG::ERROR << "Failed to retrieve tool " << m_inertBuilder << endreq;
-          log <<"Creation of inert material objects might fail." << endreq;
-      } else
-          log << MSG::INFO << "Retrieved tool " << m_trackingVolumeArrayCreator << endreq;
-    }
-
-    if ( !m_muonInert ) m_inertAdjustLevel = 0;
-
-    if (m_loadMSentry ) {
-      // Retrieve the tracking volumes Svc (if configured) -------------------------------------------    
-      if (m_tvSvc.retrieve().isFailure()) {
-	log << MSG::WARNING << "Failed to load " << m_tvSvc << " switch to default volume size" << endreq;
-	m_loadMSentry = false;
-      }
-    }
-
-    if (m_chronoStatSvc.retrieve().isFailure()) {
-      log << MSG::WARNING << "Could not retrieve Tool " << m_chronoStatSvc << ". Exiting."<<endreq;
-    }
+      ATH_MSG_INFO( "Retrieved tool " << m_trackingVolumeArrayCreator );
+  } else {
+    m_activeAdjustLevel = 0;                // no active material to consider
+  }
+  
+  // Retrieve the inert material builder builder (if configured) -------------------------------------------    
+  
+  if (m_muonInert || m_blendInertMaterial) {
     
-        
-    log << MSG::INFO  << name() <<" initialize() successful" << endreq;    
+    if (m_inertBuilder.retrieve().isFailure())
+      {
+	ATH_MSG_ERROR( "Failed to retrieve tool " << m_inertBuilder <<"Creation of inert material objects might fail." );
+      } else
+      ATH_MSG_INFO( "Retrieved tool " << m_trackingVolumeArrayCreator );
+  }
+  
+  if ( !m_muonInert ) m_inertAdjustLevel = 0;
+  
+  if (m_loadMSentry ) {
+    // Retrieve the tracking volumes Svc (if configured) -------------------------------------------    
+    if (m_tvSvc.retrieve().isFailure()) {
+      ATH_MSG_WARNING( "Failed to load " << m_tvSvc << " switch to default volume size" );
+      m_loadMSentry = false;
+    }
+  }
+
+  if (m_chronoStatSvc.retrieve().isFailure()) {
+    ATH_MSG_WARNING( "Could not retrieve Tool " << m_chronoStatSvc << ". Exiting.");
+  }
+  
+  
+  ATH_MSG_INFO( name() <<" initialize() successful" );    
     
   return StatusCode::SUCCESS;
 }
@@ -236,16 +225,14 @@ StatusCode Muon::MuonTrackingGeometryBuilder::initialize()
 
 const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry(const Trk::TrackingVolume* tvol) const
 {
-
-  MsgStream log( msgSvc(), name() );
   
-  log << MSG::INFO  << name() <<" building tracking geometry" << endreq;    
+  ATH_MSG_INFO( name() <<" building tracking geometry" );    
   m_chronoStatSvc->chronoStart("MS::build-up");
   ///////////////////////////////////////////////////////////////////////////////////////////////////
   // check setup
   if (m_muonInert && m_blendInertMaterial) {
     if (!m_adjustStatic || !m_static3d) {
-      log << MSG::INFO  << name() <<" diluted inert material hardcoded for 3D volume frame, adjusting setup" << endreq;
+      ATH_MSG_INFO( name() <<" diluted inert material hardcoded for 3D volume frame, adjusting setup" );
       m_adjustStatic = true;
       m_static3d = true;
     }
@@ -300,7 +287,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
     return new Trk::TrackingGeometry(topVolume);
   }     
   
-  log << MSG::INFO  << name() <<"building barrel+innerEndcap+outerEndcap" << endreq;    
+  ATH_MSG_INFO( name() <<"building barrel+innerEndcap+outerEndcap" );    
   
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MuonSpectrometer contains:
@@ -361,7 +348,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
       const Trk::CylinderVolumeBounds* cylR = dynamic_cast<const Trk::CylinderVolumeBounds*> (&(enclosedCentralFaceVolumes[0]->volumeBounds()));
       if (cylR && cylR->outerRadius() != enclosedDetectorOuterRadius ) {
         enclosedDetectorOuterRadius = cylR->outerRadius();
-        log << MSG::WARNING << name() << " enclosed volume envelope outer radius does not correspond to radius of glue volumes : adjusted " << endreq;
+        ATH_MSG_WARNING(name() << " enclosed volume envelope outer radius does not correspond to radius of glue volumes : adjusted " );
       }
     }
     if (enclosedNegativeFaceVolumes.size() && enclosedPositiveFaceVolumes.size()) {
@@ -372,12 +359,12 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
       const Trk::CylinderVolumeBounds* cylP = dynamic_cast<const Trk::CylinderVolumeBounds*> (&(enclosedPositiveFaceVolumes[0]->volumeBounds()));
       if (cylP) posZ = enclosedPositiveFaceVolumes[0]->center()[2]+cylP->halflengthZ();
       if ( fabs(negZ+enclosedDetectorHalfZ)>0.001 ||  fabs(posZ-enclosedDetectorHalfZ)>0.001 ) {
-	log << MSG::WARNING << name() << " enclosed volume envelope z dimension does not correspond to that of glue volumes " << endreq;
+	ATH_MSG_WARNING( name() << " enclosed volume envelope z dimension does not correspond to that of glue volumes " );
         if ( fabs(negZ+posZ)<0.001) {
           enclosedDetectorHalfZ = posZ;
-          log << MSG::WARNING << name() << " z adjusted " << endreq;
+          ATH_MSG_WARNING( name() << " z adjusted " );
 	} else {
-	  log << MSG::ERROR << name() << "assymetric Z dimensions - cannot recover "<< negZ <<","<< posZ << endreq;
+	  ATH_MSG_ERROR( name() << "assymetric Z dimensions - cannot recover "<< negZ <<","<< posZ );
           return 0;
 	}
      }
@@ -386,13 +373,13 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
     
 
     // 
-    log << MSG::INFO  << name() <<" dimensions of enclosed detectors (halfZ,outerR):"
-	<<  enclosedDetectorHalfZ<<","<< enclosedDetectorOuterRadius << endreq;    
+    ATH_MSG_INFO( name() <<" dimensions of enclosed detectors (halfZ,outerR):"
+	<<  enclosedDetectorHalfZ<<","<< enclosedDetectorOuterRadius );    
     // check if input makes sense - gives warning if cuts into muon envelope
     // adjust radius
     const Trk::TrackingVolume* barrelR = 0;
     if ( enclosedDetectorOuterRadius > m_innerBarrelRadius ) {
-      log << MSG::WARNING  << name() <<" enclosed volume too wide, cuts into muon envelope, abandon :R:" <<enclosedDetectorOuterRadius << endreq;
+      ATH_MSG_WARNING( name() <<" enclosed volume too wide, cuts into muon envelope, abandon :R:" <<enclosedDetectorOuterRadius );
       return 0;   
     } else {    
       if ( enclosedDetectorOuterRadius < m_innerBarrelRadius ) {
@@ -406,7 +393,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 									   dummyLayers,dummyVolumes,
 									   "BarrelRBuffer", bcorr);
 	
-	log << MSG::INFO << name() << "glue barrel R buffer + ID/Calo volumes" << endreq;
+	ATH_MSG_INFO( name() << "glue barrel R buffer + ID/Calo volumes" );
 	barrelR = m_trackingVolumeHelper->glueTrackingVolumeArrays(*barrelRBuffer,Trk::tubeInnerCover,
 								   *tvol, Trk::cylinderCover,
 								   "All::Gaps::BarrelR");    
@@ -415,7 +402,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
     }
     // adjust z
     if ( enclosedDetectorHalfZ > m_barrelZ ) {
-      log << MSG::WARNING  << name() <<" enclosed volume too long, cuts into muon envelope, abandon :Z:"<< enclosedDetectorHalfZ << endreq;    
+      ATH_MSG_WARNING( name() <<" enclosed volume too long, cuts into muon envelope, abandon :Z:"<< enclosedDetectorHalfZ );    
       return 0;
     } else {    
       if ( enclosedDetectorHalfZ < m_barrelZ ) {
@@ -437,7 +424,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 									    dummyLayers,dummyVolumes,
 									    "BarrelRZNegBuffer", bcorr);
 	
-	log << MSG::INFO << name() << "glue barrel R  + barrel Z buffer" << endreq;
+	ATH_MSG_INFO( name() << "glue barrel R  + barrel Z buffer" );
 	const Trk::TrackingVolume* barrelZP = m_trackingVolumeHelper->glueTrackingVolumeArrays(*barrelR, Trk::positiveFaceXY,
 											       *barrelZPBuffer,Trk::negativeFaceXY, 
 											       "All::Gaps::BarrelZP");    
@@ -461,7 +448,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 	  enclosedBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
 							 m_barrelZ);
 	} else {
-	  log << MSG::INFO << name() << " input MSEntrance size (R,Z:"<< rMS <<","<<zMS<<") clashes with MS material, switch to default values (R,Z:" << m_innerBarrelRadius <<","<< m_barrelZ << ")" << endreq;
+	  ATH_MSG_INFO( name() << " input MSEntrance size (R,Z:"<< rMS <<","<<zMS<<") clashes with MS material, switch to default values (R,Z:" << m_innerBarrelRadius <<","<< m_barrelZ << ")" );
 	}
       }
     }
@@ -492,7 +479,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
   Trk::Volume posDiskVol(new HepTransform3D(Trk::s_idRotation,posDiskShieldPosition),posDiskShieldBounds);
   posDiskShield = processShield(&posDiskVol,2,"Muons::Detectors::PositiveDiskShield");
 	   
-  log << MSG::INFO << name() << "glue enclosed  + disk shields" << endreq;
+  ATH_MSG_INFO( name() << "glue enclosed  + disk shields" );
   const Trk::TrackingVolume* centralP = m_trackingVolumeHelper->glueTrackingVolumeArrays(*enclosed, Trk::positiveFaceXY,
 											 *posDiskShield,Trk::negativeFaceXY, 
 											 "Muon::Container::CentralP");    
@@ -690,18 +677,18 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    negBeamPipe->registerColorCode(0); 
    posBeamPipe->registerColorCode(0); 
 
-   log << MSG::INFO  << name() <<" volumes defined " << endreq;    
+   ATH_MSG_INFO( name() <<" volumes defined " );    
 //
 // glue volumes at navigation level, create enveloping volume 
 // radially
 // central + barrel
-   log << MSG::INFO << name() << "glue barrel+enclosed volumes" << endreq;
+   ATH_MSG_INFO( name() << "glue barrel+enclosed volumes" );
    const Trk::TrackingVolume* barrel = m_trackingVolumeHelper->glueTrackingVolumeArrays(*muonBarrel,Trk::tubeInnerCover,
 											*central, Trk::cylinderCover, 
                                                                                         "All::Container::Barrel");
    //checkVolume(barrel);
 // shield+outerEndcap
-   log << MSG::INFO << name() << "glue shield+outerEndcap" << endreq;
+   ATH_MSG_INFO( name() << "glue shield+outerEndcap" );
    const Trk::TrackingVolume* negOuterEndcap = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negativeMuonOuterEndcap, Trk::tubeInnerCover,
 												*negOuterShield, Trk::tubeOuterCover,
 												"Muon::Container::NegativeOuterEndcap");
@@ -711,7 +698,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 												"Muon::Container::PositiveOuterEndcap");
    //checkVolume(posOuterEndcap);
 // shield+innerEndcap
-   log << MSG::INFO << name() << "glue shield+innerEndcap" << endreq;
+   ATH_MSG_INFO( name() << "glue shield+innerEndcap" );
    const Trk::TrackingVolume* negInnerEndcap = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negativeMuonInnerEndcap, Trk::tubeInnerCover,
 												*negInnerShield, Trk::tubeOuterCover,
 												"Muon::Container::NegativeInnerEndcap");
@@ -721,7 +708,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 												"Muon::Container::PositiveInnerEndcap");
    //checkVolume(posInnerEndcap);
 // inner+outerEndcap
-   log << MSG::INFO << name() << "glue inner+outerEndcap" << endreq;
+   ATH_MSG_INFO( name() << "glue inner+outerEndcap" );
    const Trk::TrackingVolume* negNavEndcap = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negOuterEndcap, Trk::positiveFaceXY,
 											      *negInnerEndcap, Trk::negativeFaceXY, 
 											      "Muon::Container::NegativeEndcap");  
@@ -731,7 +718,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    //checkVolume(negNavEndcap);
    //checkVolume(posNavEndcap);
 // beam pipe + endcaps
-   log << MSG::INFO << name() << "glue beamPipe+endcaps" << endreq;
+   ATH_MSG_INFO( name() << "glue beamPipe+endcaps" );
    const Trk::TrackingVolume* negEndcap = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negNavEndcap, Trk::tubeInnerCover,
 											   *negBeamPipe, Trk::cylinderCover,
 										           "All::Container::NegativeEndcap");  
@@ -741,7 +728,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    //checkVolume(negEndcap);
    //checkVolume(posEndcap);
 // barrel + endcaps
-   log << MSG::INFO << name() << "glue barrel+endcaps" << endreq;
+   ATH_MSG_INFO( name() << "glue barrel+endcaps" );
 
    const Trk::TrackingVolume* negDet = m_trackingVolumeHelper->glueTrackingVolumeArrays(*negEndcap, Trk::positiveFaceXY,
                                                                                         *barrel, Trk::negativeFaceXY, 
@@ -778,20 +765,19 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 
    m_chronoStatSvc->chronoStop("MS::build-up");
 
-   log << MSG::INFO  << name() <<" returning tracking geometry " << endreq;    
-   log << MSG::INFO  << name() <<" with "<< m_frameNum<<" subvolumes at navigation level" << endreq;    
-   log << MSG::INFO  << name() <<"( mean number of enclosed detached volumes:"<< float(m_frameStat)/m_frameNum<<")" << endreq;    
+   ATH_MSG_INFO( name() <<" returning tracking geometry " );    
+   ATH_MSG_INFO( name() <<" with "<< m_frameNum<<" subvolumes at navigation level" );    
+   ATH_MSG_INFO( name() <<"( mean number of enclosed detached volumes:"<< float(m_frameStat)/m_frameNum<<")" );    
    return trackingGeometry;  
 }
 
 // finalize
 StatusCode Muon::MuonTrackingGeometryBuilder::finalize()
 {
-    MsgStream log(msgSvc(), name());
     if (m_stations) {
       for (size_t i = 0; i < m_stations->size(); i++) {
 	if ((*m_stations)[i]) delete (*m_stations)[i];
-        else log << MSG::DEBUG << name() << " station pointer corrupted ! " << endreq; 
+        else ATH_MSG_DEBUG( name() << " station pointer corrupted ! " ); 
       }
       delete m_stations; m_stations = 0;
     } 
@@ -799,20 +785,18 @@ StatusCode Muon::MuonTrackingGeometryBuilder::finalize()
       unsigned int inLim = (m_blendInertMaterial && m_removeBlended) ? m_inertPerm : m_inertObjs->size();
       for (size_t i = 0; i < inLim; i++) {
 	if ((*m_inertObjs)[i])	delete (*m_inertObjs)[i];
-        else log << MSG::DEBUG << name() << " inert object pointer corrupted ! " << endreq; 
+        else ATH_MSG_DEBUG( name() << " inert object pointer corrupted ! " ); 
       }
       delete m_inertObjs; m_inertObjs = 0;
     } 
 
     m_chronoStatSvc->chronoPrint("MS::build-up");
 
-    log << MSG::INFO  << name() <<" finalize() successful" << endreq;
+    ATH_MSG_INFO( name() <<" finalize() successful" );
     return StatusCode::SUCCESS;
 }
 const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::VolumeBounds* volBounds, HepTransform3D transform, double zTol, double phiTol) const
 {
-  MsgStream log(msgSvc(), name());
-
   if (!volBounds) return 0;
   // volume shape
   const Trk::CuboidVolumeBounds* box = dynamic_cast<const Trk::CuboidVolumeBounds*> (volBounds);
@@ -940,7 +924,7 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
   for (unsigned int ie=0; ie < edges.size() ; ie++) {
     Trk::GlobalPosition gp = transform*edges[ie];
     double phi = gp.phi()+M_PI; 
-    log << MSG::VERBOSE << "edges:"<< ie<<","<<gp<<","<< phi<< endreq;
+    ATH_MSG_VERBOSE( "edges:"<< ie<<","<<gp<<","<< phi);
     double rad = gp.perp();
     if (cyl || bcyl) {
       double radius = 0.; double hz = 0.;
@@ -999,7 +983,7 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     span.push_back( fmax(m_beamPipeRadius+0.001, minR - zTol) );  
     span.push_back( maxR + zTol );  
   } else {
-    log << MSG::ERROR  << name() <<" volume shape not recognized: "<< endreq;
+    ATH_MSG_ERROR( name() <<" volume shape not recognized: ");
     for (int i=0; i<6; i++) span.push_back(0.);
   }
   const Muon::Span* newSpan=new Muon::Span(span);
@@ -1008,7 +992,6 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
 
 const std::vector<std::vector<std::pair<const Trk::DetachedTrackingVolume*,const Muon::Span*> >* >* Muon::MuonTrackingGeometryBuilder::findVolumesSpan(const std::vector<const Trk::DetachedTrackingVolume*>*& objs, double zTol, double phiTol) const
 {
-  MsgStream log(msgSvc(), name());
 
   if (!objs || !objs->size()) return 0;
   std::vector<std::vector<std::pair<const Trk::DetachedTrackingVolume*,const Span*> >* >* spans =
@@ -1018,8 +1001,8 @@ const std::vector<std::vector<std::pair<const Trk::DetachedTrackingVolume*,const
   for (unsigned int iobj=0; iobj<objs->size(); iobj++) {
     HepTransform3D  transform = (*objs)[iobj]->trackingVolume()->transform();
     const Muon::Span* span = findVolumeSpan(&((*objs)[iobj]->trackingVolume()->volumeBounds()), transform, zTol, phiTol);
-    log << MSG::VERBOSE << "span:"<<(*objs)[iobj]->name()<< ","<<(*span)[0]<<","<< (*span)[1]<<","<<(*span)[2]<<","
-    << (*span)[3]<<","<< (*span)[4]<<","<< (*span)[5] << endreq;  
+    ATH_MSG_VERBOSE( "span:"<<(*objs)[iobj]->name()<< ","<<(*span)[0]<<","<< (*span)[1]<<","<<(*span)[2]<<","
+    << (*span)[3]<<","<< (*span)[4]<<","<< (*span)[5] );  
     // negative outer wheel
     if ( (*span)[0] < -m_bigWheel ) (*spans)[0]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
     // negative big wheen
@@ -1050,7 +1033,6 @@ const std::vector<std::vector<std::pair<const Trk::DetachedTrackingVolume*,const
 
 const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(const Trk::Volume* vol, int etaN , int phiN, std::string volumeName) const
 {
-  MsgStream log(msgSvc(), name());
 
   const Trk::TrackingVolume* tVol = 0;
 
@@ -1060,14 +1042,14 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
   // partitions ? include protection against wrong setup
   if (etaN < 1 || phiN < 1) {
-    log << MSG::ERROR << name() << "wrong partition setup" << endreq;
+    ATH_MSG_ERROR( name() << "wrong partition setup" );
     etaN = 1;
     phiN = 1;
   }
   if ( etaN * phiN > 1 ) {  // partition
     const Trk::CylinderVolumeBounds* cyl=dynamic_cast<const Trk::CylinderVolumeBounds*> (&(vol->volumeBounds()));
     if (!cyl) {
-      log << MSG::ERROR << " process volume: volume cylinder boundaries not retrieved, return 0 " << endreq;
+      ATH_MSG_ERROR( " process volume: volume cylinder boundaries not retrieved, return 0 " );
       return 0; 
     }
     // subvolume boundaries
@@ -1182,8 +1164,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
 const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(const Trk::Volume* vol, int mode , std::string volumeName) const
 {
-  MsgStream log(msgSvc(), name());
-  log << MSG::VERBOSE << name() << "processing volume in mode:"<< mode << endreq;
+  ATH_MSG_VERBOSE( name() << "processing volume in mode:"<< mode );
 
   // mode : -1 ( adjusted z/phi partition )
   //         0 ( -"- plus barrel H binning )            
@@ -1201,7 +1182,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
   // retrieve cylinder
   const Trk::CylinderVolumeBounds* cyl=dynamic_cast<const Trk::CylinderVolumeBounds*> (&(vol->volumeBounds()));
   if (!cyl) {
-    log << MSG::ERROR << " process volume: volume cylinder boundaries not retrieved, return 0 " << endreq;
+    ATH_MSG_ERROR( " process volume: volume cylinder boundaries not retrieved, return 0 " );
     return 0; 
   }
   // create vector of zSteps for this volume
@@ -1435,10 +1416,10 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
   // proceed with 2D z/phi binning
   // partitions ? include protection against wrong setup
   if (phiN < 1) {
-    log << MSG::ERROR << name() << "wrong partition setup" << endreq;
+    ATH_MSG_ERROR( name() << "wrong partition setup" );
     phiN = 1;
   } else {
-    log << MSG::VERBOSE << name() << "partition setup:(z,phi):"<<etaN<<","<<phiN << endreq;
+    ATH_MSG_VERBOSE( name() << "partition setup:(z,phi):"<<etaN<<","<<phiN );
   }
 
   if ( etaN * phiN > 1 ) {  // partition
@@ -1567,8 +1548,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
 const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(const Trk::Volume* vol, int type,std::string volumeName) const
 {
-  MsgStream log(msgSvc(), name());
-  log << MSG::VERBOSE << name() << "processing shield volume "<< volumeName<<"  in mode:"<< type << endreq;
+  ATH_MSG_VERBOSE( name() << "processing shield volume "<< volumeName<<"  in mode:"<< type );
 
   const Trk::TrackingVolume* tVol = 0;
 
@@ -1581,7 +1561,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
   // retrieve cylinder
   const Trk::CylinderVolumeBounds* cyl=dynamic_cast<const Trk::CylinderVolumeBounds*> (&(vol->volumeBounds()));
   if (!cyl) {
-    log << MSG::ERROR << " process volume: volume cylinder boundaries not retrieved, return 0 " << endreq;
+    ATH_MSG_ERROR( " process volume: volume cylinder boundaries not retrieved, return 0 " );
     return 0; 
   }
   // create vector of zSteps for this volume
@@ -1901,7 +1881,7 @@ bool Muon::MuonTrackingGeometryBuilder::enclosed(const Trk::Volume* vol, const M
   //
   //const Muon::Span* s = findVolumeSpan(&(cs->volumeBounds()), cs->transform(), 0.,0.) ;
   //std::auto_ptr<const Muon::Span> s (findVolumeSpan(&(cs->volumeBounds()), cs->transform(), 0.,0.) );
-  log << MSG::VERBOSE << "enclosing volume:z:"<< zMin<<","<<zMax<<":r:"<< rMin<<","<<rMax<<":phi:"<<pMin<<","<<pMax<< endreq;
+  ATH_MSG_VERBOSE( "enclosing volume:z:"<< zMin<<","<<zMax<<":r:"<< rMin<<","<<rMax<<":phi:"<<pMin<<","<<pMax);
   //
   bool rLimit = (!m_static3d || ( (*s)[4] < rMax-tol && (*s)[5] > rMin+tol ) ); 
   if ( rLimit && (*s)[0] < zMax-tol && (*s)[1] > zMin+tol ) {
@@ -1925,7 +1905,6 @@ bool Muon::MuonTrackingGeometryBuilder::enclosed(const Trk::Volume* vol, const M
 
 void Muon::MuonTrackingGeometryBuilder::checkVolume(const Trk::TrackingVolume* vol ) const
 {
-  MsgStream log(msgSvc(), name());
 
   std::cout << "MuonTrackingGeometryBuilder::checkVolume: " << vol->volumeName() << std::endl;
 
@@ -2467,8 +2446,8 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
       double fraction = (*cs)[ic].second;
       double csVol = fraction*calculateVolume(nCs);      
       const Muon::Span* s = findVolumeSpan(&(nCs->volumeBounds()), nCs->transform(), 0.,0.) ;
-      if (s) log << MSG::VERBOSE << "constituent:"<<ic<<":z:"<< (*s)[0]<<","<<(*s)[1]<<":r:"<< (*s)[4]<<","<<(*s)[5]
-	    <<":phi:"<<(*s)[2]<<","<<(*s)[3]<< endreq;      
+      if (s) ATH_MSG_VERBOSE("constituent:"<<ic<<":z:"<< (*s)[0]<<","<<(*s)[1]<<":r:"<< (*s)[4]<<","<<(*s)[5]
+	    <<":phi:"<<(*s)[2]<<","<<(*s)[3]);      
       double enVol = 0.;
       // loop over frame volumes, check if confined
       //std::vector<const Trk::TrackingVolume*>::iterator fIter = (*mIter).second->begin(); 
@@ -2491,14 +2470,14 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
 	for ( fIter=vv->begin(); fIter!=vv->end(); fIter++) { 
 	  //if (fEncl[fIter-(*mIter).second->begin()]) { (*fIter)->addMaterial(*detMat,dil); if (m_colorCode==0) (*fIter)->registerColorCode(12) ; 
 	  if (fEncl[fIter-vv->begin()]) { (*fIter)->addMaterial(*detMat,dil); if (m_colorCode==0) (*fIter)->registerColorCode(12) ; 
-	    //log << MSG::VERBOSE << (*fIter)->volumeName()<<" acquires material from "<<  (*mIter).first->name()<< endreq;  }
-	    log << MSG::VERBOSE << (*fIter)->volumeName()<<" acquires material from "<<  (*viter)->name()<< endreq;  }
+	    //ATH_MSG_VERBOSE((*fIter)->volumeName()<<" acquires material from "<<  (*mIter).first->name());  }
+	    ATH_MSG_VERBOSE((*fIter)->volumeName()<<" acquires material from "<<  (*viter)->name());  }
 	}
-	log << MSG::VERBOSE << "diluting factor:"<< dil<<" for "<< (*viter)->name()<<","<<ic<<endreq;
+	ATH_MSG_VERBOSE("diluting factor:"<< dil<<" for "<< (*viter)->name()<<","<<ic);
       } else {
-	log << MSG::VERBOSE << "diluting factor:"<< dil<<" for "<< (*viter)->name()<<","<<ic<<endreq;
+	ATH_MSG_VERBOSE("diluting factor:"<< dil<<" for "<< (*viter)->name()<<","<<ic);
       }
-    }
-    if ( m_removeBlended ) {  log << MSG::VERBOSE << "deleting "<< (*viter)->name()<< endreq; delete *viter; }
+  }
+  if ( m_removeBlended ) {  ATH_MSG_VERBOSE("deleting "<< (*viter)->name()); delete *viter; }
   }
 }

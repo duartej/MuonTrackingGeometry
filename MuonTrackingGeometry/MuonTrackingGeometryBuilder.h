@@ -12,7 +12,7 @@
 #include "TrkGeometry/MagneticFieldProperties.h"
 #include "TrkGeometry/MaterialProperties.h"
 // Gaudi
-#include "GaudiKernel/AlgTool.h"
+#include "AthenaBaseComps/AthAlgTool.h"
 #include "GaudiKernel/ToolHandle.h"
 #include "GaudiKernel/ServiceHandle.h"
 #include "GaudiKernel/IChronoStatSvc.h"
@@ -47,7 +47,7 @@ namespace Muon {
       @author Sarka.Todorova@cern.ch
     */
     
-  class MuonTrackingGeometryBuilder : public AlgTool,
+  class MuonTrackingGeometryBuilder : public AthAlgTool,
                                virtual public Trk::IGeometryBuilder {
   public:
       /** Constructor */

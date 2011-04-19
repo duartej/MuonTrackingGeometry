@@ -78,7 +78,7 @@ const InterfaceID& Muon::MuonStationTypeBuilder::interfaceID()
 
 // constructor
 Muon::MuonStationTypeBuilder::MuonStationTypeBuilder(const std::string& t, const std::string& n, const IInterface* p) :
-  AlgTool(t,n,p),
+  AthAlgTool(t,n,p),
   m_muonMgrLocation("MuonMgr"),
   m_multilayerRepresentation(true), 
   m_resolveSpacer(false), 
@@ -97,8 +97,7 @@ Muon::MuonStationTypeBuilder::MuonStationTypeBuilder(const std::string& t, const
   m_matCSC02(0),
   m_matCSCspacer2(0),
   m_matTGC01(0),
-  m_matTGC06(0),
-  m_log(0)
+  m_matTGC06(0)
 {
   declareInterface<Muon::MuonStationTypeBuilder>(this);
 
@@ -117,17 +116,14 @@ Muon::MuonStationTypeBuilder::~MuonStationTypeBuilder()
 StatusCode Muon::MuonStationTypeBuilder::initialize()
 {
     
-    m_log = new MsgStream(msgSvc(), name());
-
-    StatusCode s = AlgTool::initialize();
-    if (s.isFailure()) *m_log<< MSG::INFO << "failing to initialize?" << endreq;
-
+    //StatusCode s = AlgTool::initialize();
+    // if (s.isFailure()) ATH_MSG_INFO( "failing to initialize?");
     // Get DetectorStore service
     //
     StoreGateSvc* m_detStore=0;
     StatusCode ds = service("DetectorStore",m_detStore);
     if (ds.isFailure()) {
-        *m_log << MSG::FATAL << "DetectorStore service not found !" << endreq;
+      ATH_MSG_FATAL( "DetectorStore service not found !" );
     }
     // get Muon Spectrometer Description Manager
     // s = m_detStore->retrieve(m_muonMgr, m_muonMgrLocation);
@@ -135,25 +131,25 @@ StatusCode Muon::MuonStationTypeBuilder::initialize()
     ds = m_detStore->retrieve(m_muonMgr);
 
     if (ds.isFailure()) {
-        *m_log << MSG::ERROR << "Could not get MuonDetectorManager, no layers for muons will be built. " << endreq;
+      ATH_MSG_ERROR( "Could not get MuonDetectorManager, no layers for muons will be built. " );
     }
 
-    *m_log << MSG::DEBUG << m_muonMgr->geometryVersion() << endreq; 
+    ATH_MSG_DEBUG( m_muonMgr->geometryVersion()); 
     
     // Retrieve the magnetic field tool   ----------------------------------------------------    
     if (m_magFieldMode && m_magFieldTool.retrieve().isFailure())
     {
-      *m_log << MSG::FATAL << "Failed to retrieve tool " << m_magFieldTool << endreq;
+      ATH_MSG_FATAL( "Failed to retrieve tool " << m_magFieldTool );
       return StatusCode::FAILURE;
     } else
-      *m_log << MSG::INFO << "Retrieved tool " << m_magFieldTool << endreq;
+      ATH_MSG_INFO( "Retrieved tool " << m_magFieldTool );
 
     // Retrieve the tracking volume array creator   -------------------------------------------    
     if (m_trackingVolumeArrayCreator.retrieve().isFailure()) {
-      *m_log << MSG::FATAL << "Failed to retrieve tool " << m_trackingVolumeArrayCreator << endreq;
+      ATH_MSG_FATAL("Failed to retrieve tool " << m_trackingVolumeArrayCreator);
       return StatusCode::FAILURE;
     } else
-      *m_log << MSG::INFO << "Retrieved tool " << m_trackingVolumeArrayCreator << endreq;
+      ATH_MSG_INFO("Retrieved tool " << m_trackingVolumeArrayCreator);
 
     // default (trivial) muon material properties 
     m_muonMaterial = new Trk::MaterialProperties(0.,10e8,0.);
@@ -166,7 +162,7 @@ StatusCode Muon::MuonStationTypeBuilder::initialize()
 
     m_materialConverter= new Trk::GeoMaterialConverter();
      
-    *m_log << MSG::INFO  << name() <<" initialize() successful" << endreq;    
+    ATH_MSG_INFO(name() <<" initialize() successful");    
     
     return StatusCode::SUCCESS;
 }
@@ -174,7 +170,7 @@ StatusCode Muon::MuonStationTypeBuilder::initialize()
 const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationComponents(const GeoVPhysVol* mv, Trk::CuboidVolumeBounds* envelope) const
 {
 
-    *m_log << MSG::DEBUG  << name() <<" processing station components for " <<mv->getLogVol()->getName()<< endreq;    
+   ATH_MSG_DEBUG( name() <<" processing station components for " <<mv->getLogVol()->getName());    
 ///////////////////////////////////////////////////////////////////////////////////////////////////
    
    double tolerance = 0.0001;   
@@ -197,8 +193,8 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
         HepTransform3D transf = mv->getXToChildVol(ich);        
       // TEMPORARY CORRECTION 
         if ( (mv->getLogVol()->getName()).substr(0,3)=="BMF" && (clv->getName()).substr(0,2)=="LB" ) {
-	  *m_log<< MSG::DEBUG << "TEMPORARY MANUAL CORRECTION OF BMF SPACER LONG BEAM POSITION" << endreq;
-            transf = transf * HepTranslate3D(-37.5,0.,0.);
+	  ATH_MSG_DEBUG( "TEMPORARY MANUAL CORRECTION OF BMF SPACER LONG BEAM POSITION");
+	  transf = transf * HepTranslate3D(-37.5,0.,0.);
         } 
         // retrieve volumes for components
 	Trk::VolumeBounds* volBounds=0; 
@@ -374,7 +370,7 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
           // remove z shift in transform !! bugfix !!
           double zShift = compVol[i]->transform().getTranslation()[2];
 	  if ( fabs(zShift)>0 ) {
-	    *m_log << MSG::DEBUG << "unusual z shift for subvolume:" << zShift << endreq; 
+	    ATH_MSG_DEBUG("unusual z shift for subvolume:" << zShift); 
           }  
           //                                 (HepTranslateZ3D(-zShift)*(*compTransf[i])).getTranslation() <<std::endl;
           if (lowX == currX) {
@@ -382,8 +378,8 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
             mdtVol = new Trk::Volume(new HepTransform3D(HepTranslateZ3D(-zShift)*compVol[i]->transform()),mdtBounds);
 	  } else {
             if ( fabs(lowX-currX)>0.002 ) { 
-	      *m_log << MSG::DEBUG  << "Mdt volume size does not match the envelope:lowX,currX:" << lowX <<","<<currX << std::endl;
-	      *m_log << MSG::DEBUG  << "adjusting Mdt volume " << std::endl;
+	      ATH_MSG_DEBUG( "Mdt volume size does not match the envelope:lowX,currX:" << lowX <<","<<currX );
+	      ATH_MSG_DEBUG( "adjusting Mdt volume ");
 	    }
 	    mdtBounds = new Trk::CuboidVolumeBounds(compBounds->halflengthX()+0.5*(lowX-currX),envY,envZ);
             mdtVol = new Trk::Volume(new HepTransform3D(HepTranslateX3D(0.5*(currX-lowX))
@@ -457,7 +453,7 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
 
 const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationComponents(const GeoVPhysVol* mv, Trk::TrapezoidVolumeBounds* envelope ) const
 {
-    *m_log << MSG::DEBUG  << name() <<" processing station components for " <<mv->getLogVol()->getName() << endreq;    
+  ATH_MSG_DEBUG( name() <<" processing station components for " <<mv->getLogVol()->getName() );    
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     double tolerance = 0.0001;   
@@ -674,8 +670,8 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
             mdtVol = new Trk::Volume(new HepTransform3D(compVol[i]->transform()),mdtBounds);
 	  } else {
             if (fabs(lowX-currX)>0.002 ) {
-	      *m_log << MSG::DEBUG  << "Mdt volume size does not match the envelope:lowX,currX:" << lowX <<","<<currX << std::endl;
-	      *m_log << MSG::DEBUG  << "adjusting Mdt volume " << std::endl;
+	      ATH_MSG_DEBUG( "Mdt volume size does not match the envelope:lowX,currX:" << lowX <<","<<currX );
+	      ATH_MSG_DEBUG( "adjusting Mdt volume " );
 	    }
 	    mdtBounds = new Trk::TrapezoidVolumeBounds(envX1,envX2,envY,compTrdBounds->halflengthZ()+0.5*(lowX-currX));
             mdtVol = new Trk::Volume(new HepTransform3D(HepTranslateZ3D(0.5*(currX-lowX))*compVol[i]->transform()),mdtBounds);
@@ -757,9 +753,7 @@ StatusCode Muon::MuonStationTypeBuilder::finalize()
     for (unsigned int i=0;i<m_rpcDed.size();i++) delete m_rpcDed[i];
     for (unsigned int i=0;i<m_mdtFoamMat.size();i++) delete m_mdtFoamMat[i];
 
-    *m_log << MSG::INFO  << name() <<" finalize() successful" << endreq;
-    delete m_log; 
-    m_log = 0;
+    ATH_MSG_INFO( name() <<" finalize() successful");
  
     return StatusCode::SUCCESS;
 }
@@ -1124,7 +1118,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
             m_rpc46 = getAveragedLayerMaterial(gv[ic],vol,2*xs);
           }
           rpcMat=*m_rpc46;  
-        } else { *m_log << MSG::WARNING << name() << "RPC module thickness different from 46:" << thickness << endreq; }
+        } else { ATH_MSG_WARNING( name() << "RPC module thickness different from 46:" << thickness ); }
       }
           
       Trk::HomogenousLayerMaterial rpcMaterial(rpcMat);
@@ -1208,7 +1202,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
 		}
 		rpcMat=*m_rpcMidPanel;
 	      } else {
-		*m_log << MSG::WARNING << name() << "unknown RPC panel:" << gx << endreq;               
+		ATH_MSG_WARNING( name() << "unknown RPC panel:" << gx );               
 	      }
 	      // create Rpc panel layers 
 	      thickness = 2*gx;
@@ -1218,7 +1212,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
 	      layers.push_back(layer);
 	      layer->setLayerType(0);
 	    } else if  ( (gclv->getName())=="Rpclayer" ) {
-	      if ( fabs(gx-6.85)>0.001 )  *m_log << MSG::WARNING << name() << " unusual thickness of RPC layer:" << 2*gx << endreq;
+	      if ( fabs(gx-6.85)>0.001 )  ATH_MSG_WARNING( name() << " unusual thickness of RPC layer:" << 2*gx );
 	      if (!m_rpcLayer) {                   
 		double vol = 8*gx*gy*gz;
 		// material allocated to two strip planes ( gas volume suppressed )
@@ -1233,16 +1227,16 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
 	      layers.push_back(layer);
 	      layer->setLayerType(1);               
 	    } else {
-	      *m_log << MSG::WARNING << name()  << "unknown RPC component? " << gclv->getName() << endreq;
+	      ATH_MSG_WARNING( name()  << "unknown RPC component? " << gclv->getName() );
 	    }
 	  }
           delete cTr;
 	}
       } else {
-         *m_log << MSG::WARNING << name() << "RPC true trapezoid layer, not coded yet" <<endreq;
+	ATH_MSG_WARNING( name() << "RPC true trapezoid layer, not coded yet" );
       }
     } else {
-      *m_log << MSG::WARNING << name() << "RPC layer shape not recognized" <<endreq;
+      ATH_MSG_WARNING( name() << "RPC layer shape not recognized" );
     }
   } // end loop over Modules
 
@@ -1253,7 +1247,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
                                                           m_muonMagneticField,
                                                           rpcLayers,
                                                           name);         
-  *m_log << MSG::DEBUG << " Rpc component volume processed with" << layers.size() << " layers"  << endreq;
+  ATH_MSG_DEBUG( " Rpc component volume processed with" << layers.size() << " layers");
   return rpc;
 }
 //
@@ -1789,12 +1783,12 @@ double Muon::MuonStationTypeBuilder::get_x_size(const GeoVPhysVol* pv) const
 Trk::ExtendedMaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerMaterial( const GeoVPhysVol* pv, double volume, double thickness) const
 {  
 
-  *m_log << MSG::DEBUG << name() << "::getAveragedLayerMaterial:processing "<< std::endl; 
+  ATH_MSG_DEBUG( name() << "::getAveragedLayerMaterial:processing "); 
   // loop through the whole hierarchy; collect material
   Trk::ExtendedMaterialProperties* total=new Trk::ExtendedMaterialProperties(0.,10.e8,10.e8,0.,0.,0.);
   collectMaterial( pv, total, volume/thickness);
-  *m_log << MSG::VERBOSE << name() << " combined material thickness: "<< total->thickness() << std::endl; 
-  *m_log << MSG::VERBOSE << name() << " actual layer thickness: "<< thickness << std::endl; 
+  ATH_MSG_VERBOSE(name() << " combined material thickness: "<< total->thickness() ); 
+  ATH_MSG_VERBOSE(name() << " actual layer thickness: "<< thickness ); 
   // scaled material properties to the actual layer thickness
   if (total->thickness() > 0 ) { 
     double scale = thickness/total->thickness();
@@ -1807,11 +1801,11 @@ Trk::ExtendedMaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerM
 					  total->averageZ(),
 					  total->averageRho()/scale);
     delete total;    
-    *m_log<< MSG::VERBOSE << "averaged material:d,x0,dInX0:"<<scaled->thickness()<<","<<scaled->x0()<<","<<scaled->thicknessInX0()<<endreq;
+    ATH_MSG_VERBOSE( "averaged material:d,x0,dInX0:"<<scaled->thickness()<<","<<scaled->x0()<<","<<scaled->thicknessInX0() );
 
     return scaled;
   }  
-  *m_log << MSG::DEBUG << name() << "::getAverageLayerMaterial returns 0 " << std::endl; 
+  ATH_MSG_DEBUG(name() << "::getAverageLayerMaterial returns 0 "); 
   return 0;
 }
 
@@ -2359,7 +2353,7 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
     Trk::OverlapDescriptor* od=0;
     Trk::ExtendedMaterialProperties matProp = collectStationMaterial(trVol,sf);
     if (matProp.thickness() > thickness) {
-      *m_log << MSG::DEBUG << " thickness of combined station material exceeds station size:" << trVol->volumeName()<<endreq;
+      ATH_MSG_DEBUG( " thickness of combined station material exceeds station size:" << trVol->volumeName() );
     } else if (matProp.thickness()<thickness && matProp.thickness()>0.) {
       //if (matProp.thickness()> 0.)  matProp *= thickness/matProp.thickness();
       double scale = thickness/matProp.thickness();
@@ -2392,7 +2386,7 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
     Trk::OverlapDescriptor* od=0;
     Trk::ExtendedMaterialProperties matProp = collectStationMaterial(trVol,sf);
     if (matProp.thickness() > thickness) {
-      *m_log << MSG::DEBUG << " thickness of combined station material exceeds station size:" << trVol->volumeName()<<endreq;
+      ATH_MSG_DEBUG( " thickness of combined station material exceeds station size:" << trVol->volumeName() );
     } else if (matProp.thickness()<thickness && matProp.thickness()>0.) {
       //if (matProp.thickness()> 0.)  matProp *= thickness/matProp.thickness();
       double scale = thickness/matProp.thickness();
@@ -2426,7 +2420,7 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
     Trk::OverlapDescriptor* od=0;
     Trk::ExtendedMaterialProperties matProp = collectStationMaterial(trVol,sf);
     if (matProp.thickness() > thickness) {
-      *m_log << MSG::DEBUG << " thickness of combined station material exceeds station size:" << trVol->volumeName()<<endreq;
+      ATH_MSG_DEBUG( " thickness of combined station material exceeds station size:" << trVol->volumeName() );
     } else if (matProp.thickness()<thickness && matProp.thickness()>0.) {
       //if (matProp.thickness()> 0.)  matProp *= thickness/matProp.thickness();
       double scale = thickness/matProp.thickness();

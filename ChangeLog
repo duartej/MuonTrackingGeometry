@@ -1,4 +1,8 @@
 2011-04-29 Sarka Todorova <sarka.todorova@cern.ch>
+	* clear TGC cache to get rid of surfaces with invalid id
+	* tagged as MuonTrackingGeometry-00-05-36
+
+2011-04-29 Sarka Todorova <sarka.todorova@cern.ch>
 	* error message in case invalid TGC channel is accessed
 	* tagged as MuonTrackingGeometry-00-05-35
 

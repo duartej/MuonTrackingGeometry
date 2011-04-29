@@ -693,6 +693,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
           */
         }
       }
+      tgc->clearCache();
     } else {
       ATH_MSG_WARNING( name() << "tgcROE not found for :" << stationName <<","<<eta<<","<<phi );         
       /*

@@ -664,14 +664,19 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
     if (tgc) {
       int etaSt = eta - 4;
       if (eta < 5) etaSt = eta - 5; 
-      Identifier wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,1,0,1);
+      bool* validId=new bool(false);
+      Identifier wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,1,0,1,true,validId);
+      if (!(*validId)) ATH_MSG_ERROR( "invalid TGC channel:" << wireId );
+      //std::cout <<"wireId? valid? "<<wireId <<","<<*validId <<std::endl;
       const HepPoint3D gp = tgc->channelPos(wireId);
       const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gp);
       if (!assocVol) ATH_MSG_DEBUG( "wrong tgcROE?" << stationName <<"," << eta <<"," << phi );
       if (assocVol && assocVol->confinedLayers()) {
 	const std::vector<const Trk::Layer*> layers = assocVol->confinedLayers()->arrayObjects();           
 	for (unsigned int il=0;il<layers.size();il++) {
-	  Identifier wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,il+1,0,1);
+	  Identifier wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,il+1,0,1,true,validId);
+	  if (!(*validId)) ATH_MSG_ERROR( "invalid TGC channel:" << wireId );
+	  //std::cout <<"Id? valid? "<<wireId <<","<<*validId <<std::endl;
 	  unsigned int id = wireId.get_identifier32().get_compact();
           layers[il]->setLayerType(id); 
 	  // strip plane surface

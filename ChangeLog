@@ -1,3 +1,7 @@
+2011-05-06 Sarka Todorova <sarka.todorova@cern.ch>
+	* suppress error messages in TGC identification ( temporary )
+	* tagged as MuonTrackingGeometry-00-05-37
+
 2011-04-29 Sarka Todorova <sarka.todorova@cern.ch>
 	* clear TGC cache to get rid of surfaces with invalid id
 	* tagged as MuonTrackingGeometry-00-05-36

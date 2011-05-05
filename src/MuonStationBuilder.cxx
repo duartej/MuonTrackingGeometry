@@ -666,7 +666,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
       if (eta < 5) etaSt = eta - 5; 
       bool* validId=new bool(false);
       Identifier wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,1,0,1,true,validId);
-      if (!(*validId)) ATH_MSG_ERROR( "invalid TGC channel:" << wireId );
+      //if (!(*validId)) ATH_MSG_ERROR( "invalid TGC channel:" << wireId );
       //std::cout <<"wireId? valid? "<<wireId <<","<<*validId <<std::endl;
       const HepPoint3D gp = tgc->channelPos(wireId);
       const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gp);
@@ -675,15 +675,18 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 	const std::vector<const Trk::Layer*> layers = assocVol->confinedLayers()->arrayObjects();           
 	for (unsigned int il=0;il<layers.size();il++) {
 	  Identifier wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,il+1,0,1,true,validId);
-	  if (!(*validId)) ATH_MSG_ERROR( "invalid TGC channel:" << wireId );
-	  //std::cout <<"Id? valid? "<<wireId <<","<<*validId <<std::endl;
-	  unsigned int id = wireId.get_identifier32().get_compact();
-          layers[il]->setLayerType(id); 
-	  // strip plane surface
-	  const Trk::PlaneSurface* stripSurf = dynamic_cast<const Trk::PlaneSurface*> (&(tgc->surface(wireId)));
-	  if ( (layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center()).mag()>0.001)   
-	    ATH_MSG_INFO( "TGC strip plane shifted:"<<st<<","<<eta<<","<<phi<<":" <<
+          if (!validId) layers[il]->setLayerType(1);
+          else {
+	    //if (!(*validId)) ATH_MSG_ERROR( "invalid TGC channel:" << wireId );
+	    //std::cout <<"Id? valid? "<<wireId <<","<<*validId <<std::endl;
+	    unsigned int id = wireId.get_identifier32().get_compact();
+	    layers[il]->setLayerType(id); 
+	    // strip plane surface
+	    const Trk::PlaneSurface* stripSurf = dynamic_cast<const Trk::PlaneSurface*> (&(tgc->surface(wireId)));
+	    if ( (layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center()).mag()>0.001)   
+	      ATH_MSG_INFO( "TGC strip plane shifted:"<<st<<","<<eta<<","<<phi<<":" <<
 			  layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center());
+	  }
           /*
 	  Identifier s1 = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,il+1,1,1); 
 	  HepPoint3D lw1 = (layers[il]->surfaceRepresentation().transform().inverse()) * (tgc->channelPos(wireId));

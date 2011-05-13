@@ -684,8 +684,8 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 	    // strip plane surface
 	    const Trk::PlaneSurface* stripSurf = dynamic_cast<const Trk::PlaneSurface*> (&(tgc->surface(wireId)));
 	    if ( (layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center()).mag()>0.001)   
-	      ATH_MSG_INFO( "TGC strip plane shifted:"<<st<<","<<eta<<","<<phi<<":" <<
-			  layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center());
+	      ATH_MSG_DEBUG( "TGC strip plane shifted:"<<st<<","<<eta<<","<<phi<<":" <<
+			     layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center());
 	  }
           /*
 	  Identifier s1 = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,il+1,1,1); 

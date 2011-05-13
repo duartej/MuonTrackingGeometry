@@ -1,3 +1,7 @@
+2011-05-13 Susumu Oda <Susumu.Oda@cern.ch>
+	* suppress info messages on TGC strip plane shifts (bug #81921)
+	* tagged as MuonTrackingGeometry-00-05-38 
+
 2011-05-06 Sarka Todorova <sarka.todorova@cern.ch>
 	* suppress error messages in TGC identification ( temporary )
 	* tagged as MuonTrackingGeometry-00-05-37

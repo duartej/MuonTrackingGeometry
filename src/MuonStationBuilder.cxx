@@ -675,7 +675,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 	const std::vector<const Trk::Layer*> layers = assocVol->confinedLayers()->arrayObjects();           
 	for (unsigned int il=0;il<layers.size();il++) {
 	  Identifier wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,il+1,0,1,true,validId);
-          if (!validId) layers[il]->setLayerType(1);
+          if (!(*validId)) layers[il]->setLayerType(1);
           else {
 	    //if (!(*validId)) ATH_MSG_ERROR( "invalid TGC channel:" << wireId );
 	    //std::cout <<"Id? valid? "<<wireId <<","<<*validId <<std::endl;
@@ -696,6 +696,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
           */
         }
       }
+      delete validId;
       tgc->clearCache();
     } else {
       ATH_MSG_WARNING( name() << "tgcROE not found for :" << stationName <<","<<eta<<","<<phi );         

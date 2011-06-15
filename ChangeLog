@@ -1,3 +1,8 @@
+2011-06-15 Susumu Oda <Susumu.Oda@cern.ch>
+	* fix bug #81921: ERROR ToolSvc.MuonStationBuilder invalid TGC 
+	  channel:4294950912 (src/MuonStationBuilder.cxx). 
+	* tagged as MuonTrackingGeometry-00-05-40 
+	
 2011-06-09 Sarka Todorova <sarka.todorova@cern.ch>
 	* fix memory leak
 	* tagged as MuonTrackingGeometry-00-05-39

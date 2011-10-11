@@ -681,7 +681,7 @@ Trk::GlobalPosition Muon::MuonInertMaterialBuilder::getScanPoint(const Trk::Volu
   const Trk::TrapezoidVolumeBounds*  trd = dynamic_cast<const Trk::TrapezoidVolumeBounds*> (&(vol->volumeBounds()));
   const Trk::SimplePolygonBrepVolumeBounds*  spb = dynamic_cast<const Trk::SimplePolygonBrepVolumeBounds*> (&(vol->volumeBounds()));
   
-  if ( !cub && !cyl && !trd && !spb ) { std::cout<< "unknown scan shape!"<< std::endl; return (vol->transform()*gp); }
+  if ( !cub && !cyl && !trd && !spb ) { ATH_MSG_DEBUG("unknown scan shape!"); return (vol->transform()*gp); }
   
   std::vector<double> rndm(3);  
   // generate random numbers
@@ -701,7 +701,7 @@ Trk::GlobalPosition Muon::MuonInertMaterialBuilder::getScanPoint(const Trk::Volu
     if (!vol->inside( vol->transform()*gp,0.001)) {
       gp = Trk::GlobalPosition(x1+(x1+x2)*rndm[0],y-2*y*rndm[1],-z+2*z*rndm[2]);
       if (!vol->inside( vol->transform()*gp,0.001))
-	std::cout << "trapezoid hit not correct:"<<-y+2*y*rndm[1]<< std::endl; 
+	ATH_MSG_DEBUG( "trapezoid hit not correct:"<<-y+2*y*rndm[1]); 
     }
   } else if (cyl) {
     double x1 = cyl->innerRadius();
@@ -764,9 +764,9 @@ Trk::GlobalPosition Muon::MuonInertMaterialBuilder::getScanPoint(const Trk::Volu
     }
     
   } else {
-    std::cout << "volume bounds not recognized in scan"<< std::endl;
+    ATH_MSG_DEBUG("volume bounds not recognized in scan");
   }
-  if (!vol->inside(vol->transform()*gp,0.001)) std::cout << "test hit:wrong scan hit:"<<gp<< std::endl;
+  if (!vol->inside(vol->transform()*gp,0.001)) ATH_MSG_DEBUG("test hit:wrong scan hit:"<<gp);
   
   return (vol->transform()*gp);
 }

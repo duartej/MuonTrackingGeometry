@@ -1,3 +1,8 @@
+2011-10-11 Sarka Todorova <sarka.todorova@cern.ch>
+	* suppress printout in inert material build-up (a problem in conical volume,
+	* conical surfaces now available, update required  )
+	* tagged as MuonTrackingGeometry-00-05-41 
+	
 2011-06-15 Susumu Oda <Susumu.Oda@cern.ch>
 	* fix bug #81921: ERROR ToolSvc.MuonStationBuilder invalid TGC 
 	  channel:4294950912 (src/MuonStationBuilder.cxx). 

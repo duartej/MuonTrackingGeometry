@@ -1836,8 +1836,6 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
 
 bool Muon::MuonTrackingGeometryBuilder::enclosed(const Trk::Volume* vol, const Muon::Span* s) const
 {
-  MsgStream log(msgSvc(), name());
-
   bool encl = false;
   double tol = 1.;
   double ptol = 0.11;     // 0.08 for BT, 0.11 feet
@@ -2423,7 +2421,6 @@ double  Muon::MuonTrackingGeometryBuilder::calculateVolume( const Trk::Volume* e
 
 void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
 {
-  MsgStream log(msgSvc(), name());
   // loop over map
   //std::map<const Trk::DetachedTrackingVolume*,std::vector<const Trk::TrackingVolume*>* >::iterator mIter = m_blendMap.begin();
   std::vector<const Trk::DetachedTrackingVolume*>::iterator viter = m_blendVols.begin();

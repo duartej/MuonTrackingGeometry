@@ -591,7 +591,6 @@ void Muon::MuonStationBuilder::glueComponents(const Trk::DetachedTrackingVolume*
 
 void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume* station, int eta, int phi ) const
 {
-  MsgStream log(msgSvc(), name());
   ATH_MSG_VERBOSE( name() <<" identifying layers " );    
 
   std::string stationName = station->trackingVolume()->volumeName();
@@ -895,7 +894,6 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 
 void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* station, int eta, int phi, HepTransform3D transf ) const
 {
-  MsgStream log(msgSvc(), name());
   ATH_MSG_VERBOSE( name() <<" identifying prototype " );    
 
   std::string stationName = station->volumeName();

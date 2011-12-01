@@ -118,6 +118,12 @@ namespace Muon {
       
       mutable std::vector<Trk::Volume*>    m_garbage;      
       mutable std::vector<std::vector<std::pair<const Trk::Volume*,float> >* >   m_constituents;
+
+      bool                                 m_extraMaterial;
+      float                                m_extraX0;
+      float                                m_extraFraction;
+      float                                m_extraPos1;
+      float                                m_extraPos2;
     };
 
 

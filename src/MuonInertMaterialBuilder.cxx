@@ -94,7 +94,12 @@ Muon::MuonInertMaterialBuilder::MuonInertMaterialBuilder(const std::string& t, c
   m_blendLimit(3e+09),
   m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
   m_rndmGenSvc("RndmGenSvc","randomGen"),
-  m_flatDist(0)
+  m_flatDist(0),
+  m_extraMaterial(false),
+  m_extraX0(0.3),
+  m_extraFraction(0.5),
+  m_extraPos1(13000.),
+  m_extraPos2(15000.)
 {
   declareInterface<Trk::IDetachedTrackingVolumeBuilder>(this);
   declareProperty("MuonDetManagerLocation",           m_muonMgrLocation);
@@ -108,6 +113,11 @@ Muon::MuonInertMaterialBuilder::MuonInertMaterialBuilder(const std::string& t, c
   declareProperty("BuildShields",                     m_buildShields);
   declareProperty("BuildSupports",                    m_buildSupports);
   declareProperty("BlendLimit",                       m_blendLimit);
+  declareProperty("AddMaterial",                      m_extraMaterial);
+  declareProperty("AMradLength",                      m_extraX0);
+  declareProperty("AMsplit",                          m_extraFraction);
+  declareProperty("AMlayerPos1",                      m_extraPos1);
+  declareProperty("AMlayerPos2",                      m_extraPos2);
 }
 
 // destructor
@@ -327,6 +337,38 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
 	vol.next();      	
       }
     }
+
+    // add some extra material to the endcap
+    if (m_extraMaterial) {
+      // scaling
+      float scmat1 = m_extraX0*m_extraFraction/10.*88.93;
+      float scmat2 = m_extraX0*(1.-m_extraFraction)/10.*88.93;
+      Trk::MaterialProperties mat1(1.,88.93/scmat1,scmat1*0.0013);
+      Trk::MaterialProperties mat2(1.,88.93/scmat2,scmat2*0.0013);
+      const Trk::LayerArray* dummyLayers = 0;
+      const Trk::TrackingVolumeArray* dummyVolumes = 0;
+      Trk::VolumeBounds* extraBounds1 = new Trk::CylinderVolumeBounds(850.,13000.,5.);
+      const Trk::TrackingVolume* mextra1=new Trk::TrackingVolume(new HepTransform3D(),extraBounds1,mat1,
+								 m_muonMagneticField,dummyLayers,dummyVolumes,"extraMat1");
+      const Trk::TrackingVolume* simType1 = simplifyShape(mextra1,blend);
+      const Trk::DetachedTrackingVolume* eVol1=new Trk::DetachedTrackingVolume("extraTGCmat1",simType1);
+      if (blend) eVol1->saveConstituents(m_constituents.back());
+      Trk::VolumeBounds* extraBounds2 = new Trk::CylinderVolumeBounds(850.,13000.,5.);
+      const Trk::TrackingVolume* mextra2=new Trk::TrackingVolume(new HepTransform3D(),extraBounds2,mat2,
+                                                                 m_muonMagneticField,dummyLayers,dummyVolumes,"extraMat2");
+      const Trk::TrackingVolume* simType2 = simplifyShape(mextra2,blend);
+      const Trk::DetachedTrackingVolume* eVol2=new Trk::DetachedTrackingVolume("extraTGCmat2",simType2);
+      if (blend) eVol2->saveConstituents(m_constituents.back());
+      std::vector<HepTransform3D> pos1;
+      pos1.push_back(HepTranslate3D(0.,0.,m_extraPos1));
+      pos1.push_back(HepTranslate3D(0.,0.,-m_extraPos1));
+      std::vector<HepTransform3D> pos2;
+      pos2.push_back(HepTranslate3D(0.,0.,m_extraPos2));
+      pos2.push_back(HepTranslate3D(0.,0.,-m_extraPos2));
+      objs.push_back( std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> >(eVol1,pos1) );
+      objs.push_back( std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> >(eVol2,pos2) );      
+    }
+    //
 
     const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* mObjects = new std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >(objs);
 

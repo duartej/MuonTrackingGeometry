@@ -74,7 +74,7 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_muonActive(true),
   m_muonInert(true),
   m_innerBarrelRadius(4251.),
-  m_outerBarrelRadius(13000.),
+  m_outerBarrelRadius(13010.),
   m_barrelZ(6750.),
   m_innerEndcapZ(12900.),
   m_outerEndcapZ(23000.),

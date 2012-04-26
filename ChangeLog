@@ -1,3 +1,7 @@
+2012-04-26 Sarka Todorova <sarka.todorova@cern.ch>
+	* outer radius increased to 13010 mm 
+	* tagged as MuonTrackingGeometry-00-05-44 
+
 2011-12-01 Sarka Todorova <sarka.todorova@cern.ch>
 	* merged with branch MuonTrackingGeometry-00-05-40-02
 	* tagged as MuonTrackingGeometry-00-05-43 

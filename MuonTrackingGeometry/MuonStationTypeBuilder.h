@@ -43,7 +43,7 @@ namespace MuonGM {
  
 namespace Muon {
 
-  typedef std::pair<Trk::SharedObject<const Trk::Layer>,const HepTransform3D*> LayTr;
+  typedef std::pair<Trk::SharedObject<const Trk::Layer>,const HepGeom::Transform3D*> LayTr;
      
   /** @class MuonStationTypeBuilder
   
@@ -71,13 +71,13 @@ namespace Muon {
       const Trk::TrackingVolume* processCscStation(const GeoVPhysVol* cv, std::string name) const; 
       std::vector<const Trk::TrackingVolume*> processTgcStation(const GeoVPhysVol* cv) const; 
       /** components */
-      const Trk::TrackingVolume* processMdtBox(Trk::Volume*&,const GeoVPhysVol*&, HepTransform3D*, double ) const;
-      const Trk::TrackingVolume* processMdtTrd(Trk::Volume*&,const GeoVPhysVol*&, HepTransform3D*) const;
-      const Trk::TrackingVolume* processRpc(Trk::Volume*&,std::vector<const GeoVPhysVol*>,std::vector<HepTransform3D>) const;
-      const Trk::TrackingVolume* processSpacer(Trk::Volume*&,std::vector<const GeoVPhysVol*>,std::vector<HepTransform3D>) const;
-      const Trk::LayerArray* processCSCTrdComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, HepTransform3D*&) const;
-      const Trk::LayerArray* processCSCDiamondComponent(const GeoVPhysVol*&, Trk::DoubleTrapezoidVolumeBounds*&, HepTransform3D*&) const;
-      const Trk::LayerArray* processTGCComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, HepTransform3D*&) const;
+      const Trk::TrackingVolume* processMdtBox(Trk::Volume*&,const GeoVPhysVol*&, HepGeom::Transform3D*, double ) const;
+      const Trk::TrackingVolume* processMdtTrd(Trk::Volume*&,const GeoVPhysVol*&, HepGeom::Transform3D*) const;
+      const Trk::TrackingVolume* processRpc(Trk::Volume*&,std::vector<const GeoVPhysVol*>,std::vector<HepGeom::Transform3D>) const;
+      const Trk::TrackingVolume* processSpacer(Trk::Volume*&,std::vector<const GeoVPhysVol*>,std::vector<HepGeom::Transform3D>) const;
+      const Trk::LayerArray* processCSCTrdComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, HepGeom::Transform3D*&) const;
+      const Trk::LayerArray* processCSCDiamondComponent(const GeoVPhysVol*&, Trk::DoubleTrapezoidVolumeBounds*&, HepGeom::Transform3D*&) const;
+      const Trk::LayerArray* processTGCComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, HepGeom::Transform3D*&) const;
       std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>* > createLayerRepresentation(const Trk::TrackingVolume* trVol) const; 
    
       void printChildren(const GeoVPhysVol*) const ;

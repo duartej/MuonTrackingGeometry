@@ -247,7 +247,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
               ||(stName.substr(0,1)!="T" && stName == msTypeName) ) {
             msTV = *msTypeIter;
 	    if (msTV && gmStation) {
-	      HepTransform3D transf = gmStation->getTransform(); 
+	      HepGeom::Transform3D transf = gmStation->getTransform(); 
               Identifier stId(0);
               if (stName.substr(0,1)=="C") {
 		stId = m_cscIdHelper->elementID(vname.substr(0,3),eta,phi);
@@ -473,18 +473,18 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		  if (m_muonStationTypeBuilder) confinedVolumes = 
 						  m_muonStationTypeBuilder->processBoxStationComponents(cv,envBounds); 
 		  // enveloping volume
-		  envelope= new Trk::Volume(new HepTransform3D(),envBounds);
+		  envelope= new Trk::Volume(new HepGeom::Transform3D(),envBounds);
 		}
 		if (shape=="Trd") {
 		  Trk::TrapezoidVolumeBounds* envBounds = 0;
-		  HepTransform3D* transf =new HepTransform3D(); 
+		  HepGeom::Transform3D* transf =new HepGeom::Transform3D(); 
 		  if (halfY1==halfY2) {
 		    envBounds = new Trk::TrapezoidVolumeBounds(halfX1,halfX2,halfY1,halfZ);
 		    std::cout << "CAUTION!!!: this trapezoid volume does not require XY -> YZ switch" << std::endl;
 		  }
 		  if (halfY1!=halfY2 && halfX1 == halfX2 ) {
 		    delete transf;
-		    transf = new HepTransform3D( HepRotateY3D(90*deg)* HepRotateZ3D(90*deg) );
+		    transf = new HepGeom::Transform3D( HepGeom::RotateY3D(90*CLHEP::deg)* HepGeom::RotateZ3D(90*CLHEP::deg) );
 		    envBounds = new Trk::TrapezoidVolumeBounds(halfY1,halfY2,halfZ,halfX1); 
 		  }
 		  if (halfX1!=halfX2 && halfY1!=halfY2 ) std::cout << "station envelope arbitrary trapezoid?" << std::endl;
@@ -606,7 +606,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
       for (int gasgap = 0; gasgap < cscRE->Ngasgaps(); gasgap++) {
 	Identifier idi = m_cscIdHelper->channelID(cscRE->identify(),cscRE->ChamberLayer(),gasgap+1,0,1);   
         const Trk::PlaneSurface* stripSurf = dynamic_cast<const Trk::PlaneSurface*> (&(cscRE->surface(idi)));
-        const HepPoint3D gpi = stripSurf->center();
+        const HepGeom::Point3D<double> gpi = stripSurf->center();
         const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gpi);
         const Trk::Layer* assocLay = 0;
         if (assocVol) assocLay = assocVol->associatedLayer(gpi);
@@ -668,7 +668,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 	Identifier wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,1,0,1,true,validId);
 	//if (!(*validId)) ATH_MSG_ERROR( "invalid TGC channel:" << wireId );
 	//std::cout <<"wireId? valid? "<<wireId <<","<<*validId <<std::endl;
-	const HepPoint3D gp = tgc->channelPos(wireId);
+	const HepGeom::Point3D<double> gp = tgc->channelPos(wireId);
 	const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gp);
 	if (!assocVol) ATH_MSG_DEBUG( "wrong tgcROE?" << stationName <<"," << eta <<"," << phi );
 	if (assocVol && assocVol->confinedLayers()) {
@@ -689,8 +689,8 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 	    }
             /*
 	    Identifier s1 = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,il+1,1,1); 
-	    HepPoint3D lw1 = (layers[il]->surfaceRepresentation().transform().inverse()) * (tgc->channelPos(wireId));
-	    HepPoint3D ls1 = (layers[il]->surfaceRepresentation().transform().inverse()) * (tgc->channelPos(s1));
+	    HepGeom::Point3D<double> lw1 = (layers[il]->surfaceRepresentation().transform().inverse()) * (tgc->channelPos(wireId));
+	    HepGeom::Point3D<double> ls1 = (layers[il]->surfaceRepresentation().transform().inverse()) * (tgc->channelPos(s1));
             int wireRe = 1000*lw1[Trk::locY];                       
 	    layers[il]->setRef( 10e4+ls1[Trk::locX] + 10e5*(wireRe+10e6) );                      
             */
@@ -784,7 +784,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 	    Identifier id = m_mdtIdHelper->channelID(nameIndex,eta,phi,multi+1,layer,1);           
 	    if (id>0) {
 	      // retrieve associated layer
-	      HepPoint3D gp = multilayer->tubePos(id);
+	      HepGeom::Point3D<double> gp = multilayer->tubePos(id);
 	      const Trk::Layer* assocLay = assocVol->associatedLayer(gp);
 	      unsigned int iD = id;
 	      if (assocLay && assocLay->layerType()!= iD) {
@@ -848,8 +848,8 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
                       }
 		      (*layers)[il]->setLayerType(id);
                       //turn eta position into integer to truncate
-		      HepPoint3D locPosEta = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(etaId));
-		      HepPoint3D locPosPhi = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(phiId));
+		      HepGeom::Point3D<double> locPosEta = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(etaId));
+		      HepGeom::Point3D<double> locPosPhi = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(phiId));
                       int etaRefi = int(1000*locPosEta[Trk::locY]);                       
 		      (*layers)[il]->setRef( 10e4+locPosPhi[Trk::locX] + 10e5*(etaRefi+10e6));
 		    } 
@@ -892,7 +892,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 
 }
 
-void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* station, int eta, int phi, HepTransform3D transf ) const
+void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* station, int eta, int phi, HepGeom::Transform3D transf ) const
 {
   ATH_MSG_VERBOSE( name() <<" identifying prototype " );    
 
@@ -916,7 +916,7 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
 	    Identifier id = m_mdtIdHelper->channelID(nameIndex,eta,phi,multi+1,layer,1);           
 	    if (id.get_compact() > 0) {
 	      // retrieve associated layer
-	      HepPoint3D gp = multilayer->tubePos(id);
+	      HepGeom::Point3D<double> gp = multilayer->tubePos(id);
 	      const Trk::Layer* assocLay = assocVol->associatedLayer(transf.inverse()*gp);
 	      unsigned int iD = id.get_identifier32().get_compact();
 	      if (assocLay) assocLay->setLayerType(iD); 
@@ -965,8 +965,8 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
 		      (*layers)[il]->setRef(swap + locPos[0]);
 		      //std::cout <<"identifying RPC:"<<stationName<<","<<iv<<","<<il<<":"<<id <<std::endl;
                       //turn eta position into integer to truncate
-		      //HepPoint3D locPosEta = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(etaId));
-		      //HepPoint3D locPosPhi = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(phiId));
+		      //HepGeom::Point3D<double> locPosEta = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(etaId));
+		      //HepGeom::Point3D<double> locPosPhi = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(phiId));
                       //int etaRefi = int(1000*locPosEta[Trk::locY]);                       
 		      //(*layers)[il]->setRef( 10e4+locPosPhi[Trk::locX] + 10e5*(etaRefi+10e6));
 		    } 

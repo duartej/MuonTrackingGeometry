@@ -1,3 +1,8 @@
+2012-07-27 Felix Rauscher
+	* CLHEP 2.x
+	* propdel svn:executable
+	* tagged as MuonTrackingGeometry-00-05-46
+
 2012-05-11 Sarka Todorova <sarka.todorova@cern.ch>
 	* outer radius increased to 13400 mm, half-length becomes 26050 mm 
 	* to take into account new (inert) material 

@@ -203,10 +203,10 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
   std::pair<std::vector<const Trk::DetachedTrackingVolume*>,std::vector<const Trk::DetachedTrackingVolume*> > mInert;
 
   // retrieve muon station prototypes from GeoModel
-  const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* msTypes = buildDetachedTrackingVolumeTypes(blend);
+  const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> > >* msTypes = buildDetachedTrackingVolumeTypes(blend);
   ATH_MSG_INFO( name() <<" obtained " << msTypes->size() << " prototypes");
   
-  std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >::const_iterator msTypeIter = msTypes->begin();
+  std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> > >::const_iterator msTypeIter = msTypes->begin();
   
   for (; msTypeIter != msTypes->end(); ++msTypeIter) {
     std::string msTypeName = (*msTypeIter).first->name();
@@ -224,7 +224,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
     //
     const Trk::DetachedTrackingVolume* msTV = (*msTypeIter).first;
     for (unsigned int it=0 ;it<(*msTypeIter).second.size(); it++)  { 
-      HepTransform3D combTr((*msTypeIter).second[it]); 
+      HepGeom::Transform3D combTr((*msTypeIter).second[it]); 
       const Trk::DetachedTrackingVolume* newStat = msTV->clone(msTypeName,combTr);
       if (perm) mInert.first.push_back(newStat);
       else mInert.second.push_back(newStat);
@@ -249,11 +249,11 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonInertMaterialBu
   return muonObjects;
 }
 
-const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* Muon::MuonInertMaterialBuilder::buildDetachedTrackingVolumeTypes(bool blend) const
+const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> > >* Muon::MuonInertMaterialBuilder::buildDetachedTrackingVolumeTypes(bool blend) const
 {
 
     ATH_MSG_INFO( name() <<" building muon object types" );
-    std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > > objs;
+    std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> > > objs;
 
     std::vector<std::string> objName;
     
@@ -290,16 +290,16 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
 	  //printInfo(cv);
 	    
 	  std::vector<const GeoShape*> input_shapes;
-	  std::vector<std::pair<const GeoLogVol*,std::vector<HepTransform3D> > > vols;
+	  std::vector<std::pair<const GeoLogVol*,std::vector<HepGeom::Transform3D> > > vols;
 
           bool simpleTree = false;
           if ( !cv->getNChildVols() ) {
-	    std::vector<HepTransform3D > volTr;
+	    std::vector<HepGeom::Transform3D > volTr;
 	    volTr.push_back(vol.getTransform()); 
-	    vols.push_back(std::pair<const GeoLogVol*,std::vector<HepTransform3D> > (clv,volTr) );
+	    vols.push_back(std::pair<const GeoLogVol*,std::vector<HepGeom::Transform3D> > (clv,volTr) );
             simpleTree = true;
           } else {
-	    getObjsForTranslation(cv,HepTransform3D(),vols );
+	    getObjsForTranslation(cv,HepGeom::Transform3D(),vols );
 	  }
 	  input_shapes.resize(vols.size());             
 	  for (unsigned int i=0;i<vols.size();i++) input_shapes[i]=vols[i].first->getShape();
@@ -319,7 +319,7 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
 	    }  
 	    if (found) continue;
             // m_geoShapeConverter->decodeShape(input_shapes[ish]);
-            HepTransform3D ident;
+            HepGeom::Transform3D ident;
 	    const Trk::Volume* trObject = m_geoShapeConverter->translateGeoShape(input_shapes[ish],&ident);
 	    if (trObject) {  
 	      Trk::MaterialProperties mat = m_materialConverter->convert( vols[ish].first->getMaterial() );
@@ -327,7 +327,7 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
 	      const Trk::TrackingVolume* simType = simplifyShape(newType,blend);
 	      const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(protoName,simType);
               if (blend) typeStat->saveConstituents(m_constituents.back());
-	      objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> >(typeStat,vols[ish].second));
+	      objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> >(typeStat,vols[ish].second));
               delete trObject;
 	    }  else {
 	      ATH_MSG_WARNING( name()<< " volume not translated: " << vname );
@@ -348,29 +348,29 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTr
       const Trk::LayerArray* dummyLayers = 0;
       const Trk::TrackingVolumeArray* dummyVolumes = 0;
       Trk::VolumeBounds* extraBounds1 = new Trk::CylinderVolumeBounds(850.,13000.,5.);
-      const Trk::TrackingVolume* mextra1=new Trk::TrackingVolume(new HepTransform3D(),extraBounds1,mat1,
+      const Trk::TrackingVolume* mextra1=new Trk::TrackingVolume(new HepGeom::Transform3D(),extraBounds1,mat1,
 								 m_muonMagneticField,dummyLayers,dummyVolumes,"extraMat1");
       const Trk::TrackingVolume* simType1 = simplifyShape(mextra1,blend);
       const Trk::DetachedTrackingVolume* eVol1=new Trk::DetachedTrackingVolume("extraTGCmat1",simType1);
       if (blend) eVol1->saveConstituents(m_constituents.back());
       Trk::VolumeBounds* extraBounds2 = new Trk::CylinderVolumeBounds(850.,13000.,5.);
-      const Trk::TrackingVolume* mextra2=new Trk::TrackingVolume(new HepTransform3D(),extraBounds2,mat2,
+      const Trk::TrackingVolume* mextra2=new Trk::TrackingVolume(new HepGeom::Transform3D(),extraBounds2,mat2,
                                                                  m_muonMagneticField,dummyLayers,dummyVolumes,"extraMat2");
       const Trk::TrackingVolume* simType2 = simplifyShape(mextra2,blend);
       const Trk::DetachedTrackingVolume* eVol2=new Trk::DetachedTrackingVolume("extraTGCmat2",simType2);
       if (blend) eVol2->saveConstituents(m_constituents.back());
-      std::vector<HepTransform3D> pos1;
-      pos1.push_back(HepTranslate3D(0.,0.,m_extraPos1));
-      pos1.push_back(HepTranslate3D(0.,0.,-m_extraPos1));
-      std::vector<HepTransform3D> pos2;
-      pos2.push_back(HepTranslate3D(0.,0.,m_extraPos2));
-      pos2.push_back(HepTranslate3D(0.,0.,-m_extraPos2));
-      objs.push_back( std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> >(eVol1,pos1) );
-      objs.push_back( std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> >(eVol2,pos2) );      
+      std::vector<HepGeom::Transform3D> pos1;
+      pos1.push_back(HepGeom::Translate3D(0.,0.,m_extraPos1));
+      pos1.push_back(HepGeom::Translate3D(0.,0.,-m_extraPos1));
+      std::vector<HepGeom::Transform3D> pos2;
+      pos2.push_back(HepGeom::Translate3D(0.,0.,m_extraPos2));
+      pos2.push_back(HepGeom::Translate3D(0.,0.,-m_extraPos2));
+      objs.push_back( std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> >(eVol1,pos1) );
+      objs.push_back( std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> >(eVol2,pos2) );      
     }
     //
 
-    const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* mObjects = new std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >(objs);
+    const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> > >* mObjects = new std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> > >(objs);
 
     int count = 0;
     for (unsigned int i=0;i<mObjects->size();i++) count += (*mObjects)[i].second.size();
@@ -408,7 +408,7 @@ void Muon::MuonInertMaterialBuilder::printChildren(const GeoVPhysVol* pv) const
   // subcomponents
   unsigned int nc = pv->getNChildVols();
   for (unsigned int ic=0; ic<nc; ic++) {
-    HepTransform3D transf = pv->getXToChildVol(ic);
+    HepGeom::Transform3D transf = pv->getXToChildVol(ic);
  
     //
     std::cout << " dumping transform to subcomponent" << std::endl;
@@ -563,13 +563,13 @@ double  Muon::MuonInertMaterialBuilder::calculateVolume( const Trk::Volume* enve
   return envVol;
 }
 
-void Muon::MuonInertMaterialBuilder::getObjsForTranslation(const GeoVPhysVol* pv,HepTransform3D transform, std::vector<std::pair<const GeoLogVol*, std::vector<HepTransform3D> > >& vols ) const
+void Muon::MuonInertMaterialBuilder::getObjsForTranslation(const GeoVPhysVol* pv,HepGeom::Transform3D transform, std::vector<std::pair<const GeoLogVol*, std::vector<HepGeom::Transform3D> > >& vols ) const
 {
   // subcomponents 
   unsigned int nc = pv->getNChildVols();
   //std::cout << "getObjsForTranslation from:"<< pv->getLogVol()->getName()<<","<<pv->getLogVol()->getMaterial()->getName()<<", looping over "<< nc << " children" << std::endl;
   for (unsigned int ic=0; ic<nc; ic++) {
-    HepTransform3D transf = pv->getXToChildVol(ic);
+    HepGeom::Transform3D transf = pv->getXToChildVol(ic);
     const GeoVPhysVol* cv = &(*(pv->getChildVol(ic)));
     const GeoLogVol* clv = cv->getLogVol();
     if (!cv->getNChildVols()) {
@@ -582,9 +582,9 @@ void Muon::MuonInertMaterialBuilder::getObjsForTranslation(const GeoVPhysVol* pv
 	}
       }
       if (!found) {
-	std::vector<HepTransform3D > volTr;
+	std::vector<HepGeom::Transform3D > volTr;
 	volTr.push_back(transform*transf); 
-	vols.push_back(std::pair<const GeoLogVol*,std::vector<HepTransform3D> > (clv,volTr) );
+	vols.push_back(std::pair<const GeoLogVol*,std::vector<HepGeom::Transform3D> > (clv,volTr) );
 	//std::cout << "new volume added:"<< clv->getName() <<","<<clv->getMaterial()->getName()<<std::endl;
 	//printInfo(cv);
       }
@@ -594,7 +594,7 @@ void Muon::MuonInertMaterialBuilder::getObjsForTranslation(const GeoVPhysVol* pv
   }
 }
 
-const Trk::Volume* Muon::MuonInertMaterialBuilder::createEnvelope(const HepTransform3D transf, std::vector<std::pair<const Trk::Volume*,std::pair<float,float> > > constituents ) const 
+const Trk::Volume* Muon::MuonInertMaterialBuilder::createEnvelope(const HepGeom::Transform3D transf, std::vector<std::pair<const Trk::Volume*,std::pair<float,float> > > constituents ) const 
 {
   Trk::Volume* envelope = 0;
     
@@ -690,10 +690,10 @@ const Trk::Volume* Muon::MuonInertMaterialBuilder::createEnvelope(const HepTrans
   bool cylEnv = false;
 
   if ( cylinder && fabs(xSize-ySize)/fmax(xSize,ySize)<0.1) { // make it a cylinder
-    envelope = new Trk::Volume(new HepTransform3D(transf*HepTranslate3D(Trk::GlobalPosition(0.5*(xMin+xMax),0.5*(yMin+yMax),0.5*(zMin+zMax)))), new Trk::CylinderVolumeBounds(sqrt(xSize*xSize+ySize*ySize),zSize));
+    envelope = new Trk::Volume(new HepGeom::Transform3D(transf*HepGeom::Translate3D(Trk::GlobalPosition(0.5*(xMin+xMax),0.5*(yMin+yMax),0.5*(zMin+zMax)))), new Trk::CylinderVolumeBounds(sqrt(xSize*xSize+ySize*ySize),zSize));
     cylEnv = true;
   } else {
-    envelope = new Trk::Volume(new HepTransform3D(transf*HepTranslate3D(Trk::GlobalPosition(0.5*(xMin+xMax),0.5*(yMin+yMax),0.5*(zMin+zMax)))),
+    envelope = new Trk::Volume(new HepGeom::Transform3D(transf*HepGeom::Translate3D(Trk::GlobalPosition(0.5*(xMin+xMax),0.5*(yMin+yMax),0.5*(zMin+zMax)))),
 			     new Trk::CuboidVolumeBounds(xSize,ySize,zSize));
   }  
   
@@ -882,7 +882,7 @@ Muon::MuonInertMaterialBuilder::splitComposedVolume(const Trk::Volume* trVol, bo
 	      Trk::GlobalPosition dc = subtr[is].first->transform().inverse()*constituents[iv].first->center(); 
 	      if (cyls->outerRadius()<cyl->outerRadius() && dc.perp()<0.001 && fabs(dc.z())<10.
 		  && fabs(cyl->halflengthZ()-cyls->halflengthZ())<10.){
-		replaceVol = new Trk::Volume(new HepTransform3D(constituents[iv].first->transform()),
+		replaceVol = new Trk::Volume(new HepGeom::Transform3D(constituents[iv].first->transform()),
 					     new Trk::CylinderVolumeBounds(cyls->outerRadius(),
 									   cyl->outerRadius(),
 									   cyl->halfPhiSector(),

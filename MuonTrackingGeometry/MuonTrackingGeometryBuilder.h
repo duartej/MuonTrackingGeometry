@@ -28,7 +28,7 @@ namespace Trk {
  class ITrackingVolumeArrayCreator;
  class IMagneticFieldTool;
  typedef std::pair< SharedObject<const TrackingVolume>, Trk::GlobalPosition> TrackingVolumeOrderPosition;
- typedef std::pair< SharedObject<const TrackingVolume>, const HepTransform3D*> TrackingVolumeNavOrder;
+ typedef std::pair< SharedObject<const TrackingVolume>, const HepGeom::Transform3D*> TrackingVolumeNavOrder;
 
 }
  
@@ -66,7 +66,7 @@ namespace Muon {
       
     private:
       /** Private method to find z/phi span of detached volumes */
-      const Span* findVolumeSpan(const Trk::VolumeBounds* volBounds, HepTransform3D transf, double zTol, double phiTol) const;
+      const Span* findVolumeSpan(const Trk::VolumeBounds* volBounds, HepGeom::Transform3D transf, double zTol, double phiTol) const;
       const std::vector<std::vector<std::pair<const Trk::DetachedTrackingVolume*,const Span*> >* >* findVolumesSpan(const std::vector<const Trk::DetachedTrackingVolume*>*& objs, double zTol, double phiTol) const;
       /** Private methods to define subvolumes and fill them with detached volumes */
       const Trk::TrackingVolume* processVolume( const Trk::Volume*, int, int, std::string) const; 

@@ -76,16 +76,16 @@ namespace Muon {
     private:
 
       /** Method creating material object prototypes */
-      const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepTransform3D> > >* buildDetachedTrackingVolumeTypes(bool blend) const; 
+      const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> > >* buildDetachedTrackingVolumeTypes(bool blend) const; 
       /** Method extracting material objects from GeoModel tree */
-      void getObjsForTranslation(const GeoVPhysVol* pv,HepTransform3D , std::vector<std::pair<const GeoLogVol*,std::vector<HepTransform3D> > >& vols ) const;
+      void getObjsForTranslation(const GeoVPhysVol* pv,HepGeom::Transform3D , std::vector<std::pair<const GeoLogVol*,std::vector<HepGeom::Transform3D> > >& vols ) const;
       /** Dump from GeoModel tree  */
       void printInfo(const GeoVPhysVol* pv) const;
       void printChildren(const GeoVPhysVol* pv) const;
       /** Simplification of GeoModel object + envelope */
       const Trk::TrackingVolume* simplifyShape(const Trk::TrackingVolume* tr, bool blend) const;
       /** Envelope creation & material fraction calculation */
-      const Trk::Volume* createEnvelope(const HepTransform3D transf, std::vector<std::pair<const Trk::Volume*,std::pair<float,float> > > ) const;
+      const Trk::Volume* createEnvelope(const HepGeom::Transform3D transf, std::vector<std::pair<const Trk::Volume*,std::pair<float,float> > > ) const;
       /** Simplification of objects, material fraction calculation */
       std::vector<std::pair<const Trk::Volume*,std::pair<float,float> > > splitComposedVolume(const Trk::Volume*,bool) const; 
       /** Scan point generation for 'hit&miss' sampling */

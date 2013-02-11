@@ -1,3 +1,7 @@
+2013-02-11 Sarka Todorova <sarka.todorova@cern.ch>
+	* add python builder configuration 
+	* tagged as MuonTrackingGeometry-00-05-47 
+
 2012-07-27 Felix Rauscher
 	* CLHEP 2.x
 	* propdel svn:executable

@@ -16,6 +16,8 @@
 #include "GaudiKernel/ToolHandle.h"
 
 #include "GeoModelKernel/GeoVPhysVol.h"
+#include "TrkDetDescrGeoModelCnv/GeoMaterialConverter.h"
+#include "TrkDetDescrGeoModelCnv/GeoShapeConverter.h"
 
 class MdtIdHelper;
 class RpcIdHelper;
@@ -73,7 +75,8 @@ namespace Muon {
       void encloseLayers( const Trk::DetachedTrackingVolume* ) const; 
       void identifyLayers(const Trk::DetachedTrackingVolume*, int, int ) const;
       void identifyPrototype(const Trk::TrackingVolume*, int, int, HepGeom::Transform3D ) const;
- 
+      void getObjsForTranslation(const GeoVPhysVol* pv, std::string name, HepGeom::Transform3D , std::vector<std::pair<const GeoLogVol*,std::vector<HepGeom::Transform3D> > >& vols, std::vector<std::string>& volNames ) const;
+  
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       const MdtIdHelper*            m_mdtIdHelper;           //!< 
       const RpcIdHelper*            m_rpcIdHelper;           //!< 
@@ -91,6 +94,8 @@ namespace Muon {
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
       mutable Trk::MagneticFieldProperties  m_muonMagneticField;          //!< the magnetic Field
+      Trk::GeoShapeConverter*             m_geoShapeConverter;          //!< shape converter
+      Trk::GeoMaterialConverter*          m_materialConverter;          //!< material converter
       bool                                m_buildBarrel;
       bool                                m_buildEndcap;
       bool                                m_buildCsc;

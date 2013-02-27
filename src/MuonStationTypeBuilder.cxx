@@ -24,6 +24,7 @@
 #include "TrkVolumes/DoubleTrapezoidVolumeBounds.h"
 #include "TrkVolumes/BoundarySurface.h"
 #include "TrkVolumes/CombinedVolumeBounds.h"
+#include "TrkVolumes/SubtractedVolumeBounds.h"
 #include "TrkVolumes/VolumeExcluder.h"
 #include "TrkSurfaces/DiscBounds.h"
 #include "TrkSurfaces/RectangleBounds.h"
@@ -471,11 +472,11 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
       double halfY2=0.;
       for (unsigned int ich =0; ich< mv->getNChildVols(); ++ich) 
       {
-	// std::cout << "next component:"<< ich << std::endl;
+        //std::cout << "next component:"<< ich << std::endl;
         const GeoVPhysVol* cv = &(*(mv->getChildVol(ich))); 
         const GeoLogVol* clv = cv->getLogVol();
         HepGeom::Transform3D transf = mv->getXToChildVol(ich);        
-        // std::cout << "component:"<<ich<<":" << clv->getName() <<", made of "<<clv->getMaterial()->getName()<<","<<clv->getShape()->type()<<","  <<transf.getTranslation()<<std::endl;
+        //std::cout << "component:"<<ich<<":" << clv->getName() <<", made of "<<clv->getMaterial()->getName()<<","<<clv->getShape()->type()<<","  <<transf.getTranslation()<<std::endl;
         // retrieve volumes for components
 	Trk::VolumeBounds* volBounds=0; 
 	Trk::Volume* vol; 
@@ -507,9 +508,9 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
 	  halfZ  = box->getZHalfLength(); 
           volBounds = new Trk::CuboidVolumeBounds(halfX1,halfY1,halfZ);
         }
-	// std::cout << "dimensions:"<<halfX1<<","<<halfX2<<","<<halfY1<<","<<halfY2<<","<<halfZ<<std::endl;
+        //std::cout << "dimensions:"<<halfX1<<","<<halfX2<<","<<halfY1<<","<<halfY2<<","<<halfZ<<std::endl;
         if ( clv->getShape()->type()!="Trd" && clv->getShape()->type()!="Box" ) {
- 	  //std::cout<<"WARNING:component shape not Box nor Trapezoid, determining the x size from subcomponents"<<std::endl; 
+ 	  std::cout<<"WARNING:component shape not Box nor Trapezoid, determining the x size from subcomponents"<<std::endl; 
 	  double xSize = get_x_size(cv);
           // printChildren(cv);
 	  if (clv->getName().substr(0,1)!="C" && clv->getName().substr(0,2)!="LB")
@@ -2341,6 +2342,19 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
   const Trk::TrapezoidVolumeBounds* trdBounds= dynamic_cast<const Trk::TrapezoidVolumeBounds*> (&(trVol->volumeBounds()));
   const Trk::DoubleTrapezoidVolumeBounds* dtrdBounds= dynamic_cast<const Trk::DoubleTrapezoidVolumeBounds*> (&(trVol->volumeBounds()));
 
+  HepGeom::Transform3D subt=HepGeom::Transform3D();
+
+  const Trk::SubtractedVolumeBounds* subBounds= dynamic_cast<const Trk::SubtractedVolumeBounds*> (&(trVol->volumeBounds()));
+  if (subBounds) {    
+    subt = HepGeom::RotateY3D(90*CLHEP::deg)* HepGeom::RotateZ3D(90*CLHEP::deg)*subt;
+    while (subBounds) {
+      cubBounds= dynamic_cast<const Trk::CuboidVolumeBounds*> (&(subBounds->outer()->volumeBounds()));
+      trdBounds= dynamic_cast<const Trk::TrapezoidVolumeBounds*> (&(subBounds->outer()->volumeBounds()));
+      dtrdBounds= dynamic_cast<const Trk::DoubleTrapezoidVolumeBounds*> (&(subBounds->outer()->volumeBounds()));
+      subBounds= dynamic_cast<const Trk::SubtractedVolumeBounds*> (&(subBounds->outer()->volumeBounds()));
+    }
+  }
+
   const Trk::PlaneLayer* layer = 0;
 
   if (cubBounds) { 
@@ -2394,7 +2408,7 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
 						matProp.averageA(),matProp.averageZ(),matProp.averageRho()/scale);
     }
     Trk::HomogenousLayerMaterial mat(matProp);  
-    layer = new Trk::PlaneLayer(new HepGeom::Transform3D(trVol->transform()),
+    layer = new Trk::PlaneLayer(new HepGeom::Transform3D(subt*trVol->transform()),
 				bounds, mat, thickness, od, 1 );
     for (size_t i=0; i<surfs->size(); i++) delete (*surfs)[i];
     delete surfs;

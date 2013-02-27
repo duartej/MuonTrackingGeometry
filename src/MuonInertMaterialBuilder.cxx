@@ -267,10 +267,10 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGe
 	const GeoLogVol* clv = cv->getLogVol();
 	std::string vname = clv->getName();
 	
-	if ((vname.size()>7 && vname.substr(vname.size()-7,7) !="Station") ||  vname.size()<8 ) {        // Inert element
-	  
-	  //std::cout << " INERT muon object found:" << vname <<" "<<ichild<< std::endl;
-	  
+	if ((vname.size()>7 && vname.substr(vname.size()-7,7) !="Station") ||  ( vname.size()<8 && vname.substr(0,3) != "NSW") ) {        // Inert element
+
+	  //std::cout << " INERT muon object found:" << vname << std::endl;
+	  	  
 	  bool accepted = true ;
 	  if (  vname.substr(0,3)=="BAR" || vname.substr(0,2)=="BT" || vname.substr(0,6) == "EdgeBT" 
 		|| vname.substr(0,6) == "HeadBT" ) accepted = m_buildBT ? true : false;
@@ -282,6 +282,9 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGe
 	  else if ( vname.substr(0,1)=="J" )  accepted = m_buildShields>0 ? true : false; 
 
           //if ( vname=="EdgeBTVoussoir" && accepted && m_simplify ) accepted = false;
+
+	  if (accepted) ATH_MSG_VERBOSE( name() << " INERT muon object found:" << vname );
+
 	  
 	  if (!accepted) { vol.next(); continue; }  
 

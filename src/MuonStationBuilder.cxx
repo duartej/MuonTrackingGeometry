@@ -172,6 +172,9 @@ StatusCode Muon::MuonStationBuilder::initialize()
     else                                            
         m_muonMagneticField = Trk::MagneticFieldProperties(&(*m_magFieldTool), Trk::RealisticField);    
 
+    m_materialConverter= new Trk::GeoMaterialConverter();
+    m_geoShapeConverter= new Trk::GeoShapeConverter();
+
     ATH_MSG_INFO( name() <<" initialize() successful" );    
     
   return StatusCode::SUCCESS;
@@ -197,6 +200,88 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
       const GeoVPhysVol* cv = &(*(vol.getVolume()));
       const GeoLogVol* clv = cv->getLogVol();
       std::string vname = clv->getName();
+      
+      // special treatment for NSW / no readout geometry to copy from yet
+      if (vname.substr(0,3) =="NSW") {
+	ATH_MSG_INFO( vname <<" processing NSW " );
+	std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> > > objs;
+	
+	std::vector<const GeoShape*> input_shapes;
+	std::vector<std::pair<const GeoLogVol*,std::vector<HepGeom::Transform3D> > > vols;
+	std::vector<std::string> volNames;
+	
+	bool simpleTree = false;
+	if ( !cv->getNChildVols() ) {
+	  std::vector<HepGeom::Transform3D > volTr;
+	  volTr.push_back(vol.getTransform()); 
+	  vols.push_back(std::pair<const GeoLogVol*,std::vector<HepGeom::Transform3D> > (clv,volTr) );
+          volNames.push_back(vname);
+	  simpleTree = true;
+	} else {
+	  getObjsForTranslation(cv,"",HepGeom::Transform3D(),vols,volNames );
+	}
+	input_shapes.resize(vols.size());             
+	for (unsigned int i=0;i<vols.size();i++) input_shapes[i]=vols[i].first->getShape();
+	
+	for (unsigned int ish=0; ish < vols.size(); ish++) { 
+	  
+	  std::string protoName = vname;
+	  if (!simpleTree) protoName = vname+"_"+volNames[ish];
+	  //std::cout << "NSW looping over vols:" << vols.size() <<","<< ish <<","<< protoName << std::endl;
+	  std::vector<const Trk::Layer*> layers;	  
+          /*
+	  bool found = false;
+	  for (unsigned int ip=0; ip<objs.size();ip++) {
+	    if (protoName==objs[ip].first->name()) {
+              found = true;
+              if (simpleTree) objs[ip].second.push_back(vol.getTransform());
+              std ::cout << "looping over NSW:"<< protoName <<","<< vol.getTransform().getTranslation().perp() << std::endl;
+              //else objs[ip].second.insert(objs[ip].second.end(),vols[ish].second.begin(),vols[ish].second.end());
+            } 
+           }  
+          if (found) continue;
+          */
+	  // m_geoShapeConverter->decodeShape(input_shapes[ish]);
+	  HepGeom::Transform3D ident;
+	  const Trk::Volume* trObject = m_geoShapeConverter->translateGeoShape(input_shapes[ish],&ident);
+	  if (trObject) {  
+	    Trk::MaterialProperties mat = m_materialConverter->convert( vols[ish].first->getMaterial() );
+	    const Trk::TrackingVolume* newType= new Trk::TrackingVolume( *trObject, mat, m_muonMagneticField,0,0,protoName);
+      	    std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> layRepr=m_muonStationTypeBuilder->createLayerRepresentation(newType);
+            if (layRepr.first) {
+              layers.clear();
+              layers.push_back(layRepr.first);
+	      const std::vector<const Trk::Layer*>* inLayers = new std::vector<const Trk::Layer*>(layers); 
+	      const Trk::TrackingVolume* newTypeL= new Trk::TrackingVolume( *trObject, mat, m_muonMagneticField,inLayers,protoName);
+	      const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(protoName,newTypeL);
+	      objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> >(typeStat,vols[ish].second));
+	    } else {
+	      //const Trk::TrackingVolume* simType = simplifyShape(newType,blend);
+	      const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(protoName,newType);
+	      objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> >(typeStat,vols[ish].second));
+	    }
+	    delete trObject;
+	    ATH_MSG_INFO( "new prototype build for: " << protoName <<","<<vols[ish].second.size() );
+	  }  else {
+	    ATH_MSG_WARNING( name()<< " volume not translated: " << vname );
+	  }            
+	} // end new object
+	
+	for (unsigned int it=0 ;it<objs.size(); it++)  { 
+	  // clone station from prototype
+	  for (unsigned int itr=0 ;itr<objs[it].second.size(); itr++)  { 
+	    //HepGeom::Transform3D ntransf= objs[it].second[itr]*HepGeom::RotateZ3D(5*CLHEP::deg);
+	    //const Trk::DetachedTrackingVolume* newStat = objs[it].first->clone(vname,ntransf);
+	    const Trk::DetachedTrackingVolume* newStat = objs[it].first->clone(vname,objs[it].second[itr]);
+	    //std::cout << newStat->trackingVolume()->confinedVolumes() <<","<< newStat->constituents() << std::endl;
+	    mStations.push_back(newStat);
+	  }
+	}
+	// clean up prototypes
+	for (unsigned int it = 0; it < objs.size(); it++)  delete objs[it].first; 
+	
+      } // end NSW!
+
       if (vname.size()>7 && vname.substr(vname.size()-7,7) =="Station" && 
             ( (m_buildBarrel && vname.substr(0,1) =="B")
             ||(m_buildEndcap && vname.substr(0,1) =="E")
@@ -1005,5 +1090,49 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
     }
   }
   // end identification check
+}
+
+void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std::string name, HepGeom::Transform3D transform, std::vector<std::pair<const GeoLogVol*, std::vector<HepGeom::Transform3D> > >& vols, std::vector< std::string >& volNames ) const
+{
+  // subcomponents 
+  unsigned int nc = pv->getNChildVols();
+  //std::cout << "getObjsForTranslation from:"<< pv->getLogVol()->getName()<<","<<pv->getLogVol()->getMaterial()->getName()<<", looping over "<< nc << " children" << std::endl;
+  for (unsigned int ic=0; ic<nc; ic++) {
+    HepGeom::Transform3D transf = pv->getXToChildVol(ic);
+    const GeoVPhysVol* cv = &(*(pv->getChildVol(ic)));
+    const GeoLogVol* clv = cv->getLogVol();
+    std::string childName = clv->getName();
+    if (childName=="") childName="Spacer";
+    if (childName.size()>9 && childName.substr(childName.size()-9,9)=="Sensitive") {
+      std::stringstream st;
+      st << ic; 
+      childName=childName+st.str();
+    }
+    std::string cName = childName.substr(0,3)=="NSW" ? name : name+childName;
+    //std::cout << "child number,name,position:"<< ic<<":"<<clv->getName() <<":"<< (transform*transf).getTranslation().perp() <<","<<(transform*transf).getTranslation().z() << std::endl;
+    if (!cv->getNChildVols()) {
+      bool found = false;
+      for (unsigned int is = 0; is < vols.size(); is++) {
+	if (cName == volNames[is]) {
+	   if ( fabs((transform*transf).getTranslation().perp()- vols[is].second.front().getTranslation().perp())< 1. ) {
+	    found = true; 
+	    vols[is].second.push_back(transform*transf);
+	    //std::cout << "clone?" << clv->getName() <<","<<(transform*transf).getTranslation().perp() << std::endl;
+	    break;
+	   }
+	}
+      }
+      if (!found) {
+	std::vector<HepGeom::Transform3D > volTr;
+	volTr.push_back(transform*transf); 
+	vols.push_back(std::pair<const GeoLogVol*,std::vector<HepGeom::Transform3D> > (clv,volTr) );
+        volNames.push_back(cName);
+	//std::cout << "new volume added:"<< cName <<","<<clv->getMaterial()->getName()<<std::endl;
+	//printInfo(cv);
+      }
+    } else {
+      getObjsForTranslation(cv, cName, transform*transf, vols, volNames);
+    }
+  }
 }
 

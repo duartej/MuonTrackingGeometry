@@ -1,3 +1,7 @@
+2013-02-27 Sarka Todorova <sarka.todorova@cern.ch>
+	* first NSW import - no channel identification yet 
+	* tagged as MuonTrackingGeometry-00-05-48 
+
 2013-02-11 Sarka Todorova <sarka.todorova@cern.ch>
 	* add python builder configuration 
 	* tagged as MuonTrackingGeometry-00-05-47 

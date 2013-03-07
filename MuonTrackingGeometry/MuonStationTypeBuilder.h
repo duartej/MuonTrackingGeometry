@@ -75,19 +75,23 @@ namespace Muon {
       const Trk::TrackingVolume* processMdtTrd(Trk::Volume*&,const GeoVPhysVol*&, HepGeom::Transform3D*) const;
       const Trk::TrackingVolume* processRpc(Trk::Volume*&,std::vector<const GeoVPhysVol*>,std::vector<HepGeom::Transform3D>) const;
       const Trk::TrackingVolume* processSpacer(Trk::Volume*&,std::vector<const GeoVPhysVol*>,std::vector<HepGeom::Transform3D>) const;
+      const Trk::TrackingVolume* processNSW(std::vector<const Trk::Layer*>) const;
       const Trk::LayerArray* processCSCTrdComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, HepGeom::Transform3D*&) const;
       const Trk::LayerArray* processCSCDiamondComponent(const GeoVPhysVol*&, Trk::DoubleTrapezoidVolumeBounds*&, HepGeom::Transform3D*&) const;
       const Trk::LayerArray* processTGCComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, HepGeom::Transform3D*&) const;
       std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>* > createLayerRepresentation(const Trk::TrackingVolume* trVol) const; 
+      const Trk::Layer* createLayer(const Trk::TrackingVolume* trVol,Trk::ExtendedMaterialProperties*) const; 
    
       void printChildren(const GeoVPhysVol*) const ;
-  private:
+      // used to be private ..
       double get_x_size(const GeoVPhysVol*) const ;
       double decodeX(const GeoShape*) const ;
       double getVolume(const GeoShape*) const;
       Trk::ExtendedMaterialProperties* getAveragedLayerMaterial(const GeoVPhysVol*,double,double) const;
       void collectMaterial(const GeoVPhysVol*,Trk::ExtendedMaterialProperties*& ,double) const;
       Trk::ExtendedMaterialProperties collectStationMaterial(const Trk::TrackingVolume* trVol,double) const; 
+
+  private:
      /** Private method to fill default material */
       //void fillDefaultServiceMaterial();
 

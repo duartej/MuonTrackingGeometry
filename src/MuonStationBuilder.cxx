@@ -12,8 +12,12 @@
 #include "MuonReadoutGeometry/RpcReadoutElement.h"
 #include "MuonReadoutGeometry/CscReadoutElement.h"
 #include "MuonReadoutGeometry/TgcReadoutElement.h"
+#include "MuonReadoutGeometry/sTgcReadoutElement.h"
+#include "MuonReadoutGeometry/MMReadoutElement.h"
 #include "MuonIdHelpers/MdtIdHelper.h"
 #include "MuonIdHelpers/RpcIdHelper.h"
+#include "MuonIdHelpers/sTgcIdHelper.h"
+#include "MuonIdHelpers/MmIdHelper.h"
 // Trk
 #include "TrkDetDescrInterfaces/ITrackingVolumeArrayCreator.h"
 #include "TrkDetDescrInterfaces/ITrackingVolumeHelper.h"
@@ -126,6 +130,8 @@ StatusCode Muon::MuonStationBuilder::initialize()
     m_rpcIdHelper = m_muonMgr-> rpcIdHelper();
     m_cscIdHelper = m_muonMgr-> cscIdHelper();
     m_tgcIdHelper = m_muonMgr-> tgcIdHelper();
+    m_stgcIdHelper = m_muonMgr-> stgcIdHelper();
+    m_mmIdHelper  = m_muonMgr-> mmIdHelper();
 
     ATH_MSG_INFO( m_muonMgr->geometryVersion() ); 
     
@@ -207,28 +213,49 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> > > objs;
 	
 	std::vector<const GeoShape*> input_shapes;
-	std::vector<std::pair<const GeoLogVol*,std::vector<HepGeom::Transform3D> > > vols;
+	std::vector<std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<HepGeom::Transform3D> > > vols;
 	std::vector<std::string> volNames;
 	
 	bool simpleTree = false;
 	if ( !cv->getNChildVols() ) {
 	  std::vector<HepGeom::Transform3D > volTr;
 	  volTr.push_back(vol.getTransform()); 
-	  vols.push_back(std::pair<const GeoLogVol*,std::vector<HepGeom::Transform3D> > (clv,volTr) );
+	  std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*> cpair(clv,0);
+	  vols.push_back(std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<HepGeom::Transform3D> > (cpair,volTr) );
           volNames.push_back(vname);
 	  simpleTree = true;
 	} else {
 	  getObjsForTranslation(cv,"",HepGeom::Transform3D(),vols,volNames );
-	}
+        }
 	input_shapes.resize(vols.size());             
-	for (unsigned int i=0;i<vols.size();i++) input_shapes[i]=vols[i].first->getShape();
-	
+	for (unsigned int i=0;i<vols.size();i++) input_shapes[i]=vols[i].first.first->getShape();
+
+        
+	//std::cout <<"number of prototypes to process for NSW:"<<vols.size()<<std::endl;
+
+        // initial solution ( in the absence of DetectorElements and readout surfaces )
+        // Large/Small sector envelope englobing (4+4+1+4+4)x 4(rings) =  68 layers identified with simId (station type,ring,phi,sector,multi,layer)
+        //
+        // advanced solution:
+        // Large/Small sector envelope englobing (4+4+1+4+4) 17 layers (or: 5 volumes with 4/4/1/4/4 layers )
+        // each layer carrying 4 surfaces linked to readout geometry (rings)   
+
+        // collect layers corresponding to sensitive planes/spacers
+	std::vector<const Trk::Layer*> sectorL;
+	std::vector<const Trk::Layer*> sectorS;
+
 	for (unsigned int ish=0; ish < vols.size(); ish++) { 
-	  
+
+          bool isLargeSector =  fabs(((vols[ish]).second)[0].getTranslation().phi())<0.01 ? true : false;
 	  std::string protoName = vname;
 	  if (!simpleTree) protoName = vname+"_"+volNames[ish];
-	  //std::cout << "NSW looping over vols:" << vols.size() <<","<< ish <<","<< protoName << std::endl;
+	  //std::cout << "NSW looping over vols:" << vols.size() <<","<< ish <<","<< protoName <<":"<<protoName.substr(protoName.find("-")+1)<<":"
+	  //	    << ((vols[ish]).second)[0].getTranslation().perp()<<","<<((vols[ish]).second)[0].getTranslation().z()<<","<<
+	  //  ((vols[ish]).second)[0].getTranslation().phi()   << std::endl;
 	  std::vector<const Trk::Layer*> layers;	  
+
+	  std::string oName = protoName.substr(protoName.find("-")+1);	  
+
           /*
 	  bool found = false;
 	  for (unsigned int ip=0; ip<objs.size();ip++) {
@@ -245,20 +272,14 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	  HepGeom::Transform3D ident;
 	  const Trk::Volume* trObject = m_geoShapeConverter->translateGeoShape(input_shapes[ish],&ident);
 	  if (trObject) {  
-	    Trk::MaterialProperties mat = m_materialConverter->convert( vols[ish].first->getMaterial() );
+	    Trk::MaterialProperties mat = m_materialConverter->convert( vols[ish].first.first->getMaterial() );
+	    //std::cout <<"material conversion:"<<vols[ish].first.second->thickness()<<","<<vols[ish].first.second->x0()<<":"<<vols[ish].first.second->thicknessInX0()<<std::endl;
 	    const Trk::TrackingVolume* newType= new Trk::TrackingVolume( *trObject, mat, m_muonMagneticField,0,0,protoName);
-      	    std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> layRepr=m_muonStationTypeBuilder->createLayerRepresentation(newType);
-            if (layRepr.first) {
-              layers.clear();
-              layers.push_back(layRepr.first);
-	      const std::vector<const Trk::Layer*>* inLayers = new std::vector<const Trk::Layer*>(layers); 
-	      const Trk::TrackingVolume* newTypeL= new Trk::TrackingVolume( *trObject, mat, m_muonMagneticField,inLayers,protoName);
-	      const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(protoName,newTypeL);
-	      objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> >(typeStat,vols[ish].second));
-	    } else {
-	      //const Trk::TrackingVolume* simType = simplifyShape(newType,blend);
-	      const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(protoName,newType);
-	      objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> >(typeStat,vols[ish].second));
+      	    const Trk::Layer* layRepr=m_muonStationTypeBuilder->createLayer(newType, vols[ish].first.second);
+            if (layRepr) {
+              layRepr->moveLayer(vols[ish].second[0]);
+              if (isLargeSector) sectorL.push_back(layRepr);
+              else sectorS.push_back(layRepr);
 	    }
 	    delete trObject;
 	    ATH_MSG_INFO( "new prototype build for: " << protoName <<","<<vols[ish].second.size() );
@@ -266,19 +287,84 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	    ATH_MSG_WARNING( name()<< " volume not translated: " << vname );
 	  }            
 	} // end new object
-	
-	for (unsigned int it=0 ;it<objs.size(); it++)  { 
-	  // clone station from prototype
-	  for (unsigned int itr=0 ;itr<objs[it].second.size(); itr++)  { 
-	    //HepGeom::Transform3D ntransf= objs[it].second[itr]*HepGeom::RotateZ3D(5*CLHEP::deg);
-	    //const Trk::DetachedTrackingVolume* newStat = objs[it].first->clone(vname,ntransf);
-	    const Trk::DetachedTrackingVolume* newStat = objs[it].first->clone(vname,objs[it].second[itr]);
-	    //std::cout << newStat->trackingVolume()->confinedVolumes() <<","<< newStat->constituents() << std::endl;
+
+	//std::cout <<"number of layers:large:small:"<< sectorL.size()<<","<<sectorS.size() << std::endl;
+
+        // create station prototypes
+        const Trk::TrackingVolume* newTypeL=m_muonStationTypeBuilder->processNSW(sectorL); 
+	const Trk::DetachedTrackingVolume* typeL = newTypeL ? new Trk::DetachedTrackingVolume("NSWL",newTypeL) : 0;
+	//objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> >(typeStat,vols[ish].second));
+        const Trk::TrackingVolume* newTypeS=m_muonStationTypeBuilder->processNSW(sectorS); 
+	const Trk::DetachedTrackingVolume* typeS = newTypeS ? new Trk::DetachedTrackingVolume("NSWS",newTypeS) : 0;
+
+        if (typeL) {
+	  mStations.push_back(typeL); 
+	  
+	  for (unsigned int it=1 ;it<8; it++)  { 
+	    // clone station from prototype :: CHECK z<0 side, probably turns in wrong direction
+	    HepGeom::Transform3D ntransf= HepGeom::RotateZ3D(it*45*CLHEP::deg);
+	    const Trk::DetachedTrackingVolume* newStat = typeL->clone("NSWL",ntransf);
+	    //std::cout <<"cloned NSW station:"<<newStat->trackingVolume()->center()<<std::endl;   
+            // recalculate identifiers
+            const std::vector<const Trk::Layer*>* lays=newStat->trackingVolume()->confinedArbitraryLayers();
+            for (unsigned int il=0; il<lays->size(); il++) {
+	      int iType = (*lays)[il]->layerType();
+	      if (iType!=0) {
+		int nType = abs(iType)+it*1000;
+                if (iType<0) nType*= -1;
+		(*lays)[il]->setLayerType(nType);
+		//std::cout <<"new layer id:"<<it<<","<<iType<<","<<(*lays)[il]->layerType()<<std::endl;
+                /*   // identification not quite reliable yet
+		  int iside= nType<0? -1 : 1;
+		  int itech= int((iside*nType)/1.e05);
+		  int irest = int((iside*nType)-itech*1.e05);
+		  int iEta = iside*(int(irest/1.e04)+1);
+		  irest = int(irest-(iside*iEta-1)*1.e04);
+		  int iPhi = int(irest/1.e03)+1;
+		  irest = int(irest-(iPhi-1)*1.e03);
+		  int iMl = int(irest/1.e02)+1;
+		  irest = int(irest-(iMl-1)*1.e02);
+		  int iLay = il+1;
+		  //std::cout <<"check decoding:lay:"<<iLay<<","<<il<<std::endl;
+		  Identifier id=m_mmIdHelper->channelID("MML",iEta,iPhi,iMl,iLay,1);
+		  const MuonGM::MMReadoutElement* mmRE=m_muonMgr->getMMRElement_fromIdFields(0,iside,iPhi,iMl);
+		  //std::cout << "id helper:"<< id << ","<<mmRE<<std::endl;
+		  const HepGeom::Transform3D& tr=mmRE->transform(id);
+		  std::cout <<"layer center:"<<((*lays)[il])->surfaceRepresentation().center()<< std::endl;
+		  std::cout <<"MMRE layer center:"<<mmRE->center(id)<<std::endl; 
+		  std::cout <<"local position of layer centre:wrt 0 ring1:"<<tr.inverse()*(((*lays)[il])->surfaceRepresentation().center()) << std::endl;
+		*/
+	      }
+	    }
+	    mStations.push_back(newStat);
+	  }
+	}	  
+
+        if (typeS) {
+	  mStations.push_back(typeS); 
+      
+	  for (unsigned int it=1 ;it<8; it++)  { 
+	    // clone station from prototype
+	    HepGeom::Transform3D ntransf= HepGeom::RotateZ3D(it*45*CLHEP::deg);
+	    const Trk::DetachedTrackingVolume* newStat = typeS->clone("NSWL",ntransf);
+	    //std::cout <<"cloned NSW station:"<<newStat->trackingVolume()->center()<<std::endl;   
+            // recalculate identifiers
+            const std::vector<const Trk::Layer*>* lays=newStat->trackingVolume()->confinedArbitraryLayers();
+            for (unsigned int il=0; il<lays->size(); il++) {
+	      int iType = (*lays)[il]->layerType();
+	      if (iType!=0) {
+		int nType = abs(iType)+it*1000;
+                if (iType<0) nType*= -1;
+		(*lays)[il]->setLayerType(nType);
+		//std::cout <<"new layer id:"<<it<<","<<iType<<","<<(*lays)[il]->layerType()<<std::endl;
+	      }
+	    }
 	    mStations.push_back(newStat);
 	  }
 	}
+
 	// clean up prototypes
-	for (unsigned int it = 0; it < objs.size(); it++)  delete objs[it].first; 
+	//for (unsigned int it = 0; it < objs.size(); it++)  delete objs[it].first; 
 	
       } // end NSW!
 
@@ -1092,11 +1178,83 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
   // end identification check
 }
 
-void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std::string name, HepGeom::Transform3D transform, std::vector<std::pair<const GeoLogVol*, std::vector<HepGeom::Transform3D> > >& vols, std::vector< std::string >& volNames ) const
+
+void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std::string name, HepGeom::Transform3D transform, std::vector<std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*> , std::vector<HepGeom::Transform3D> > >& vols, std::vector< std::string >& volNames ) const
 {
   // subcomponents 
   unsigned int nc = pv->getNChildVols();
   //std::cout << "getObjsForTranslation from:"<< pv->getLogVol()->getName()<<","<<pv->getLogVol()->getMaterial()->getName()<<", looping over "<< nc << " children" << std::endl;
+  double thick = 2*m_muonStationTypeBuilder->get_x_size(pv);
+  double vol = m_muonStationTypeBuilder->getVolume(pv->getLogVol()->getShape()); 
+  Trk::ExtendedMaterialProperties* matComb = m_muonStationTypeBuilder->getAveragedLayerMaterial(pv,vol,thick);
+  //std::cout << "thickness, averaged x0:"<< matComb->thickness()<<","<< matComb->x0()<< std::endl;
+  //double dInX0 = matComb->thickness()/matComb->x0(); 
+  for (unsigned int ic=0; ic<nc; ic++) {
+    HepGeom::Transform3D transf = pv->getXToChildVol(ic);
+    const GeoVPhysVol* cv = &(*(pv->getChildVol(ic)));
+    const GeoLogVol* clv = cv->getLogVol();
+    std::string childName = clv->getName();
+    bool matMode = false;
+    if (childName=="") childName="Spacer";
+    if (childName.size()>9 && childName.substr(childName.size()-9,9)=="Sensitive") {
+      std::stringstream st;
+      st << ic; 
+      childName=childName+st.str();
+      matMode = true;
+    }
+    if (!matMode )  {  //don't take material from mother volume
+      thick = 2*m_muonStationTypeBuilder->get_x_size(cv);
+      vol = m_muonStationTypeBuilder->getVolume(cv->getLogVol()->getShape()); 
+      //std::cout <<"collecting material for daughter volume:"<<thick<<","<<vol<<std::endl;
+      matComb = m_muonStationTypeBuilder->getAveragedLayerMaterial(cv,vol,thick);
+      //std::cout << "thickness, averaged x0:"<< matComb->thickness()<<","<< matComb->x0()<< std::endl;
+      //dInX0 = matComb->thickness()/matComb->x0();
+    }
+
+    std::string cName = childName.substr(0,3)=="NSW" ? name : name+childName;
+    //std::cout << "child number,name,position:"<< ic<<":"<<clv->getName() <<":"<< (transform*transf).getTranslation().perp() <<","<<(transform*transf).getTranslation().z()<<","<<(transform*transf).getTranslation().phi() << std::endl;
+    if (!cv->getNChildVols()) {
+      bool found = false;
+      for (unsigned int is = 0; is < vols.size(); is++) {
+	if (cName == volNames[is]) {
+	   if ( fabs((transform*transf).getTranslation().perp()- vols[is].second.front().getTranslation().perp())< 1. ) {
+	    found = true; 
+            // order transforms to position prototype at phi=0/ 0.125 pi
+            double phiTr = (transform*transf).getTranslation().phi();
+            if ( phiTr>-0.001 && phiTr<0.4 ) {
+              vols[is].second.insert(vols[is].second.begin(),transform*transf);
+            } else vols[is].second.push_back(transform*transf);
+	    //std::cout << "clone?" << clv->getName() <<","<<(transform*transf).getTranslation().perp()<<","<<(transform*transf).getTranslation().z()<<","<<phiTr << std::endl;
+	    break;
+	   }
+	}
+      }
+      if (!found) {
+	std::vector<HepGeom::Transform3D > volTr;
+	volTr.push_back(transform*transf);
+        // divide mother material ?
+	Trk::ExtendedMaterialProperties* nMat=new Trk::ExtendedMaterialProperties(*matComb);
+        if (matMode) nMat->scaleThicknessInX0(1./nc); 
+        //double dX0= matMode ? dInX0/nc : dInX0;
+	std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*> cpair(clv,nMat);
+	vols.push_back(std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<HepGeom::Transform3D> > (cpair,volTr) );
+        volNames.push_back(cName);
+	//std::cout << "new volume added:"<< cName <<","<<clv->getMaterial()->getName()<<","<< volTr.back().getTranslation().z()<<","<<volTr.back().getTranslation().phi()<<":mat:"<<matComb->thicknessInX0()<<std::endl;
+	//printInfo(cv);
+      }
+    } else {
+      getObjsForTranslation(cv, cName, transform*transf, vols, volNames);
+    }
+  }
+  delete matComb;
+}
+
+/*
+void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std::string name, HepGeom::Transform3D transform, std::vector<std::pair<const GeoLogVol*, std::vector<HepGeom::Transform3D> > >& vols, std::vector< std::string >& volNames ) const
+{
+  // subcomponents 
+  unsigned int nc = pv->getNChildVols();
+  std::cout << "getObjsForTranslation from:"<< pv->getLogVol()->getName()<<","<<pv->getLogVol()->getMaterial()->getName()<<", looping over "<< nc << " children" << std::endl;
   for (unsigned int ic=0; ic<nc; ic++) {
     HepGeom::Transform3D transf = pv->getXToChildVol(ic);
     const GeoVPhysVol* cv = &(*(pv->getChildVol(ic)));
@@ -1109,15 +1267,19 @@ void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std:
       childName=childName+st.str();
     }
     std::string cName = childName.substr(0,3)=="NSW" ? name : name+childName;
-    //std::cout << "child number,name,position:"<< ic<<":"<<clv->getName() <<":"<< (transform*transf).getTranslation().perp() <<","<<(transform*transf).getTranslation().z() << std::endl;
-    if (!cv->getNChildVols()) {
+    std::cout << "child number,name,position:"<< ic<<":"<<clv->getName() <<":"<< (transform*transf).getTranslation().perp() <<","<<(transform*transf).getTranslation().z()<<","<<(transform*transf).getTranslation().phi() << std::endl;
+    //if (!cv->getNChildVols()) {
       bool found = false;
       for (unsigned int is = 0; is < vols.size(); is++) {
 	if (cName == volNames[is]) {
 	   if ( fabs((transform*transf).getTranslation().perp()- vols[is].second.front().getTranslation().perp())< 1. ) {
 	    found = true; 
-	    vols[is].second.push_back(transform*transf);
-	    //std::cout << "clone?" << clv->getName() <<","<<(transform*transf).getTranslation().perp() << std::endl;
+            // order transforms to position prototype at phi=0/ 0.125 pi
+            double phiTr = (transform*transf).getTranslation().phi();
+            if ( phiTr>-0.001 && phiTr<0.4 ) {
+              vols[is].second.insert(vols[is].second.begin(),transform*transf);
+            } else vols[is].second.push_back(transform*transf);
+	    std::cout << "clone?" << clv->getName() <<","<<(transform*transf).getTranslation().perp()<<","<<(transform*transf).getTranslation().z()<<","<<phiTr << std::endl;
 	    break;
 	   }
 	}
@@ -1127,12 +1289,12 @@ void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std:
 	volTr.push_back(transform*transf); 
 	vols.push_back(std::pair<const GeoLogVol*,std::vector<HepGeom::Transform3D> > (clv,volTr) );
         volNames.push_back(cName);
-	//std::cout << "new volume added:"<< cName <<","<<clv->getMaterial()->getName()<<std::endl;
+	std::cout << "new volume added:"<< cName <<","<<clv->getMaterial()->getName()<<","<< volTr.back().getTranslation().z()<<","<<volTr.back().getTranslation().phi()<<std::endl;
 	//printInfo(cv);
       }
-    } else {
-      getObjsForTranslation(cv, cName, transform*transf, vols, volNames);
-    }
+   //} else {
+   // getObjsForTranslation(cv, cName, transform*transf, vols, volNames);
+   // }
   }
 }
-
+*/

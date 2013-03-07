@@ -1,4 +1,8 @@
 2013-03-07 Sarka Todorova <sarka.todorova@cern.ch>
+	* more flexibility for NSW layout 
+	* tagged as MuonTrackingGeometry-00-05-50 
+
+2013-03-07 Sarka Todorova <sarka.todorova@cern.ch>
 	* NSW envelopes + temporary layer identification ( does not use identifiers yet ) 
 	* tagged as MuonTrackingGeometry-00-05-49 
 

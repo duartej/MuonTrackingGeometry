@@ -244,6 +244,8 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	std::vector<const Trk::Layer*> sectorL;
 	std::vector<const Trk::Layer*> sectorS;
 
+        int nClones =  vols.size() ? vols[0].second.size() : 0;
+
 	for (unsigned int ish=0; ish < vols.size(); ish++) { 
 
           bool isLargeSector =  fabs(((vols[ish]).second)[0].getTranslation().phi())<0.01 ? true : false;
@@ -338,6 +340,61 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	    }
 	    mStations.push_back(newStat);
 	  }
+          if (nClones==16) { // have to mirror stations as well
+	    HepGeom::Transform3D ntransf= HepGeom::RotateY3D(180*CLHEP::deg);
+	    const Trk::DetachedTrackingVolume* mtypeL = typeL->clone("NSWL",ntransf);
+            // recalculate identifiers
+            const std::vector<const Trk::Layer*>* lays=mtypeL->trackingVolume()->confinedArbitraryLayers();
+            for (unsigned int il=0; il<lays->size(); il++) {
+	      int iType = (*lays)[il]->layerType();
+	      if (iType!=0) {
+		int nType = -1*iType;
+		(*lays)[il]->setLayerType(nType);
+	      }
+	    }
+	    mStations.push_back(mtypeL);
+	    for (unsigned int it=1 ;it<8; it++)  { 
+	      // clone station from prototype :: CHECK z<0 side, probably turns in wrong direction
+	      HepGeom::Transform3D ntransf= HepGeom::RotateZ3D(it*45*CLHEP::deg);
+	      const Trk::DetachedTrackingVolume* newStat = mtypeL->clone("NSWL",ntransf);
+	      //std::cout <<"cloned NSW station:"<<newStat->trackingVolume()->center()<<std::endl;   
+	      // recalculate identifiers
+	      const std::vector<const Trk::Layer*>* lays=newStat->trackingVolume()->confinedArbitraryLayers();
+	      for (unsigned int il=0; il<lays->size(); il++) {
+		int iType = (*lays)[il]->layerType();
+		if (iType!=0) {
+		  int nType = abs(iType)+it*1000;
+		  if (iType<0) nType*= -1;
+		  (*lays)[il]->setLayerType(nType);
+		  //std::cout <<"new layer id:"<<it<<","<<iType<<","<<(*lays)[il]->layerType()<<std::endl;
+		  /*   // identification not quite reliable yet
+		       int iside= nType<0? -1 : 1;
+		       int itech= int((iside*nType)/1.e05);
+		       int irest = int((iside*nType)-itech*1.e05);
+		       int iEta = iside*(int(irest/1.e04)+1);
+		       irest = int(irest-(iside*iEta-1)*1.e04);
+		       int iPhi = int(irest/1.e03)+1;
+		       irest = int(irest-(iPhi-1)*1.e03);
+		       int iMl = int(irest/1.e02)+1;
+		       irest = int(irest-(iMl-1)*1.e02);
+		       int iLay = il+1;
+		       //std::cout <<"check decoding:lay:"<<iLay<<","<<il<<std::endl;
+		       Identifier id=m_mmIdHelper->channelID("MML",iEta,iPhi,iMl,iLay,1);
+		       const MuonGM::MMReadoutElement* mmRE=m_muonMgr->getMMRElement_fromIdFields(0,iside,iPhi,iMl);
+		       //std::cout << "id helper:"<< id << ","<<mmRE<<std::endl;
+		       const HepGeom::Transform3D& tr=mmRE->transform(id);
+		       std::cout <<"layer center:"<<((*lays)[il])->surfaceRepresentation().center()<< std::endl;
+		       std::cout <<"MMRE layer center:"<<mmRE->center(id)<<std::endl; 
+		       std::cout <<"local position of layer centre:wrt 0 ring1:"<<tr.inverse()*(((*lays)[il])->surfaceRepresentation().center()) << std::endl;
+		  */
+		}
+	      }
+	      mStations.push_back(newStat);
+	    }
+
+	  }
+
+          
 	}	  
 
         if (typeS) {
@@ -360,6 +417,39 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	      }
 	    }
 	    mStations.push_back(newStat);
+	  }
+
+          if (nClones==16) { // have to mirror stations as well
+	    HepGeom::Transform3D ntransf= HepGeom::RotateY3D(180*CLHEP::deg);
+	    const Trk::DetachedTrackingVolume* mtypeS = typeS->clone("NSWL",ntransf);
+            // recalculate identifiers
+            const std::vector<const Trk::Layer*>* lays=mtypeS->trackingVolume()->confinedArbitraryLayers();
+            for (unsigned int il=0; il<lays->size(); il++) {
+	      int iType = (*lays)[il]->layerType();
+	      if (iType!=0) {
+		int nType = -1*iType;
+		(*lays)[il]->setLayerType(nType);
+	      }
+	    }
+	    mStations.push_back(mtypeS);
+	    for (unsigned int it=1 ;it<8; it++)  { 
+	      // clone station from prototype :: CHECK z<0 side, probably turns in wrong direction
+	      HepGeom::Transform3D ntransf= HepGeom::RotateZ3D(it*45*CLHEP::deg);
+	      const Trk::DetachedTrackingVolume* newStat = mtypeS->clone("NSWL",ntransf);
+	      //std::cout <<"cloned NSW station:"<<newStat->trackingVolume()->center()<<std::endl;   
+	      // recalculate identifiers
+	      const std::vector<const Trk::Layer*>* lays=newStat->trackingVolume()->confinedArbitraryLayers();
+	      for (unsigned int il=0; il<lays->size(); il++) {
+		int iType = (*lays)[il]->layerType();
+		if (iType!=0) {
+		  int nType = abs(iType)+it*1000;
+		  if (iType<0) nType*= -1;
+		  (*lays)[il]->setLayerType(nType);
+		  //std::cout <<"new layer id:"<<it<<","<<iType<<","<<(*lays)[il]->layerType()<<std::endl;
+		}
+	      }
+	      mStations.push_back(newStat);
+	    }
 	  }
 	}
 

@@ -6,6 +6,8 @@
 #include "MuonTrackingGeometry/MuonStationTypeBuilder.h"
 //MuonSpectrometer include
 #include "MuonReadoutGeometry/MuonDetectorManager.h"
+#include "MuonReadoutGeometry/MMReadoutElement.h"
+#include "MuonReadoutGeometry/sTgcReadoutElement.h"
 #include "MuonIdHelpers/MuonIdHelper.h"
 // Trk
 #include "TrkDetDescrInterfaces/ILayerArrayCreator.h"
@@ -29,6 +31,7 @@
 #include "TrkSurfaces/DiscBounds.h"
 #include "TrkSurfaces/RectangleBounds.h"
 #include "TrkSurfaces/TrapezoidBounds.h"
+#include "TrkSurfaces/RotatedTrapezoidBounds.h"
 #include "TrkSurfaces/DiamondBounds.h"
 #include "TrkGeometrySurfaces/SubtractedPlaneSurface.h"
 #include "TrkGeometry/CylinderLayer.h"
@@ -1487,17 +1490,17 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processNSW(std::vector<
         rMax = fmax( rMax, (layers[il]->surfaceRepresentation().center().perp()) + trdBounds->halflengthY() );
 
         // hMin taken from MM, ring 0
-        int layId = abs(layers[il]->layerType());
-        int iTyp=int(layId/1.e+05);
-        if (iTyp==1) {
-	  if ( layId>0 && int((layId-iTyp*1.e+05)/1.e+04)==0 ) hMin = trdBounds->minHalflengthX(); 
+        Identifier id(layers[il]->layerType());
+        if (m_muonMgr->mmIdHelper()->is_mm(id)) {
+	  //std::cout <<"MM station eta index:"<< m_muonMgr->mmIdHelper()->stationEta(id) << std::endl;
+	  if ( abs(m_muonMgr->mmIdHelper()->stationEta(id))==1 ) hMin = trdBounds->minHalflengthX(); 
 	  // hMed taken from MM, ring 1
-	  int layId = abs(layers[il]->layerType());
-	  if ( layId>0 && int((layId-iTyp*1.e+05)/1.e+04)==1 ) hMed = trdBounds->minHalflengthX(); 
-	  if ( layId>0 && int((layId-iTyp*1.e+05)/1.e+04)==1 ) rMed = layers[il]->surfaceRepresentation().center().perp() 
-	    - trdBounds->halflengthY();
+	  if ( abs(m_muonMgr->mmIdHelper()->stationEta(id))==2 ) {
+	    hMed = trdBounds->minHalflengthX(); 
+	    rMed = layers[il]->surfaceRepresentation().center().perp()  - trdBounds->halflengthY();
+	  }
 	  // hMax taken from MM, ring 3
-	  if ( layId>0 && int((layId-iTyp*1.e+05)/1.e+04)==3 ) hMax = trdBounds->maxHalflengthX();
+	  if (  abs(m_muonMgr->mmIdHelper()->stationEta(id))==4  ) hMax = trdBounds->maxHalflengthX();
 	  //if (layId>0) std::cout <<"decode layId?"<<layId<<","<<  int(layId/1.e+05)<<","<< int(layId/1.e+04)<< std::endl; 
 	}
       }
@@ -2602,8 +2605,70 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
 
 
 
-const Trk::Layer* Muon::MuonStationTypeBuilder::createLayer(const Trk::TrackingVolume* trVol, Trk::ExtendedMaterialProperties* matEx) const
+const Trk::Layer* Muon::MuonStationTypeBuilder::createLayer(const Trk::TrackingVolume* trVol, Trk::ExtendedMaterialProperties* matEx, HepGeom::Transform3D& transf) const
 {
+  // identification first
+
+  std::string vName=trVol->volumeName().substr(trVol->volumeName().find("-")+1); 
+  //std::cout <<"NSW layer identification:"<< vName << std::endl;
+
+  const Trk::RotatedTrapezoidBounds* rtrd=0;
+  Trk::GlobalPosition mrg_pos=transf.getTranslation();
+ 
+  unsigned int layType = 0;  
+
+  //std::cout <<vName[0]<<","<<vName[1]<<","<<vName[2]<< ","<<vName[vName.size()-1]<<std::endl;
+  if ((vName[0]=='T') || (vName[0]=='M')) {     // NSW stations
+    // station eta
+    std::istringstream istr(&vName[1]);
+    int iEta;
+    istr >> iEta;
+    iEta += 1; 
+    if (transf.getTranslation().z()<0.) iEta *= -1;
+    // station Phi
+    unsigned int iPhi = 1;
+    //if (trVol->center().z()>0.) iPhi += 8;
+    // station multilayer
+    std::istringstream istm(&vName[3]);
+    int iMult;
+    istm >> iMult;
+    // layer
+    std::string stl(&vName[vName.size()-1]);
+    std::istringstream istl(stl);
+    int iLay;
+    istl >> iLay;
+    iLay += 1;
+    if (vName[0]=='T') {
+      std::string stName = (vName[2]=='L') ? "STL" : "STS";
+      int stId = (vName[2]=='L') ? 0 : 1;
+      Identifier id = m_muonMgr->stgcIdHelper()->channelID(stName,iEta,iPhi,iMult,iLay,1,1);
+      //std::cout <<"identifier:"<< id << std::endl;
+      const MuonGM::sTgcReadoutElement* stgc=m_muonMgr->getsTgcRElement_fromIdFields(stId,iEta,iPhi,iMult);
+      //std::cout <<"stgcRE:"<< stgc << std::endl;
+      //if (stgc) std::cout <<"stgcRE recovered:"<<id<<","<< stgc->center(id) << std::endl;
+      //std::cout <<"input sTGC:"<< iEta<<","<<iPhi<<","<<iMult<<","<<iLay<<std::endl;
+      //std::cout << m_muonMgr->stgcIdHelper()->stationName(id)<<","<< m_muonMgr->stgcIdHelper()->stationEta(id)<<","<<
+      //m_muonMgr->stgcIdHelper()->stationPhi(id)<<","<< m_muonMgr->stgcIdHelper()->multiplet(id)<<","<< m_muonMgr->stgcIdHelper()->gasGap(id)<<std::endl;
+      layType = id.get_identifier32().get_compact();
+      rtrd = dynamic_cast<const Trk::RotatedTrapezoidBounds*> (&stgc->bounds(id));
+      //std::cout <<"stgc bounds rotated trapezoid ? "<< rtrd<<  std::endl;
+      if (stgc) mrg_pos = stgc->center(id);
+    } else {
+      std::string stName = (vName[2]=='L') ? "MML" : "MMS";
+      int stId = (vName[2]=='L') ? 0 : 1;
+      Identifier id = m_muonMgr->mmIdHelper()->channelID(stName,iEta,iPhi,iMult,iLay,1);   
+      const MuonGM::MMReadoutElement* mm=m_muonMgr->getMMRElement_fromIdFields(stId,iEta,iPhi,iMult);
+      //if (mm) std::cout <<"mmRE recovered:"<<id<<","<< mm->center(id) << std::endl;
+      //std::cout <<"input MM:"<< iEta<<","<<iPhi<<","<<iMult<<","<<iLay<<std::endl;
+      //std::cout << mm->getStationName()<<","<< mm->getStationEta()<<","<<
+      //	mm->getStationPhi()<<","<< m_muonMgr->mmIdHelper()->multiplet(id)<<","<< m_muonMgr->mmIdHelper()->gasGap(id)<<std::endl;
+      layType = id.get_identifier32().get_compact();
+      rtrd = dynamic_cast<const Trk::RotatedTrapezoidBounds*> (&mm->bounds(id));
+      if (mm) mrg_pos = mm->center(id);
+    }
+  }
+
+  //if (rtrd) std::cout <<"extract layer size from MRG:"<< rtrd->halflengthX()<<","<<rtrd->minHalflengthY()<<","<<rtrd->maxHalflengthY()<< std::endl; 
 
   const Trk::Layer* layRepr = 0;   
   if (!trVol) return layRepr;
@@ -2620,10 +2685,21 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayer(const Trk::TrackingV
   if (subBounds) {    
     subt = HepGeom::RotateY3D(90*CLHEP::deg)* HepGeom::RotateZ3D(90*CLHEP::deg)*subt;
     while (subBounds) {
+      //std::cout << "looping over subtracted volume bounds:outer,inner position:"<< subBounds->outer()->center()<<"," << subBounds->inner()->center() << std::endl;
       cubBounds= dynamic_cast<const Trk::CuboidVolumeBounds*> (&(subBounds->outer()->volumeBounds()));
       trdBounds= dynamic_cast<const Trk::TrapezoidVolumeBounds*> (&(subBounds->outer()->volumeBounds()));
       dtrdBounds= dynamic_cast<const Trk::DoubleTrapezoidVolumeBounds*> (&(subBounds->outer()->volumeBounds()));
       subBounds= dynamic_cast<const Trk::SubtractedVolumeBounds*> (&(subBounds->outer()->volumeBounds()));
+
+      /*
+      if (&(subBounds->inner()->volumeBounds()) ) {
+	const Trk::CuboidVolumeBounds* icubBounds= dynamic_cast<const Trk::CuboidVolumeBounds*> (&(subBounds->inner()->volumeBounds()));
+	//const Trk::TrapezoidVolumeBounds* itrdBounds= dynamic_cast<const Trk::TrapezoidVolumeBounds*> (&(subBounds->inner()->volumeBounds()));
+	//const Trk::DoubleTrapezoidVolumeBounds* idtrdBounds= dynamic_cast<const Trk::DoubleTrapezoidVolumeBounds*> (&(subBounds->inner()->volumeBounds()));
+	//const Trk::SubtractedVolumeBounds* isubBounds= dynamic_cast<const Trk::SubtractedVolumeBounds*> (&(subBounds->inner()->volumeBounds()));
+	//std::cout << "inner volume:box,trd,subtr:" <<icubBounds<<"," << itrdBounds<<"," << isubBounds << std::endl;
+      }
+      */
     }
   }
 
@@ -2631,37 +2707,45 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayer(const Trk::TrackingV
 
   if (cubBounds) { 
     double thickness = 2*cubBounds->halflengthX();
-    double sf        = 4*cubBounds->halflengthZ()*cubBounds->halflengthY();
-    //const std::vector<const Trk::Surface*>* surfs = cubBounds->decomposeToSurfaces(HepGeom::Transform3D());
-    //const Trk::RectangleBounds* rbounds = dynamic_cast<const Trk::RectangleBounds*> (&(*(surfs))[0]->bounds());
-    Trk::RectangleBounds* rbounds=new Trk::RectangleBounds(cubBounds->halflengthY(),cubBounds->halflengthZ());
-    Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds);
     Trk::OverlapDescriptor* od=0;
     double scale = matEx->thickness()/thickness;
     Trk::ExtendedMaterialProperties  matProp(thickness,matEx->x0()/scale,matEx->l0()/scale,
 					     matEx->averageA(),matEx->averageZ(),scale*matEx->averageRho());
     Trk::HomogenousLayerMaterial mat(matProp);  
+
+    Trk::RectangleBounds* rbounds=new Trk::RectangleBounds(cubBounds->halflengthY(),cubBounds->halflengthZ());
+    Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds);
     layer = new Trk::PlaneLayer(new HepGeom::Transform3D(trVol->transform()*HepGeom::RotateY3D(90*CLHEP::deg) * HepGeom::RotateZ3D(90*CLHEP::deg) ),
                                 bounds, mat, thickness, od, 1 );
   }
   if (trdBounds) {
     double thickness = 2*trdBounds->halflengthZ();
-    double sf        = 2*(trdBounds->minHalflengthX()+trdBounds->maxHalflengthX())*trdBounds->halflengthY();
-    const std::vector<const Trk::Surface*>* surfs = trdBounds->decomposeToSurfaces(HepGeom::Transform3D());
-    const Trk::TrapezoidBounds* tbounds = dynamic_cast<const Trk::TrapezoidBounds*> (&(*(surfs))[0]->bounds());
-    Trk::SharedObject<const Trk::SurfaceBounds> bounds(new Trk::TrapezoidBounds(*tbounds));
     Trk::OverlapDescriptor* od=0;
     double scale = matEx->thickness()/thickness;
     Trk::ExtendedMaterialProperties  matProp(thickness,matEx->x0()/scale,matEx->l0()/scale,
 					     matEx->averageA(),matEx->averageZ(),scale*matEx->averageRho());
     Trk::HomogenousLayerMaterial mat(matProp);  
-    layer = new Trk::PlaneLayer(new HepGeom::Transform3D(subt*trVol->transform()),
+    //double sf        = 2*(trdBounds->minHalflengthX()+trdBounds->maxHalflengthX())*trdBounds->halflengthY();
+    if (rtrd) {
+      Trk::TrapezoidBounds* tbounds = new Trk::TrapezoidBounds(rtrd->halflengthX(),rtrd->minHalflengthY(),rtrd->maxHalflengthY());
+      Trk::SharedObject<const Trk::SurfaceBounds> bounds(tbounds);
+      layer = new Trk::PlaneLayer(new HepGeom::Transform3D(subt*trVol->transform()),
 				bounds, mat, thickness, od, 1 );
+      //std::cout <<"MTG layer shift ? " << (transf*subt*trVol->transform()).getTranslation()<<"->"<<mrg_pos << std::endl;
+      Trk::GlobalPosition mtg_pos=(transf*subt*trVol->transform()).getTranslation();
+      transf = HepGeom::Translate3D(mrg_pos-mtg_pos)*transf;
+    } else {
+      const std::vector<const Trk::Surface*>* surfs = trdBounds->decomposeToSurfaces(HepGeom::Transform3D());
+      const Trk::TrapezoidBounds* tbounds = dynamic_cast<const Trk::TrapezoidBounds*> (&(*(surfs))[0]->bounds());
+      Trk::SharedObject<const Trk::SurfaceBounds> bounds(new Trk::TrapezoidBounds(*tbounds));
+      layer = new Trk::PlaneLayer(new HepGeom::Transform3D(subt*trVol->transform()),
+				bounds, mat, thickness, od, 1 );
+    }
   }
   if (dtrdBounds) {
     double thickness = 2*dtrdBounds->halflengthZ();
-    double sf        = 2*(dtrdBounds->minHalflengthX()+dtrdBounds->medHalflengthX())*dtrdBounds->halflengthY1()
-                      +2*(dtrdBounds->medHalflengthX()+dtrdBounds->maxHalflengthX())*dtrdBounds->halflengthY2();
+    //double sf        = 2*(dtrdBounds->minHalflengthX()+dtrdBounds->medHalflengthX())*dtrdBounds->halflengthY1()
+    //                  +2*(dtrdBounds->medHalflengthX()+dtrdBounds->maxHalflengthX())*dtrdBounds->halflengthY2();
     const std::vector<const Trk::Surface*>* surfs = dtrdBounds->decomposeToSurfaces(HepGeom::Transform3D());
     const Trk::DiamondBounds* dbounds = dynamic_cast<const Trk::DiamondBounds*> (& (*(surfs))[0]->bounds());
     Trk::SharedObject<const Trk::SurfaceBounds> bounds(new Trk::DiamondBounds(*dbounds));
@@ -2674,70 +2758,14 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayer(const Trk::TrackingV
                                 bounds, mat, thickness, od, 1 );
   }
 
-//std::cout << "station:"<<trVol->volumeName()<<",thickness:"<<layer->thickness()<<std::endl;
-//std::cout << "station:"<<trVol->volumeName()<<",dInX0:"<<layer->layerMaterialProperties()->fullMaterial(layer->center())->thicknessInX0()<<std::endl;
-//  if (trVol->confinedVolumes()) std::cout << "subvolumes:"<<trVol->confinedVolumes()->arrayObjects().size()<< std::endl;
-
-  std::string vName=trVol->volumeName().substr(trVol->volumeName().find("-")+1); 
-  //std::cout <<"NSW layer identification:"<< vName << std::endl;
- 
-  unsigned int layType = 0;  
-
-  //std::cout <<vName[0]<<","<<vName[1]<<","<<vName[2]<< ","<<vName[vName.size()-1]<<std::endl;
-  if ((vName[0]=='T') || (vName[0]=='M')) {
-    /*     // identification not yet quite working
-       // station eta
-       std::istringstream istr(&vName[1]);
-       int iEta;
-       istr >> iEta;
-       iEta += 1; 
-       if (trVol->center().z()<0.) iEta *= -1;
-       // station Phi
-       int iPhi = 0;
-       // station multilayer
-       int iMult = (vName[3]=='P') ? 1 : 2;
-       // layer
-       std::string stl(&vName[vName.size()-1]);
-       std::istringstream istl(stl);
-       int iLay;
-       istl >> iLay;
-       iLay += 1;
-       if (vName[0]=='T') {
-       std::string stName = (vName[2]=='L') ? "STGCL" : "STGCS";
-       Identifier id = m_muonMgr->stgcIdHelper()->channelID(stName,iEta,iPhi,iMult,iLay,0,1);
-       std::cout <<"input sTGC:"<< iEta<<","<<iPhi<<","<<iMult<<","<<iLay<<std::endl;
-       std::cout << m_muonMgr->stgcIdHelper()->stationName(id)<<","<< m_muonMgr->stgcIdHelper()->stationEta(id)<<","<<
-       m_muonMgr->stgcIdHelper()->stationPhi(id)<<","<< m_muonMgr->stgcIdHelper()->multiplet(id)<<","<< m_muonMgr->stgcIdHelper()->gasGap(id)<<std::endl;
-       layType = id.get_identifier32().get_compact();
-       } else {
-       std::string stName = (vName[2]=='L') ? "MML" : "MMS";
-       Identifier id = m_muonMgr->mmIdHelper()->channelID(stName,iEta,iPhi,iMult,iLay,1);
-       std::cout <<"input MM:"<< iEta<<","<<iPhi<<","<<iMult<<","<<iLay<<std::endl;
-       std::cout << m_muonMgr->mmIdHelper()->stationName(id)<<","<< m_muonMgr->mmIdHelper()->stationEta(id)<<","<<
-       m_muonMgr->mmIdHelper()->stationPhi(id)<<","<< m_muonMgr->mmIdHelper()->multiplet(id)<<","<< m_muonMgr->mmIdHelper()->gasGap(id)<<std::endl;
-       layType = id.get_identifier32().get_compact();
-       }
-    */
-    int i1= (vName[0]=='T') ? 0 : 1;
-    std::string st(&vName[1]); 
-    std::istringstream istr(st);
-    int i2;
-    istr >> i2;
-    int i3 = 0;
-    int i4 = (vName[2]=='L') ? 0 : 1;
-    int i5 = (vName[3]=='P') ? 0 : 1;
-    std::string stl(&vName[vName.size()-1]);
-    std::istringstream istl(stl);
-    int i6;
-    istl >> i6;
-    layType = i1*100000+i2*10000+i3*1000+i4*100+i5*10+i6+1;
-    if (trVol->center().z()<0.) layType *= -1;
-  }
-
-  //std::cout <<"temporary layer identifier"<< layType<< std::endl;
+  //std::cout << "station:"<<trVol->volumeName()<<",thickness:"<<layer->thickness()<<std::endl;
+  //std::cout << "station:"<<trVol->volumeName()<<",dInX0:"<<layer->layerMaterialProperties()->fullMaterial(layer->center())->thicknessInX0()<<std::endl;
+  //  if (trVol->confinedVolumes()) std::cout << "subvolumes:"<<trVol->confinedVolumes()->arrayObjects().size()<< std::endl;
 
   layRepr = layer;
   layRepr->setLayerType(layType);
+
+  //std::cout <<"layer identifier"<< layRepr->layerType()<< std::endl;
 
   return layRepr;
 }

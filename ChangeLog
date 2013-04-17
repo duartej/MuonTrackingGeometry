@@ -1,3 +1,8 @@
+2013-04-17 Sarka Todorova <sarka.todorova@cern.ch>
+	* NSW layer identification
+	* NSW station delete crashing in the finalization - commented for the moment
+	* tagged as MuonTrackingGeometry-00-05-51 
+
 2013-03-07 Sarka Todorova <sarka.todorova@cern.ch>
 	* more flexibility for NSW layout 
 	* tagged as MuonTrackingGeometry-00-05-50 

@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
 // MuonStationTypeBuilder.h, (c) ATLAS Detector software
 ///////////////////////////////////////////////////////////////////
 
@@ -80,7 +80,7 @@ namespace Muon {
       const Trk::LayerArray* processCSCDiamondComponent(const GeoVPhysVol*&, Trk::DoubleTrapezoidVolumeBounds*&, HepGeom::Transform3D*&) const;
       const Trk::LayerArray* processTGCComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, HepGeom::Transform3D*&) const;
       std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>* > createLayerRepresentation(const Trk::TrackingVolume* trVol) const; 
-      const Trk::Layer* createLayer(const Trk::TrackingVolume* trVol,Trk::ExtendedMaterialProperties*) const; 
+      const Trk::Layer* createLayer(const Trk::TrackingVolume* trVol,Trk::ExtendedMaterialProperties*, HepGeom::Transform3D&) const; 
    
       void printChildren(const GeoVPhysVol*) const ;
       // used to be private ..
@@ -124,10 +124,6 @@ namespace Muon {
 
     };
 
-
 } // end of namespace
 
-
 #endif //MUONTRACKINGGEOMETRY_MUONSTATIONTYPEBUILDER_H
-
-

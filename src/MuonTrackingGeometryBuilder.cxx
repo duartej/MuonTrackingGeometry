@@ -776,7 +776,7 @@ StatusCode Muon::MuonTrackingGeometryBuilder::finalize()
 {
     if (m_stations) {
       for (size_t i = 0; i < m_stations->size(); i++) {
-	if ((*m_stations)[i] && (*m_stations)[i]->name().substr(0,3)!="NSW" ) delete (*m_stations)[i];
+	if ((*m_stations)[i]) delete (*m_stations)[i];
         else ATH_MSG_DEBUG( name() << " station pointer corrupted ! " ); 
       }
       delete m_stations; m_stations = 0;

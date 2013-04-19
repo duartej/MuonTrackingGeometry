@@ -421,8 +421,8 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		  unsigned int nType = nid.get_identifier32().get_compact();
 		  (*lays)[il]->setLayerType(nType);
 		}
-		mStations.push_back(newStat);
 	      }
+	      mStations.push_back(newStat);
 	    }
 	  }          
 	}	  

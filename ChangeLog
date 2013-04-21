@@ -1,3 +1,7 @@
+2013-04-21 Sarka Todorova <sarka.todorova@cern.ch>
+	* bugfix in the identification loop of TGC stations
+	* tagged as MuonTrackingGeometry-00-05-53
+
 2013-04-19 Sarka Todorova <sarka.todorova@cern.ch>
 	* bugfix in the identification loop of NSW stations - fixes the clean-up of NSW stations, too
 	* tagged as MuonTrackingGeometry-00-05-52 

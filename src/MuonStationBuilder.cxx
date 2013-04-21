@@ -1001,12 +1001,9 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
       st = 6;
     }
 
-    std::cout << "TGC station? " << stationName << std::endl;
-  
     const MuonGM::TgcReadoutElement* tgc = m_muonMgr->getTgcReadoutElement(st,eta,phi-1);
-    
-    if (!tgc || !(station->trackingVolume()->inside(tgc->center(),0.)) || 
-        (station->trackingVolume()->center()-tgc->center()).mag()>0.1 ) {
+
+    if (!tgc || !(station->trackingVolume()->inside(tgc->center(),0.))  ) {
       unsigned int phit=0;
       while ( phit<48 ) {
 	const MuonGM::TgcReadoutElement* tgct = m_muonMgr->getTgcReadoutElement(st,eta,phit);
@@ -1027,60 +1024,41 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
     
     if (tgc) {
 
-      //std::cout <<"got tgc RE, isn't it sTGC actually ?:"<< tgc->absTransform().getTranslation() << std::endl;  
+      int etaSt = tgc->getStationEta();
+      int phiSt = tgc->getStationPhi();
 
-      if (phi>=m_tgcIdHelper->stationPhiMin(false) || phi>=m_tgcIdHelper->stationPhiMin(true)) {
-	int etaSt = eta - 4;
-	if (eta < 5) etaSt = eta - 5; 
-	bool* validId=new bool(false);
-	Identifier wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,1,0,1,true,validId);
-	if (!(*validId)) ATH_MSG_ERROR( "invalid TGC channel:" << wireId );
-	//std::cout <<"wireId? valid? "<<wireId <<","<<*validId <<std::endl;
-	const HepGeom::Point3D<double> gp = tgc->channelPos(wireId);
-	//std::cout << "wire position:"<< gp << std::endl;
-	const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gp);
-	if (!assocVol) ATH_MSG_DEBUG( "wrong tgcROE?" << stationName <<"," << eta <<"," << phi );
-	if (assocVol && assocVol->confinedLayers()) {
-	  const std::vector<const Trk::Layer*> layers = assocVol->confinedLayers()->arrayObjects();           
-	  for (unsigned int il=0;il<layers.size();il++) {
-	    Identifier wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,il+1,0,1,true,validId);
-	    if (!(*validId)) layers[il]->setLayerType(1);
-	    else {
-	      //if (!(*validId)) ATH_MSG_ERROR( "invalid TGC channel:" << wireId );
-	      //std::cout <<"Id? valid? "<<wireId <<","<<*validId <<std::endl;
-	      unsigned int id = wireId.get_identifier32().get_compact();
-	      layers[il]->setLayerType(id); 
-	      // strip plane surface
-	      const Trk::PlaneSurface* stripSurf = dynamic_cast<const Trk::PlaneSurface*> (&(tgc->surface(wireId)));
-	      //std::cout << "layer, strip surface position:"<< layers[il]->surfaceRepresentation().center()<<","<< stripSurf->center() <<
-	      //	":check:"<< tgc->surface(wireId).center()<<","<<tgc->transform(wireId).getTranslation()<<","<<tgc->channelPos(wireId) << std::endl;
-	      if ( (layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center()).mag()>0.001)   
-		ATH_MSG_DEBUG( "TGC strip plane shifted:"<<st<<","<<eta<<","<<phi<<":" <<
-			       layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center());
-	    }
-            /*
-	    Identifier s1 = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phi,il+1,1,1); 
-	    HepGeom::Point3D<double> lw1 = (layers[il]->surfaceRepresentation().transform().inverse()) * (tgc->channelPos(wireId));
-	    HepGeom::Point3D<double> ls1 = (layers[il]->surfaceRepresentation().transform().inverse()) * (tgc->channelPos(s1));
-            int wireRe = 1000*lw1[Trk::locY];                       
-	    layers[il]->setRef( 10e4+ls1[Trk::locX] + 10e5*(wireRe+10e6) );                      
-            */
+      bool* validId=new bool(false);
+      Identifier wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phiSt,1,0,1,true,validId);
+      if (!(*validId)) ATH_MSG_ERROR( "invalid TGC channel:" << wireId );
+      const HepGeom::Point3D<double> gp = tgc->channelPos(wireId);
+      //std::cout << "wire position:"<< gp << std::endl;
+      const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gp);
+      if (!assocVol) ATH_MSG_DEBUG( "wrong tgcROE?" << stationName <<"," << etaSt <<"," << phiSt );
+      if (assocVol && assocVol->confinedLayers()) {
+	const std::vector<const Trk::Layer*> layers = assocVol->confinedLayers()->arrayObjects();           
+	for (unsigned int il=0;il<layers.size();il++) {
+	  wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phiSt,il+1,0,1,true,validId);            
+	  if (!(*validId)) layers[il]->setLayerType(1);
+	  else {
+	    if (!(*validId)) ATH_MSG_ERROR( "invalid TGC channel:" << wireId );
+	    unsigned int id = wireId.get_identifier32().get_compact();
+	    layers[il]->setLayerType(id);
+            // validation
+	    Identifier checkId(layers[il]->layerType());
+	    //std::cout <<"is recognized as tgc? " << m_tgcIdHelper->is_tgc(checkId)<< std::endl; 
+	    const Trk::PlaneSurface* stripSurf = dynamic_cast<const Trk::PlaneSurface*> (&(tgc->surface(checkId)));
+	    //std::cout << "layer, strip surface position:"<< layers[il]->surfaceRepresentation().center()<<","<< stripSurf->center() <<
+	    //  ":check:"<< tgc->surface(checkId).center()<<","<<tgc->transform(checkId).getTranslation()<<","<<tgc->channelPos(checkId) << std::endl;
+	    if ( (layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center()).mag()>0.001)   
+	      ATH_MSG_DEBUG( "TGC strip plane shifted:"<<st<<","<<eta<<","<<phi<<":" <<
+			     layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center());
 	  }
 	}
-	delete validId; 
-	validId = 0;
       }
-      tgc->clearCache();
+      delete validId; 
+      validId = 0;
     } else {
       ATH_MSG_WARNING( name() << "tgcROE not found for :" << stationName <<","<<eta<<","<<phi );         
-      /*
-      for (unsigned int e=0; e < 10 ; e++) {
-	for (unsigned int p=0; p < 48; p++) {
-          tgc = m_muonMgr->getTgcReadoutElement(st,e,p);
-          if (tgc) std::cout << "tgc exists:"<<e<<"," << p <<"," << station->trackingVolume()->inside(tgc->center(),0.) << std::endl;
-        }
-      }
-      */
     }
   }
 
@@ -1383,11 +1361,11 @@ void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std:
 {
   // subcomponents 
   unsigned int nc = pv->getNChildVols();
-  std::cout << "getObjsForTranslation from:"<< pv->getLogVol()->getName()<<","<<pv->getLogVol()->getMaterial()->getName()<<", looping over "<< nc << " children" << std::endl;
+  //std::cout << "getObjsForTranslation from:"<< pv->getLogVol()->getName()<<","<<pv->getLogVol()->getMaterial()->getName()<<", looping over "<< nc << " children" << std::endl;
   double thick = 2*m_muonStationTypeBuilder->get_x_size(pv);
   double vol = m_muonStationTypeBuilder->getVolume(pv->getLogVol()->getShape()); 
   Trk::ExtendedMaterialProperties* matComb = m_muonStationTypeBuilder->getAveragedLayerMaterial(pv,vol,thick);
-  if (matComb) std::cout << "thickness, averaged x0:"<< matComb->thickness()<<","<< matComb->x0()<< std::endl;
+  //if (matComb) std::cout << "thickness, averaged x0:"<< matComb->thickness()<<","<< matComb->x0()<< std::endl;
   //double dInX0 = matComb->thickness()/matComb->x0(); 
   for (unsigned int ic=0; ic<nc; ic++) {
     HepGeom::Transform3D transf = pv->getXToChildVol(ic);
@@ -1412,7 +1390,7 @@ void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std:
     }
 
     std::string cName = childName.substr(0,3)=="NSW" || childName.substr(0,8)=="NewSmall"? name : name+childName;
-    std::cout << "child number,name,position:"<< ic<<":"<<clv->getName() <<":"<< (transform*transf).getTranslation().perp() <<","<<(transform*transf).getTranslation().z()<<","<<(transform*transf).getTranslation().phi() << std::endl;
+    //std::cout << "child number,name,position:"<< ic<<":"<<clv->getName() <<":"<< (transform*transf).getTranslation().perp() <<","<<(transform*transf).getTranslation().z()<<","<<(transform*transf).getTranslation().phi() << std::endl;
     if (!cv->getNChildVols()) {
       bool found = false;
       for (unsigned int is = 0; is < vols.size(); is++) {
@@ -1439,7 +1417,7 @@ void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std:
 	std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*> cpair(clv,nMat);
 	vols.push_back(std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<HepGeom::Transform3D> > (cpair,volTr) );
         volNames.push_back(cName);
-	std::cout << "new volume added:"<< cName <<","<<clv->getMaterial()->getName()<<","<< volTr.back().getTranslation().z()<<","<<volTr.back().getTranslation().phi()<<":mat:"<<matComb->thicknessInX0()<<std::endl;
+	//std::cout << "new volume added:"<< cName <<","<<clv->getMaterial()->getName()<<","<< volTr.back().getTranslation().z()<<","<<volTr.back().getTranslation().phi()<<":mat:"<<matComb->thicknessInX0()<<std::endl;
 	//printInfo(cv);
       }
     } else {

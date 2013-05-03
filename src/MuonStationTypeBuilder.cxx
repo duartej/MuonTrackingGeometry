@@ -1523,22 +1523,26 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processNSW(std::vector<
 
     Trk::Volume* envelope = 0;
 
-    if (fabs(c1-c2)>0.1) { //combined volume bounds needed
+    if (fabs(c1-c2)>0.1) { //combined volume bounds needed but enlarge Trd instead ( otherwise layer representation not created )
 
-      Trk::TrapezoidVolumeBounds* trd1=new Trk::TrapezoidVolumeBounds(hMin,hMed,0.5*(rMed-rMin),0.5*fabs(zMax-zMin));
-      Trk::TrapezoidVolumeBounds* trd2=new Trk::TrapezoidVolumeBounds(hMed,hMax,0.5*(rMax-rMed),0.5*fabs(zMax-zMin));
-      HepGeom::Transform3D* transf1 = new HepGeom::Transform3D( HepGeom::TranslateY3D(0.5*(rMed-rMax)));
-      HepGeom::Transform3D* transf2 = new HepGeom::Transform3D( HepGeom::TranslateY3D(0.5*(rMed-rMin)));
-      Trk::Volume* ev1=new Trk::Volume(transf1,trd1);
-      Trk::Volume* ev2=new Trk::Volume(transf2,trd2);
-      Trk::CombinedVolumeBounds* cBounds=new Trk::CombinedVolumeBounds(ev1,ev2,false);
-      envelope = new Trk::Volume(cTr,cBounds);
-      
-    } else {
-    
-      Trk::TrapezoidVolumeBounds* trdVolBounds=new Trk::TrapezoidVolumeBounds(hMin,hMax,0.5*(rMax-rMin),0.5*fabs(zMax-zMin));
-      envelope = new Trk::Volume(cTr,trdVolBounds);
+      hMax = (c1>c2 ? c1:c2)*(rMax-rMin)+hMin;
+
     }
+
+    //  Trk::TrapezoidVolumeBounds* trd1=new Trk::TrapezoidVolumeBounds(hMin,hMed,0.5*(rMed-rMin),0.5*fabs(zMax-zMin));
+    //  Trk::TrapezoidVolumeBounds* trd2=new Trk::TrapezoidVolumeBounds(hMed,hMax,0.5*(rMax-rMed),0.5*fabs(zMax-zMin));
+    //  HepGeom::Transform3D* transf1 = new HepGeom::Transform3D( HepGeom::TranslateY3D(0.5*(rMed-rMax)));
+    //  HepGeom::Transform3D* transf2 = new HepGeom::Transform3D( HepGeom::TranslateY3D(0.5*(rMed-rMin)));
+    //  Trk::Volume* ev1=new Trk::Volume(transf1,trd1);
+    //  Trk::Volume* ev2=new Trk::Volume(transf2,trd2);
+    //  Trk::CombinedVolumeBounds* cBounds=new Trk::CombinedVolumeBounds(ev1,ev2,false);
+    //  envelope = new Trk::Volume(cTr,cBounds);
+    //  
+    //} else {
+    
+    Trk::TrapezoidVolumeBounds* trdVolBounds=new Trk::TrapezoidVolumeBounds(hMin,hMax,0.5*(rMax-rMin),0.5*fabs(zMax-zMin));
+    envelope = new Trk::Volume(cTr,trdVolBounds);
+    //}
 
     //std::cout <<"envelope:"<<envelope->center()<<std::endl;
 

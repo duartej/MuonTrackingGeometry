@@ -267,8 +267,10 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGe
 	const GeoLogVol* clv = cv->getLogVol();
 	std::string vname = clv->getName();
 	
-	if ((vname.size()>7 && vname.substr(vname.size()-7,7) !="Station") || 
-            ( vname.size()<8 && vname.substr(0,3) != "NSW" && vname.substr(0,8)!="NewSmall" ) ) {        // Inert element
+        if ( vname.size()<8 && vname.substr(0,3)=="NSW" ) {   // do nothing, probably NSW station
+	} else if ( vname.size()>=8 && vname.substr(0,8)=="NewSmall" ) {  // do nothing, probably NSW station
+	} else 	if ( vname.size()>7 && vname.substr(vname.size()-7,7) =="Station") { // do nothing, active station
+	} else {
 
 	  //std::cout << " INERT muon object found:" << vname << std::endl;
 	  	  

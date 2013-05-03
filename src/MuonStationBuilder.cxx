@@ -297,10 +297,17 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 
         // create station prototypes
         const Trk::TrackingVolume* newTypeL=m_muonStationTypeBuilder->processNSW(sectorL); 
-	const Trk::DetachedTrackingVolume* typeL = newTypeL ? new Trk::DetachedTrackingVolume("NSWL",newTypeL) : 0;
+	// create layer representation
+        std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> layerReprL =
+	  m_muonStationTypeBuilder->createLayerRepresentation(newTypeL);
+	// create prototype as detached tracking volume
+	const Trk::DetachedTrackingVolume* typeL = newTypeL ? new Trk::DetachedTrackingVolume("NSWL",newTypeL,layerReprL.first,layerReprL.second) : 0;
 	//objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> >(typeStat,vols[ish].second));
         const Trk::TrackingVolume* newTypeS=m_muonStationTypeBuilder->processNSW(sectorS); 
-	const Trk::DetachedTrackingVolume* typeS = newTypeS ? new Trk::DetachedTrackingVolume("NSWS",newTypeS) : 0;
+	// create layer representation
+        std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> layerReprS =
+	  m_muonStationTypeBuilder->createLayerRepresentation(newTypeS);
+	const Trk::DetachedTrackingVolume* typeS = newTypeS ? new Trk::DetachedTrackingVolume("NSWS",newTypeS,layerReprS.first,layerReprS.second) : 0;
 
         if (typeL) {
 	  mStations.push_back(typeL); 
@@ -309,8 +316,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	    // clone station from prototype :: CHECK z<0 side, probably turns in wrong direction
 	    HepGeom::Transform3D ntransf= HepGeom::RotateZ3D(it*45*CLHEP::deg);
 	    const Trk::DetachedTrackingVolume* newStat = typeL->clone("NSWL",ntransf);
-	    //std::cout <<"cloned NSW station:"<<newStat->trackingVolume()->center()<<std::endl;   
-            // recalculate identifiers
+            // no detailed identification of NSW layer representation
             const std::vector<const Trk::Layer*>* lays=newStat->trackingVolume()->confinedArbitraryLayers();
             for (unsigned int il=0; il<lays->size(); il++) {
 	      int iType = (*lays)[il]->layerType();

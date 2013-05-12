@@ -35,6 +35,8 @@
 #include "TrkVolumes/BoundarySurfaceFace.h"
 #include "TrkSurfaces/DiscBounds.h"
 #include "TrkSurfaces/RectangleBounds.h"
+#include "TrkSurfaces/TrapezoidBounds.h"
+#include "TrkSurfaces/RotatedTrapezoidBounds.h"
 #include "TrkMagFieldInterfaces/IMagneticFieldTool.h"
 #include "TrkMagFieldUtils/MagneticFieldMode.h"
 #include "TrkMagFieldUtils/MagneticFieldMap.h"
@@ -44,6 +46,7 @@
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkGeometry/TrackingGeometry.h"
 #include "TrkGeometry/Layer.h"
+#include "TrkGeometry/HomogenousLayerMaterial.h"
 #include<fstream>
 #include "GeoModelKernel/GeoShape.h"
 #include "GeoModelKernel/GeoShapeShift.h"
@@ -195,8 +198,10 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
   if (m_muonMgr) { 
     // retrieve muon station prototypes from GeoModel
     const std::vector<const Trk::DetachedTrackingVolume*>* msTypes = buildDetachedTrackingVolumeTypes(blend);
+    //const std::vector<const Trk::DetachedTrackingVolume*>* msTypes=new std::vector<const Trk::DetachedTrackingVolume*>;
     std::vector<const Trk::DetachedTrackingVolume*>::const_iterator msTypeIter = msTypes->begin();
     
+
     // position MDT chambers by repeating loop over muon tree
     // link to top tree
     const GeoVPhysVol* top = &(*(m_muonMgr->getTreeTop(0)));
@@ -207,7 +212,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
       const GeoLogVol* clv = cv->getLogVol();
       std::string vname = clv->getName();
       
-      // special treatment for NSW / no readout geometry to copy from yet
+      // special treatment for NSW
       if (vname.substr(0,3) =="NSW" || vname.substr(0,8) =="NewSmall") {
 	ATH_MSG_INFO( vname <<" processing NSW " );
 	std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> > > objs;
@@ -233,7 +238,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
         
 	std::cout <<"number of prototypes to process for NSW:"<<vols.size()<<std::endl;
 
-        // initial solution ( in the absence of DetectorElements and readout surfaces )
+        // initial solution 
         // Large/Small sector envelope englobing (4+4+1+4+4)x 4(rings) =  68 layers identified with simId (station type,ring,phi,sector,multi,layer)
         //
         // advanced solution:
@@ -251,46 +256,57 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
           bool isLargeSector =  fabs(((vols[ish]).second)[0].getTranslation().phi())<0.01 ? true : false;
 	  std::string protoName = vname;
 	  if (!simpleTree) protoName = vname+"_"+volNames[ish];
-	  //std::cout << "NSW looping over vols:" << vols.size() <<","<< ish <<","<< protoName <<":"<<protoName.substr(protoName.find("-")+1)<<":"
-	  //	    << ((vols[ish]).second)[0].getTranslation().perp()<<","<<((vols[ish]).second)[0].getTranslation().z()<<","<<
-	  //  ((vols[ish]).second)[0].getTranslation().phi()   << std::endl;
-	  std::vector<const Trk::Layer*> layers;	  
 
 	  std::string oName = protoName.substr(protoName.find("-")+1);	  
+          Identifier nswId = m_muonStationTypeBuilder->identifyNSW(oName, vols[ish].second[0]);
 
-          /*
-	  bool found = false;
-	  for (unsigned int ip=0; ip<objs.size();ip++) {
-	    if (protoName==objs[ip].first->name()) {
-              found = true;
-              if (simpleTree) objs[ip].second.push_back(vol.getTransform());
-              std ::cout << "looping over NSW:"<< protoName <<","<< vol.getTransform().getTranslation().perp() << std::endl;
-              //else objs[ip].second.insert(objs[ip].second.end(),vols[ish].second.begin(),vols[ish].second.end());
-            } 
-           }  
-          if (found) continue;
-          */
-	  // m_geoShapeConverter->decodeShape(input_shapes[ish]);
-	  HepGeom::Transform3D ident;
-	  //std::cout << "decode input NSW layer:" << ish << std::endl;
-	  m_geoShapeConverter->decodeShape(input_shapes[ish]);
-	  const Trk::Volume* trObject = m_geoShapeConverter->translateGeoShape(input_shapes[ish],&ident);
-	  if (trObject) {  
-	    Trk::MaterialProperties mat = m_materialConverter->convert( vols[ish].first.first->getMaterial() );
-	    //std::cout <<"material conversion:"<<vols[ish].first.second->thickness()<<","<<vols[ish].first.second->x0()<<":"<<vols[ish].first.second->thicknessInX0()<<std::endl;
-	    const Trk::TrackingVolume* newType= new Trk::TrackingVolume( *trObject, mat, m_muonMagneticField,0,0,protoName);
-      	    const Trk::Layer* layRepr=m_muonStationTypeBuilder->createLayer(newType, vols[ish].first.second,vols[ish].second[0]);
-            if (layRepr) {
-              layRepr->moveLayer(vols[ish].second[0]);
-	      //std::cout <<"MTG layer position:"<< layRepr->surfaceRepresentation().center()<<std::endl;
-              if (isLargeSector) sectorL.push_back(layRepr);
-              else sectorS.push_back(layRepr);
+          // get bounds and transform from readout geometry
+	  const Trk::RotatedTrapezoidBounds* rtrd=0;
+	  HepGeom::Transform3D layTransf;
+	  if (m_muonMgr->stgcIdHelper()->is_stgc(nswId)) {
+	    const MuonGM::sTgcReadoutElement* stgc=m_muonMgr->getsTgcReadoutElement(nswId);
+	    if (stgc) rtrd = dynamic_cast<const Trk::RotatedTrapezoidBounds*> (&stgc->bounds(nswId));
+            if (stgc) layTransf = stgc->transform(nswId);
+	  } else if ( m_muonMgr->mmIdHelper()->is_mm(nswId)) {
+	    const MuonGM::MMReadoutElement* mm=m_muonMgr->getMMReadoutElement(nswId);
+	    if (mm) rtrd = dynamic_cast<const Trk::RotatedTrapezoidBounds*> (&mm->bounds(nswId));
+            if (mm) layTransf = mm->transform(nswId);
+	  }
+
+          const Trk::HomogenousLayerMaterial mat(*(vols[ish].first.second));  
+
+	  const Trk::Layer* layer=0;
+
+          if (!rtrd ) {    // translate from GeoModel ( spacer & non-identified stuff )
+
+	    HepGeom::Transform3D ident;
+	    //m_geoShapeConverter->decodeShape(input_shapes[ish]);
+	    const Trk::Volume* trObject = m_geoShapeConverter->translateGeoShape(input_shapes[ish],&ident);
+            if (trObject) {
+              const Trk::TrackingVolume* newType=new Trk::TrackingVolume(*trObject,*(vols[ish].first.second),m_muonMagneticField,0,0,protoName);
+              layer = m_muonStationTypeBuilder->createLayer(newType,vols[ish].first.second,vols[ish].second[0]);
+              if (layer) layer->moveLayer(vols[ish].second[0]);
+              delete trObject;
 	    }
-	    delete trObject;
+	  } else {
+	    // create active layer
+	    // change of boundary type ( VP1 problems with rotated trapezoid )   
+	    //Trk::RotatedTrapezoidBounds* tbounds = new Trk::RotatedTrapezoidBounds(*rtrd);
+	    Trk::TrapezoidBounds* tbounds = new Trk::TrapezoidBounds(rtrd->minHalflengthY(),rtrd->maxHalflengthY(),rtrd->halflengthX());
+	    Trk::SharedObject<const Trk::SurfaceBounds> bounds(tbounds);
+	    Trk::OverlapDescriptor* od=0;
+	    double thickness=(mat.fullMaterial(layTransf.getTranslation()))->thickness();
+	    layer = new Trk::PlaneLayer(new HepGeom::Transform3D(layTransf*HepGeom::RotateZ3D(-0.5*acos(-1.))),bounds, mat,thickness, od, 1 );
+	  }
+
+          if (layer) {
+	    unsigned int layType = nswId.get_identifier32().get_compact();
+	    layer->setLayerType(layType);
+         
+	    if (isLargeSector) sectorL.push_back(layer);
+	    else sectorS.push_back(layer);
 	    ATH_MSG_INFO( "new prototype build for: " << protoName <<","<<vols[ish].second.size() );
-	  }  else {
-	    ATH_MSG_WARNING( name()<< " volume not translated: " << vname );
-	  }            
+	  }
 	} // end new object
 
 	std::cout <<"number of layers:large:small:"<< sectorL.size()<<","<<sectorS.size() << std::endl;

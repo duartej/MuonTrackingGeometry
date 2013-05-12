@@ -2608,6 +2608,43 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
 }
 
 
+Identifier Muon::MuonStationTypeBuilder::identifyNSW( std::string vName, HepGeom::Transform3D transf ) const 
+{
+  Identifier id(0);
+
+  if ((vName[0]=='T') || (vName[0]=='M')) {     // NSW stations
+    // station eta
+    std::istringstream istr(&vName[1]);
+    int iEta;
+    istr >> iEta;
+    iEta += 1; 
+    if (transf.getTranslation().z()<0.) iEta *= -1;
+    // station Phi
+    unsigned int iPhi = 1;
+    //if (trVol->center().z()>0.) iPhi += 8;
+    // station multilayer
+    std::istringstream istm(&vName[3]);
+    int iMult;
+    istm >> iMult;
+    // layer
+    std::string stl(&vName[vName.size()-1]);
+    std::istringstream istl(stl);
+    int iLay;
+    istl >> iLay;
+    iLay += 1;
+    if (vName[0]=='T') {
+      std::string stName = (vName[2]=='L') ? "STL" : "STS";
+      int stId = (vName[2]=='L') ? 0 : 1;
+      id = m_muonMgr->stgcIdHelper()->channelID(stName,iEta,iPhi,iMult,iLay,1,1);
+    } else {
+      std::string stName = (vName[2]=='L') ? "MML" : "MMS";
+      int stId = (vName[2]=='L') ? 0 : 1;
+      id = m_muonMgr->mmIdHelper()->channelID(stName,iEta,iPhi,iMult,iLay,1);   
+    }
+  }
+
+  return id;
+}
 
 const Trk::Layer* Muon::MuonStationTypeBuilder::createLayer(const Trk::TrackingVolume* trVol, Trk::ExtendedMaterialProperties* matEx, HepGeom::Transform3D& transf) const
 {

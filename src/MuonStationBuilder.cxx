@@ -18,12 +18,13 @@
 #include "MuonIdHelpers/RpcIdHelper.h"
 #include "MuonIdHelpers/sTgcIdHelper.h"
 #include "MuonIdHelpers/MmIdHelper.h"
+// Amg
+#include "GeoPrimitives/GeoPrimitives.h"
 // Trk
 #include "TrkDetDescrInterfaces/ITrackingVolumeArrayCreator.h"
 #include "TrkDetDescrInterfaces/ITrackingVolumeHelper.h"
 #include "TrkDetDescrInterfaces/IDetachedTrackingVolumeBuilder.h"
-#include "TrkDetDescrUtils/BinUtility1DX.h"
-#include "TrkDetDescrUtils/BinUtility1DY.h"
+#include "TrkDetDescrUtils/GenericBinUtility.h"
 #include "TrkDetDescrUtils/BinnedArray.h"
 #include "TrkDetDescrUtils/GeometryStatics.h"
 #include "TrkDetDescrUtils/SharedObject.h"
@@ -37,12 +38,6 @@
 #include "TrkSurfaces/RectangleBounds.h"
 #include "TrkSurfaces/TrapezoidBounds.h"
 #include "TrkSurfaces/RotatedTrapezoidBounds.h"
-#include "TrkMagFieldInterfaces/IMagneticFieldTool.h"
-#include "TrkMagFieldUtils/MagneticFieldMode.h"
-#include "TrkMagFieldUtils/MagneticFieldMap.h"
-#include "TrkMagFieldUtils/MagneticFieldMapConstant.h"
-#include "TrkMagFieldUtils/MagneticFieldMapGrid3D.h"
-#include "TrkMagFieldUtils/MagneticFieldMapSolenoid.h"
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkGeometry/TrackingGeometry.h"
 #include "TrkGeometry/Layer.h"
@@ -66,12 +61,6 @@
 // StoreGate
 #include "StoreGate/StoreGateSvc.h"
 
-// BField
-#include "BFieldAth/MagFieldAthena.h"
-
-//CLHEP
-#include "CLHEP/Units/SystemOfUnits.h"
-
 // STD
 #include <map>
 
@@ -86,8 +75,6 @@
 Muon::MuonStationBuilder::MuonStationBuilder(const std::string& t, const std::string& n, const IInterface* p) :
   AthAlgTool(t,n,p),
   m_muonMgrLocation("MuonMgr"),
-  m_magFieldMode(Trk::RealisticField),
-  m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
   m_muonStationTypeBuilder("Muon::MuonStationTypeBuilder/MuonStationTypeBuilder"),
   m_trackingVolumeHelper("Trk::TrackingVolumeHelper/TrackingVolumeHelper"),
   m_buildBarrel(true),
@@ -98,7 +85,6 @@ Muon::MuonStationBuilder::MuonStationBuilder(const std::string& t, const std::st
 {
   declareInterface<Trk::IDetachedTrackingVolumeBuilder>(this);
   declareProperty("StationTypeBuilder",               m_muonStationTypeBuilder);
-  declareProperty("MagneticFieldMode",                m_magFieldMode);  
   declareProperty("MuonDetManagerLocation",           m_muonMgrLocation);
   declareProperty("BuildBarrelStations",              m_buildBarrel);
   declareProperty("BuildEndcapStations",              m_buildEndcap);
@@ -138,15 +124,6 @@ StatusCode Muon::MuonStationBuilder::initialize()
 
     ATH_MSG_INFO( m_muonMgr->geometryVersion() ); 
     
-    // Retrieve the magnetic field tool   ----------------------------------------------------    
-    if (m_magFieldMode && m_magFieldTool.retrieve().isFailure())
-    {
-      ATH_MSG_FATAL(  "Failed to retrieve tool " << m_magFieldTool );
-      return StatusCode::FAILURE;
-    } else
-      ATH_MSG_INFO( "Retrieved tool " << m_magFieldTool );
-
-
     // Retrieve the tracking volume helper   -------------------------------------------------    
     if (m_trackingVolumeHelper.retrieve().isFailure())
     {
@@ -175,11 +152,6 @@ StatusCode Muon::MuonStationBuilder::initialize()
     m_muonMaterial = Trk::MaterialProperties(m_muonMaterialProperties[0],
                                              m_muonMaterialProperties[1],
                                              m_muonMaterialProperties[2]);
-    // set the magnetic field 
-    if (!m_magFieldMode)
-        m_muonMagneticField = Trk::MagneticFieldProperties();
-    else                                            
-        m_muonMagneticField = Trk::MagneticFieldProperties(&(*m_magFieldTool), Trk::RealisticField);    
 
     m_materialConverter= new Trk::GeoMaterialConverter();
     m_geoShapeConverter= new Trk::GeoShapeConverter();
@@ -215,22 +187,22 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
       // special treatment for NSW
       if (vname.substr(0,3) =="NSW" || vname.substr(0,8) =="NewSmall") {
 	ATH_MSG_INFO( vname <<" processing NSW " );
-	std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> > > objs;
+	std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<Amg::Transform3D> > > objs;
 	
 	std::vector<const GeoShape*> input_shapes;
-	std::vector<std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<HepGeom::Transform3D> > > vols;
+	std::vector<std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<Amg::Transform3D> > > vols;
 	std::vector<std::string> volNames;
 	
 	bool simpleTree = false;
 	if ( !cv->getNChildVols() ) {
-	  std::vector<HepGeom::Transform3D > volTr;
-	  volTr.push_back(vol.getTransform()); 
+	  std::vector<Amg::Transform3D > volTr;
+	  volTr.push_back(Amg::CLHEPTransformToEigen(vol.getTransform())); 
 	  std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*> cpair(clv,0);
-	  vols.push_back(std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<HepGeom::Transform3D> > (cpair,volTr) );
+	  vols.push_back(std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<Amg::Transform3D> > (cpair,volTr) );
           volNames.push_back(vname);
 	  simpleTree = true;
 	} else {
-	  getObjsForTranslation(cv,"",HepGeom::Transform3D(),vols,volNames );
+	  getObjsForTranslation(cv,"",Amg::Transform3D(Trk::s_idTransform),vols,volNames );
         }
 	input_shapes.resize(vols.size());             
 	for (unsigned int i=0;i<vols.size();i++) input_shapes[i]=vols[i].first.first->getShape();
@@ -253,7 +225,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 
 	for (unsigned int ish=0; ish < vols.size(); ish++) { 
 
-          bool isLargeSector =  fabs(((vols[ish]).second)[0].getTranslation().phi())<0.01 ? true : false;
+          bool isLargeSector =  fabs(((vols[ish]).second)[0].translation().phi())<0.01 ? true : false;
 	  std::string protoName = vname;
 	  if (!simpleTree) protoName = vname+"_"+volNames[ish];
 
@@ -262,7 +234,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 
           // get bounds and transform from readout geometry
 	  const Trk::RotatedTrapezoidBounds* rtrd=0;
-	  HepGeom::Transform3D layTransf;
+	  Amg::Transform3D layTransf;
 	  if (m_muonMgr->stgcIdHelper()->is_stgc(nswId)) {
 	    const MuonGM::sTgcReadoutElement* stgc=m_muonMgr->getsTgcReadoutElement(nswId);
 	    if (stgc) rtrd = dynamic_cast<const Trk::RotatedTrapezoidBounds*> (&stgc->bounds(nswId));
@@ -279,11 +251,11 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 
           if (!rtrd ) {    // translate from GeoModel ( spacer & non-identified stuff )
 
-	    HepGeom::Transform3D ident;
+	    Amg::Transform3D ident(Trk::s_idTransform);
 	    //m_geoShapeConverter->decodeShape(input_shapes[ish]);
 	    const Trk::Volume* trObject = m_geoShapeConverter->translateGeoShape(input_shapes[ish],&ident);
             if (trObject) {
-              const Trk::TrackingVolume* newType=new Trk::TrackingVolume(*trObject,*(vols[ish].first.second),m_muonMagneticField,0,0,protoName);
+              const Trk::TrackingVolume* newType=new Trk::TrackingVolume(*trObject,*(vols[ish].first.second),0,0,protoName);
               layer = m_muonStationTypeBuilder->createLayer(newType,vols[ish].first.second,vols[ish].second[0]);
               if (layer) layer->moveLayer(vols[ish].second[0]);
               delete trObject;
@@ -295,8 +267,9 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	    Trk::TrapezoidBounds* tbounds = new Trk::TrapezoidBounds(rtrd->minHalflengthY(),rtrd->maxHalflengthY(),rtrd->halflengthX());
 	    Trk::SharedObject<const Trk::SurfaceBounds> bounds(tbounds);
 	    Trk::OverlapDescriptor* od=0;
-	    double thickness=(mat.fullMaterial(layTransf.getTranslation()))->thickness();
-	    layer = new Trk::PlaneLayer(new HepGeom::Transform3D(layTransf*HepGeom::RotateZ3D(-0.5*acos(-1.))),bounds, mat,thickness, od, 1 );
+	    double thickness=(mat.fullMaterial(layTransf.translation()))->thickness();
+	    layer = new Trk::PlaneLayer(new Amg::Transform3D(layTransf*Amg::AngleAxis3D(-0.5*M_PI,Amg::Vector3D(0.,0.,1.))),
+					bounds, mat,thickness, od, 1 );
 	  }
 
           if (layer) {
@@ -318,7 +291,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	  m_muonStationTypeBuilder->createLayerRepresentation(newTypeL);
 	// create prototype as detached tracking volume
 	const Trk::DetachedTrackingVolume* typeL = newTypeL ? new Trk::DetachedTrackingVolume("NSWL",newTypeL,layerReprL.first,layerReprL.second) : 0;
-	//objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> >(typeStat,vols[ish].second));
+	//objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<Amg::Transform3D> >(typeStat,vols[ish].second));
         const Trk::TrackingVolume* newTypeS=m_muonStationTypeBuilder->processNSW(sectorS); 
 	// create layer representation
         std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> layerReprS =
@@ -330,7 +303,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	  
 	  for (int it=1 ;it<8; it++)  { 
 	    // clone station from prototype :: CHECK z<0 side, probably turns in wrong direction
-	    HepGeom::Transform3D ntransf= HepGeom::RotateZ3D(it*45*CLHEP::deg);
+	    Amg::Transform3D ntransf( Amg::AngleAxis3D(it*0.25*M_PI, Amg::Vector3D(0.,0.,1.)));
 	    const Trk::DetachedTrackingVolume* newStat = typeL->clone("NSWL",ntransf);
             // no detailed identification of NSW layer representation
             const std::vector<const Trk::Layer*>* lays=newStat->trackingVolume()->confinedArbitraryLayers();
@@ -369,7 +342,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	  }
 	  
           if (nClones==16) { // have to mirror stations as well
-	    HepGeom::Transform3D ntransf= HepGeom::RotateX3D(180*CLHEP::deg);
+	    Amg::Transform3D ntransf(Amg::AngleAxis3D(M_PI,Amg::Vector3D(1.,0.,0.)));
 	    const Trk::DetachedTrackingVolume* mtypeL = typeL->clone("NSWL",ntransf);
 	    //std::cout <<"cloned NSW station:"<<mtypeL->trackingVolume()->center()<<std::endl;   
             // recalculate identifier
@@ -408,7 +381,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	    mStations.push_back(mtypeL);
 	    for (unsigned int it=1 ;it<8; it++)  { 
 	      // clone station from prototype :: CHECK z<0 side, probably turns in wrong direction
-	      HepGeom::Transform3D ntransf= HepGeom::RotateZ3D(it*45*CLHEP::deg);
+	      Amg::Transform3D ntransf(Amg::AngleAxis3D(it*0.25*M_PI,Amg::Vector3D(0.,0.,1.)));
 	      const Trk::DetachedTrackingVolume* newStat = mtypeL->clone("NSWL",ntransf);
 	      //std::cout <<"cloned NSW station:"<<newStat->trackingVolume()->center()<<std::endl;   
 	      // recalculate identifiers
@@ -454,7 +427,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
       
 	  for (unsigned int it=1 ;it<8; it++)  { 
 	    // clone station from prototype
-	    HepGeom::Transform3D ntransf= HepGeom::RotateZ3D(it*45*CLHEP::deg);
+	    Amg::Transform3D ntransf(Amg::AngleAxis3D(it*0.25*M_PI,Amg::Vector3D(0.,0.,1.)));
 	    const Trk::DetachedTrackingVolume* newStat = typeS->clone("NSWS",ntransf);
 	    //std::cout <<"cloned NSWS station:"<<newStat->trackingVolume()->center()<<std::endl;   
             // recalculate identifiers
@@ -496,7 +469,9 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
           if (nClones==16) { // have to mirror stations as well
 	    //HepGeom::Transform3D ntransf= HepGeom::RotateZ3D(-22.5*CLHEP::deg)*HepGeom::RotateX3D(180*CLHEP::deg)* HepGeom::RotateZ3D(22.5*CLHEP::deg);
             double phiS=typeS->trackingVolume()->center().phi();
-	    HepGeom::Transform3D ntransf= HepGeom::RotateZ3D(+phiS)*HepGeom::RotateX3D(180*CLHEP::deg)* HepGeom::RotateZ3D(-phiS);
+	    Amg::Transform3D ntransf(Amg::AngleAxis3D(+phiS,Amg::Vector3D(0.,0.,1.))*
+				     Amg::AngleAxis3D(+M_PI,Amg::Vector3D(1.,0.,0.))*
+				     Amg::AngleAxis3D(-phiS,Amg::Vector3D(0.,0.,1.)));
 	    const Trk::DetachedTrackingVolume* mtypeS = typeS->clone("NSWL",ntransf);
 	    //std::cout <<"cloned NSWS station:"<<mtypeS->trackingVolume()->center()<<std::endl;   
             // recalculate identifiers
@@ -535,7 +510,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	    mStations.push_back(mtypeS);
 	    for (unsigned int it=1 ;it<8; it++)  { 
 	      // clone station from prototype :: CHECK z<0 side, probably turns in wrong direction
-	      HepGeom::Transform3D ntransf= HepGeom::RotateZ3D(it*45*CLHEP::deg);
+	      Amg::Transform3D ntransf( Amg::AngleAxis3D(it*0.25*M_PI, Amg::Vector3D(0.,0.,1.)));
 	      const Trk::DetachedTrackingVolume* newStat = mtypeS->clone("NSWL",ntransf);
 	      //std::cout <<"cloned NSWS station:"<<newStat->trackingVolume()->center()<<std::endl;   
 	      // recalculate identifiers
@@ -632,7 +607,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
               ||(stName.substr(0,1)!="T" && stName == msTypeName) ) {
             msTV = *msTypeIter;
 	    if (msTV && gmStation) {
-	      HepGeom::Transform3D transf = gmStation->getTransform(); 
+	      Amg::Transform3D transf = Amg::CLHEPTransformToEigen(gmStation->getTransform()); 
               Identifier stId(0);
               if (stName.substr(0,1)=="C") {
 		stId = m_cscIdHelper->elementID(vname.substr(0,3),eta,phi);
@@ -640,14 +615,14 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
               // adjust eta,phi
               if (msTypeName.substr(0,1)=="C") {
                 eta = 1;
-		if (transf.getTranslation().z() < 0 ) eta = 0;
-		double phic = transf.getTranslation().phi() + 0.1 ;  
+		if (transf.translation().z() < 0 ) eta = 0;
+		double phic = transf.translation().phi() + 0.1 ;  
                 phi = static_cast<int> (phic<0 ? 4*phic/M_PI+8 : 4*phic/M_PI);
               } 
 	      if (msTypeName.substr(0,1)=="T") {
 		bool az = true;
 		std::string msName = msTV->trackingVolume()->volumeName();
-		if (transf.getTranslation().z() < 0 ) az = false;
+		if (transf.translation().z() < 0 ) az = false;
 		if (msName.substr(7,2)=="01") eta = az ? 5 : 4;
 		if (msName.substr(7,2)=="02") eta = az ? 5 : 4;
 		if (msName.substr(7,2)=="03") eta = az ? 6 : 3;
@@ -674,7 +649,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
               if (stName.substr(0,1)=="T") {
 		int etaSt = eta - 4;
 		if (eta < 5) etaSt = eta - 5; 
-		double phic = transf.getTranslation().phi(); 
+		double phic = transf.translation().phi(); 
 		if (msTypeName.substr(2,1)=="E" && msTypeName.substr(0,3)!="T4E")
 		  phi = static_cast<int> (phic<0 ? 24*phic/M_PI+48 : 24*phic/M_PI);
 		else
@@ -858,18 +833,19 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		  if (m_muonStationTypeBuilder) confinedVolumes = 
 						  m_muonStationTypeBuilder->processBoxStationComponents(cv,envBounds); 
 		  // enveloping volume
-		  envelope= new Trk::Volume(new HepGeom::Transform3D(),envBounds);
+		  envelope= new Trk::Volume(0,envBounds);
 		}
 		if (shape=="Trd") {
 		  Trk::TrapezoidVolumeBounds* envBounds = 0;
-		  HepGeom::Transform3D* transf =new HepGeom::Transform3D(); 
+		  Amg::Transform3D* transf=new Amg::Transform3D(Trk::s_idTransform); 
 		  if (halfY1==halfY2) {
 		    envBounds = new Trk::TrapezoidVolumeBounds(halfX1,halfX2,halfY1,halfZ);
 		    std::cout << "CAUTION!!!: this trapezoid volume does not require XY -> YZ switch" << std::endl;
 		  }
 		  if (halfY1!=halfY2 && halfX1 == halfX2 ) {
 		    delete transf;
-		    transf = new HepGeom::Transform3D( HepGeom::RotateY3D(90*CLHEP::deg)* HepGeom::RotateZ3D(90*CLHEP::deg) );
+	            transf = new Amg::Transform3D( Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,1.,0.))*
+						   Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,0.,1.)));
 		    envBounds = new Trk::TrapezoidVolumeBounds(halfY1,halfY2,halfZ,halfX1); 
 		  }
 		  if (halfX1!=halfX2 && halfY1!=halfY2 ) std::cout << "station envelope arbitrary trapezoid?" << std::endl;
@@ -886,13 +862,13 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		// ready to build the station prototype
 		const Trk::TrackingVolume* newType= new Trk::TrackingVolume( *envelope,
 									     m_muonMaterial,
-									     m_muonMagneticField,
 									     0,confinedVolumes,
 									     name);         
 		delete envelope; 
 		
 		// identify prototype
-		if (m_resolveActiveLayers && ( name.substr(0,1)=="B" || name.substr(0,1)=="E") ) identifyPrototype(newType,eta,phi,gmStation->getTransform());
+		if (m_resolveActiveLayers && ( name.substr(0,1)=="B" || name.substr(0,1)=="E") ) 
+		  identifyPrototype(newType,eta,phi,Amg::CLHEPTransformToEigen(gmStation->getTransform()));
 		
 		// create layer representation
 		std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> layerRepr 
@@ -930,7 +906,7 @@ void Muon::MuonStationBuilder::glueComponents(const Trk::DetachedTrackingVolume*
    if (volArray) {
      if (volArray->arrayObjectsNumber() > 1) {
        const std::vector< const Trk::TrackingVolume* > components = volArray->arrayObjects();
-       const Trk::BinUtility1DX* binUtilityX = dynamic_cast<const Trk::BinUtility1DX*>(volArray->binUtility()); 
+       const Trk::BinUtility* binUtilityX = volArray->binUtility(); 
        const Trk::CuboidVolumeBounds* cubVolBounds = 
 	 dynamic_cast<const Trk::CuboidVolumeBounds* >( &(components[0]->volumeBounds())); 
        /*
@@ -991,7 +967,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
       for (int gasgap = 0; gasgap < cscRE->Ngasgaps(); gasgap++) {
 	Identifier idi = m_cscIdHelper->channelID(cscRE->identify(),cscRE->ChamberLayer(),gasgap+1,0,1);   
         const Trk::PlaneSurface* stripSurf = dynamic_cast<const Trk::PlaneSurface*> (&(cscRE->surface(idi)));
-        const HepGeom::Point3D<double> gpi = stripSurf->center();
+        const Amg::Vector3D gpi = stripSurf->center();
         const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gpi);
         const Trk::Layer* assocLay = 0;
         if (assocVol) assocLay = assocVol->associatedLayer(gpi);
@@ -1052,7 +1028,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
       bool* validId=new bool(false);
       Identifier wireId  = m_tgcIdHelper->channelID(stationName.substr(0,3),etaSt,phiSt,1,0,1,true,validId);
       if (!(*validId)) ATH_MSG_ERROR( "invalid TGC channel:" << wireId );
-      const HepGeom::Point3D<double> gp = tgc->channelPos(wireId);
+      const Amg::Vector3D gp = tgc->channelPos(wireId);
       //std::cout << "wire position:"<< gp << std::endl;
       const Trk::TrackingVolume* assocVol = station->trackingVolume()->associatedSubVolume(gp);
       if (!assocVol) ATH_MSG_DEBUG( "wrong tgcROE?" << stationName <<"," << etaSt <<"," << phiSt );
@@ -1070,7 +1046,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 	    //std::cout <<"is recognized as tgc? " << m_tgcIdHelper->is_tgc(checkId)<< std::endl; 
 	    const Trk::PlaneSurface* stripSurf = dynamic_cast<const Trk::PlaneSurface*> (&(tgc->surface(checkId)));
 	    //std::cout << "layer, strip surface position:"<< layers[il]->surfaceRepresentation().center()<<","<< stripSurf->center() <<
-	    //  ":check:"<< tgc->surface(checkId).center()<<","<<tgc->transform(checkId).getTranslation()<<","<<tgc->channelPos(checkId) << std::endl;
+	    //  ":check:"<< tgc->surface(checkId).center()<<","<<tgc->transform(checkId).translation()<<","<<tgc->channelPos(checkId) << std::endl;
 	    if ( (layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center()).mag()>0.001)   
 	      ATH_MSG_DEBUG( "TGC strip plane shifted:"<<st<<","<<eta<<","<<phi<<":" <<
 			     layers[il]->surfaceRepresentation().transform().inverse()*stripSurf->center());
@@ -1166,7 +1142,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 	      if (assocLay) assocLay->setLayerType(iD); 
 	      if (assocLay) {
 		//const Trk::LocalPosition* locPos = (assocLay->surfaceRepresentation()).globalToLocal(gp,0.001);
-                Trk::GlobalPosition locPos = assocLay->surfaceRepresentation().transform().inverse()*gp;
+                Amg::Vector3D locPos = assocLay->surfaceRepresentation().transform().inverse()*gp;
 		if (fabs(assocLay->getRef()-locPos[1])>0.01) 
 		  std::cout << "ERROR REFERENCE:"<< stationName<<","<<assocLay->getRef()<<","<<locPos[1]<<std::endl;
 		if (fabs(locPos[2])>0.01) 
@@ -1263,7 +1239,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
 
 }
 
-void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* station, int eta, int phi, HepGeom::Transform3D transf ) const
+void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* station, int eta, int phi, Amg::Transform3D transf ) const
 {
   ATH_MSG_VERBOSE( name() <<" identifying prototype " );    
 
@@ -1287,7 +1263,7 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
 	    Identifier id = m_mdtIdHelper->channelID(nameIndex,eta,phi,multi+1,layer,1);           
 	    if (id.get_compact() > 0) {
 	      // retrieve associated layer
-	      HepGeom::Point3D<double> gp = multilayer->tubePos(id);
+	      Amg::Vector3D gp = multilayer->tubePos(id);
 	      const Trk::Layer* assocLay = assocVol->associatedLayer(transf.inverse()*gp);
 	      unsigned int iD = id.get_identifier32().get_compact();
 	      if (assocLay) assocLay->setLayerType(iD); 
@@ -1326,12 +1302,12 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
 		if (1/*m_rpcIdHelper->valid(etaId)*/){
 		  for (unsigned int il=0;il<layers->size();il++) {
 		    if ((*layers)[il]->layerType() != 0 && (*layers)[il]->surfaceRepresentation().isOnSurface(transf.inverse()*rpc->stripPos(etaId),false,0.5*(*layers)[il]->thickness() ) ) {
-                      const Trk::GlobalPosition locPos1 = (*layers)[il]->surfaceRepresentation().transform().inverse()*transf.inverse()*rpc->stripPos(etaId);
-                      const Trk::GlobalPosition locPos2 = rpc->surface(etaId).transform().inverse()*rpc->stripPos(etaId);
+                      const Amg::Vector3D locPos1 = (*layers)[il]->surfaceRepresentation().transform().inverse()*transf.inverse()*rpc->stripPos(etaId);
+                      const Amg::Vector3D locPos2 = rpc->surface(etaId).transform().inverse()*rpc->stripPos(etaId);
                       double swap = ( fabs( locPos1[1] - locPos2[0] ) > 0.001 ) ? 20000. : 0. ;
 		      unsigned int id = etaId.get_identifier32().get_compact();
 		      (*layers)[il]->setLayerType(id);
-                      const Trk::GlobalPosition locPos = (*layers)[il]->surfaceRepresentation().transform().inverse()
+                      const Amg::Vector3D locPos = (*layers)[il]->surfaceRepresentation().transform().inverse()
 			*transf.inverse()*rpc->surface(etaId).center(); 
 		      (*layers)[il]->setRef(swap + locPos[0]);
 		      //std::cout <<"identifying RPC:"<<stationName<<","<<iv<<","<<il<<":"<<id <<std::endl;
@@ -1379,7 +1355,7 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
 }
 
 
-void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std::string name, HepGeom::Transform3D transform, std::vector<std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*> , std::vector<HepGeom::Transform3D> > >& vols, std::vector< std::string >& volNames ) const
+void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std::string name, Amg::Transform3D transform, std::vector<std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*> , std::vector<Amg::Transform3D> > >& vols, std::vector< std::string >& volNames ) const
 {
   // subcomponents 
   unsigned int nc = pv->getNChildVols();
@@ -1390,7 +1366,7 @@ void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std:
   //if (matComb) std::cout << "thickness, averaged x0:"<< matComb->thickness()<<","<< matComb->x0()<< std::endl;
   //double dInX0 = matComb->thickness()/matComb->x0(); 
   for (unsigned int ic=0; ic<nc; ic++) {
-    HepGeom::Transform3D transf = pv->getXToChildVol(ic);
+    Amg::Transform3D transf = Amg::CLHEPTransformToEigen( pv->getXToChildVol(ic));
     const GeoVPhysVol* cv = &(*(pv->getChildVol(ic)));
     const GeoLogVol* clv = cv->getLogVol();
     std::string childName = clv->getName();
@@ -1412,34 +1388,34 @@ void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std:
     }
 
     std::string cName = childName.substr(0,3)=="NSW" || childName.substr(0,8)=="NewSmall"? name : name+childName;
-    //std::cout << "child number,name,position:"<< ic<<":"<<clv->getName() <<":"<< (transform*transf).getTranslation().perp() <<","<<(transform*transf).getTranslation().z()<<","<<(transform*transf).getTranslation().phi() << std::endl;
+    //std::cout << "child number,name,position:"<< ic<<":"<<clv->getName() <<":"<< (transform*transf).translation().perp() <<","<<(transform*transf).translation().z()<<","<<(transform*transf).translation().phi() << std::endl;
     if (!cv->getNChildVols()) {
       bool found = false;
       for (unsigned int is = 0; is < vols.size(); is++) {
 	if (cName == volNames[is]) {
-	   if ( fabs((transform*transf).getTranslation().perp()- vols[is].second.front().getTranslation().perp())< 1. ) {
+	   if ( fabs((transform*transf).translation().perp()- vols[is].second.front().translation().perp())< 1. ) {
 	    found = true; 
             // order transforms to position prototype at phi=0/ 0.125 pi
-            double phiTr = (transform*transf).getTranslation().phi();
+            double phiTr = (transform*transf).translation().phi();
             if ( phiTr>-0.001 && phiTr<0.4 ) {
               vols[is].second.insert(vols[is].second.begin(),transform*transf);
             } else vols[is].second.push_back(transform*transf);
-	    //std::cout << "clone?" << clv->getName() <<","<<(transform*transf).getTranslation().perp()<<","<<(transform*transf).getTranslation().z()<<","<<phiTr << std::endl;
+	    //std::cout << "clone?" << clv->getName() <<","<<(transform*transf).translation().perp()<<","<<(transform*transf).translation().z()<<","<<phiTr << std::endl;
 	    break;
 	   }
 	}
       }
       if (!found) {
-	std::vector<HepGeom::Transform3D > volTr;
+	std::vector<Amg::Transform3D > volTr;
 	volTr.push_back(transform*transf);
         // divide mother material ?
 	Trk::ExtendedMaterialProperties* nMat=new Trk::ExtendedMaterialProperties(*matComb);
         if (matMode) nMat->scaleThicknessInX0(1./nc); 
         //double dX0= matMode ? dInX0/nc : dInX0;
 	std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*> cpair(clv,nMat);
-	vols.push_back(std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<HepGeom::Transform3D> > (cpair,volTr) );
+	vols.push_back(std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<Amg::Transform3D> > (cpair,volTr) );
         volNames.push_back(cName);
-	//std::cout << "new volume added:"<< cName <<","<<clv->getMaterial()->getName()<<","<< volTr.back().getTranslation().z()<<","<<volTr.back().getTranslation().phi()<<":mat:"<<matComb->thicknessInX0()<<std::endl;
+	//std::cout << "new volume added:"<< cName <<","<<clv->getMaterial()->getName()<<","<< volTr.back().translation().z()<<","<<volTr.back().translation().phi()<<":mat:"<<matComb->thicknessInX0()<<std::endl;
 	//printInfo(cv);
       }
     } else {
@@ -1467,19 +1443,19 @@ void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std:
       childName=childName+st.str();
     }
     std::string cName = childName.substr(0,3)=="NSW" ? name : name+childName;
-    std::cout << "child number,name,position:"<< ic<<":"<<clv->getName() <<":"<< (transform*transf).getTranslation().perp() <<","<<(transform*transf).getTranslation().z()<<","<<(transform*transf).getTranslation().phi() << std::endl;
+    std::cout << "child number,name,position:"<< ic<<":"<<clv->getName() <<":"<< (transform*transf).translation().perp() <<","<<(transform*transf).translation().z()<<","<<(transform*transf).translation().phi() << std::endl;
     //if (!cv->getNChildVols()) {
       bool found = false;
       for (unsigned int is = 0; is < vols.size(); is++) {
 	if (cName == volNames[is]) {
-	   if ( fabs((transform*transf).getTranslation().perp()- vols[is].second.front().getTranslation().perp())< 1. ) {
+	   if ( fabs((transform*transf).translation().perp()- vols[is].second.front().translation().perp())< 1. ) {
 	    found = true; 
             // order transforms to position prototype at phi=0/ 0.125 pi
-            double phiTr = (transform*transf).getTranslation().phi();
+            double phiTr = (transform*transf).translation().phi();
             if ( phiTr>-0.001 && phiTr<0.4 ) {
               vols[is].second.insert(vols[is].second.begin(),transform*transf);
             } else vols[is].second.push_back(transform*transf);
-	    std::cout << "clone?" << clv->getName() <<","<<(transform*transf).getTranslation().perp()<<","<<(transform*transf).getTranslation().z()<<","<<phiTr << std::endl;
+	    std::cout << "clone?" << clv->getName() <<","<<(transform*transf).translation().perp()<<","<<(transform*transf).translation().z()<<","<<phiTr << std::endl;
 	    break;
 	   }
 	}
@@ -1489,7 +1465,7 @@ void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std:
 	volTr.push_back(transform*transf); 
 	vols.push_back(std::pair<const GeoLogVol*,std::vector<HepGeom::Transform3D> > (clv,volTr) );
         volNames.push_back(cName);
-	std::cout << "new volume added:"<< cName <<","<<clv->getMaterial()->getName()<<","<< volTr.back().getTranslation().z()<<","<<volTr.back().getTranslation().phi()<<std::endl;
+	std::cout << "new volume added:"<< cName <<","<<clv->getMaterial()->getName()<<","<< volTr.back().translation().z()<<","<<volTr.back().translation().phi()<<std::endl;
 	//printInfo(cv);
       }
    //} else {

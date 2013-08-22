@@ -7,7 +7,6 @@
 
 //Trk
 #include "TrkDetDescrInterfaces/IDetachedTrackingVolumeBuilder.h"
-#include "TrkGeometry/MagneticFieldProperties.h"
 #include "TrkGeometry/MaterialProperties.h"
 #include "TrkGeometry/DetachedTrackingVolume.h"
 #include "TrkGeometry/TrackingVolume.h"
@@ -36,7 +35,6 @@ namespace Trk {
  class ITrackingVolumeArrayCreator;
  class ILayerBuilder;
  class ILayerArrayCreator;
- class IMagneticFieldTool;
 
 //mw
  class MaterialProperties;
@@ -76,20 +74,20 @@ namespace Muon {
     private:
 
       /** Method creating material object prototypes */
-      const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<HepGeom::Transform3D> > >* buildDetachedTrackingVolumeTypes(bool blend) const; 
+      const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<Amg::Transform3D> > >* buildDetachedTrackingVolumeTypes(bool blend) const; 
       /** Method extracting material objects from GeoModel tree */
-      void getObjsForTranslation(const GeoVPhysVol* pv,HepGeom::Transform3D , std::vector<std::pair<const GeoLogVol*,std::vector<HepGeom::Transform3D> > >& vols ) const;
+      void getObjsForTranslation(const GeoVPhysVol* pv,Amg::Transform3D , std::vector<std::pair<const GeoLogVol*,std::vector<Amg::Transform3D> > >& vols ) const;
       /** Dump from GeoModel tree  */
       void printInfo(const GeoVPhysVol* pv) const;
       void printChildren(const GeoVPhysVol* pv) const;
       /** Simplification of GeoModel object + envelope */
       const Trk::TrackingVolume* simplifyShape(const Trk::TrackingVolume* tr, bool blend) const;
       /** Envelope creation & material fraction calculation */
-      const Trk::Volume* createEnvelope(const HepGeom::Transform3D transf, std::vector<std::pair<const Trk::Volume*,std::pair<float,float> > > ) const;
+      const Trk::Volume* createEnvelope(const Amg::Transform3D transf, std::vector<std::pair<const Trk::Volume*,std::pair<float,float> > > ) const;
       /** Simplification of objects, material fraction calculation */
       std::vector<std::pair<const Trk::Volume*,std::pair<float,float> > > splitComposedVolume(const Trk::Volume*,bool) const; 
       /** Scan point generation for 'hit&miss' sampling */
-      Trk::GlobalPosition getScanPoint(const Trk::Volume* vol) const;
+      Amg::Vector3D getScanPoint(const Trk::Volume* vol) const;
       /** Volume calculation */
       double calculateVolume( const Trk::Volume* envelope) const;
 
@@ -107,9 +105,6 @@ namespace Muon {
       double                              m_blendLimit;                 // volume limit for blending (except shields) 
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system
- 
-      ToolHandle<Trk::IMagneticFieldTool> m_magFieldTool;                //!< Tracking Interface to Magnetic Field
-      mutable Trk::MagneticFieldProperties m_muonMagneticField;          //!< the magnetic Field
 //mw
       Trk::GeoMaterialConverter*           m_materialConverter;          //!< material converter
       Trk::GeoShapeConverter*              m_geoShapeConverter;          //!< shape converter

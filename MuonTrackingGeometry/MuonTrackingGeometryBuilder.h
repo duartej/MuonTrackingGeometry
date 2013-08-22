@@ -9,7 +9,6 @@
 #include "TrkDetDescrInterfaces/IGeometryBuilder.h"
 #include "TrkDetDescrInterfaces/ITrackingVolumesSvc.h"
 #include "TrkDetDescrUtils/GeometrySignature.h"
-#include "TrkGeometry/MagneticFieldProperties.h"
 #include "TrkGeometry/MaterialProperties.h"
 // Gaudi
 #include "AthenaBaseComps/AthAlgTool.h"
@@ -26,9 +25,9 @@ namespace Trk {
  class ITrackingVolumeHelper;
  class ITrackingVolumeDisplayer;
  class ITrackingVolumeArrayCreator;
- class IMagneticFieldTool;
- typedef std::pair< SharedObject<const TrackingVolume>, Trk::GlobalPosition> TrackingVolumeOrderPosition;
- typedef std::pair< SharedObject<const TrackingVolume>, const HepGeom::Transform3D*> TrackingVolumeNavOrder;
+
+ typedef std::pair< SharedObject<const TrackingVolume>, Amg::Vector3D> TrackingVolumeOrderPosition;
+ typedef std::pair< SharedObject<const TrackingVolume>, const Amg::Transform3D*> TrackingVolumeNavOrder;
 
 }
  
@@ -66,7 +65,7 @@ namespace Muon {
       
     private:
       /** Private method to find z/phi span of detached volumes */
-      const Span* findVolumeSpan(const Trk::VolumeBounds* volBounds, HepGeom::Transform3D transf, double zTol, double phiTol) const;
+      const Span* findVolumeSpan(const Trk::VolumeBounds* volBounds, Amg::Transform3D transf, double zTol, double phiTol) const;
       const std::vector<std::vector<std::pair<const Trk::DetachedTrackingVolume*,const Span*> >* >* findVolumesSpan(const std::vector<const Trk::DetachedTrackingVolume*>*& objs, double zTol, double phiTol) const;
       /** Private methods to define subvolumes and fill them with detached volumes */
       const Trk::TrackingVolume* processVolume( const Trk::Volume*, int, int, std::string) const; 
@@ -92,7 +91,6 @@ namespace Muon {
       void blendMaterial() const;
      
       unsigned int                                         m_magFieldMode;                  //!< switch the magnetic field mode
-      ToolHandle<Trk::IMagneticFieldTool>                  m_magFieldTool;                  //!< Tracking Interface to Magnetic Field
 
       ToolHandle<Trk::IDetachedTrackingVolumeBuilder>      m_stationBuilder;                //!< A Tool for station type creation
 
@@ -127,7 +125,6 @@ namespace Muon {
       double                              m_diskShieldZ;
 
       mutable Trk::MaterialProperties       m_muonMaterial;               //!< the (empty) material
-      mutable Trk::MagneticFieldProperties  m_muonMagneticField;          //!< the magnetic Field
 
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
       mutable Trk::TrackingVolume*        m_standaloneTrackingVolume;   // muon standalone tracking volume                 
@@ -158,11 +155,11 @@ namespace Muon {
       mutable std::vector<const Span*>                            m_spans;             // for clearing
       mutable std::vector<double>                                 m_zPartitions;
       mutable std::vector<int>                                    m_zPartitionsType;
-      mutable std::vector<double>                                 m_adjustedPhi;
+      mutable std::vector<float>                                  m_adjustedPhi;
       mutable std::vector<int>                                    m_adjustedPhiType;
-      mutable std::vector<std::vector<std::vector<std::vector<std::pair<int,double> > > > > m_hPartitions;
+      mutable std::vector<std::vector<std::vector<std::vector<std::pair<int,float> > > > > m_hPartitions;
       mutable std::vector<double>                                 m_shieldZPart;
-      mutable std::vector<std::vector<std::pair<int,double> > >   m_shieldHPart;
+      mutable std::vector<std::vector<std::pair<int,float> > >   m_shieldHPart;
       //mutable std::vector<std::pair<std::string,std::pair<double, unsigned int> > >   m_dilFact;
       mutable std::vector<Trk::MaterialProperties>               m_matProp;
       mutable std::map<const Trk::DetachedTrackingVolume*,std::vector<const Trk::TrackingVolume*>* > m_blendMap;

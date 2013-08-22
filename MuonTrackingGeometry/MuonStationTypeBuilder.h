@@ -6,7 +6,6 @@
 #define MUONTRACKINGGEOMETRY_MUONSTATIONTYPEBUILDER_H
 
 //Trk
-#include "TrkGeometry/MagneticFieldProperties.h"
 //#include "TrkGeometry/ExtendedMaterialProperties.h"
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkDetDescrUtils/SharedObject.h"
@@ -17,8 +16,6 @@
 
 #include "GeoModelKernel/GeoVPhysVol.h"
 #include "GeoModelKernel/GeoMaterial.h"
-// CLHEP
-#include "CLHEP/Geometry/Transform3D.h"
 
 namespace Trk {
  class TrackingGeometry;
@@ -29,7 +26,6 @@ namespace Trk {
  class Volume;
  class Layer;
  class ITrackingVolumeArrayCreator;
- class IMagneticFieldTool;
  class CuboidVolumeBounds;
  class TrapezoidVolumeBounds;
  class DoubleTrapezoidVolumeBounds;
@@ -43,7 +39,7 @@ namespace MuonGM {
  
 namespace Muon {
 
-  typedef std::pair<Trk::SharedObject<const Trk::Layer>,const HepGeom::Transform3D*> LayTr;
+  typedef std::pair<Trk::SharedObject<const Trk::Layer>,const Amg::Transform3D*> LayTr;
      
   /** @class MuonStationTypeBuilder
   
@@ -71,17 +67,17 @@ namespace Muon {
       const Trk::TrackingVolume* processCscStation(const GeoVPhysVol* cv, std::string name) const; 
       std::vector<const Trk::TrackingVolume*> processTgcStation(const GeoVPhysVol* cv) const; 
       /** components */
-      const Trk::TrackingVolume* processMdtBox(Trk::Volume*&,const GeoVPhysVol*&, HepGeom::Transform3D*, double ) const;
-      const Trk::TrackingVolume* processMdtTrd(Trk::Volume*&,const GeoVPhysVol*&, HepGeom::Transform3D*) const;
-      const Trk::TrackingVolume* processRpc(Trk::Volume*&,std::vector<const GeoVPhysVol*>,std::vector<HepGeom::Transform3D>) const;
-      const Trk::TrackingVolume* processSpacer(Trk::Volume*&,std::vector<const GeoVPhysVol*>,std::vector<HepGeom::Transform3D>) const;
+      const Trk::TrackingVolume* processMdtBox(Trk::Volume*&,const GeoVPhysVol*&, Amg::Transform3D*, double ) const;
+      const Trk::TrackingVolume* processMdtTrd(Trk::Volume*&,const GeoVPhysVol*&, Amg::Transform3D*) const;
+      const Trk::TrackingVolume* processRpc(Trk::Volume*&,std::vector<const GeoVPhysVol*>,std::vector<Amg::Transform3D>) const;
+      const Trk::TrackingVolume* processSpacer(Trk::Volume*&,std::vector<const GeoVPhysVol*>,std::vector<Amg::Transform3D>) const;
       const Trk::TrackingVolume* processNSW(std::vector<const Trk::Layer*>) const;
-      const Trk::LayerArray* processCSCTrdComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, HepGeom::Transform3D*&) const;
-      const Trk::LayerArray* processCSCDiamondComponent(const GeoVPhysVol*&, Trk::DoubleTrapezoidVolumeBounds*&, HepGeom::Transform3D*&) const;
-      const Trk::LayerArray* processTGCComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, HepGeom::Transform3D*&) const;
+      const Trk::LayerArray* processCSCTrdComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, Amg::Transform3D*&) const;
+      const Trk::LayerArray* processCSCDiamondComponent(const GeoVPhysVol*&, Trk::DoubleTrapezoidVolumeBounds*&, Amg::Transform3D*&) const;
+      const Trk::LayerArray* processTGCComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, Amg::Transform3D*&) const;
       std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>* > createLayerRepresentation(const Trk::TrackingVolume* trVol) const; 
-      const Trk::Layer* createLayer(const Trk::TrackingVolume* trVol,Trk::ExtendedMaterialProperties*, HepGeom::Transform3D&) const; 
-      Identifier identifyNSW( std::string, HepGeom::Transform3D ) const;
+      const Trk::Layer* createLayer(const Trk::TrackingVolume* trVol,Trk::ExtendedMaterialProperties*, Amg::Transform3D&) const; 
+      Identifier identifyNSW( std::string, Amg::Transform3D ) const;
    
       void printChildren(const GeoVPhysVol*) const ;
       // used to be private ..
@@ -102,11 +98,8 @@ namespace Muon {
       bool                                m_resolveSpacer;   
 
       ToolHandle<Trk::ITrackingVolumeArrayCreator>   m_trackingVolumeArrayCreator;  //!< Helper Tool to create TrackingVolume Arrays
-      unsigned int                                   m_magFieldMode;                //!< set the magnetic field mode
-      ToolHandle<Trk::IMagneticFieldTool>            m_magFieldTool;                //!< Tracking Interface to Magnetic Field
 
       mutable Trk::MaterialProperties*     m_muonMaterial;               //!< the material
-      mutable Trk::MagneticFieldProperties m_muonMagneticField;          //!< the magnetic Field
  
       mutable Trk::ExtendedMaterialProperties*    m_mdtTubeMat;                  //
       mutable std::vector<Trk::ExtendedMaterialProperties*>    m_mdtFoamMat;                  //

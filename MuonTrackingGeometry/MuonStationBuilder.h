@@ -7,7 +7,6 @@
 
 //Trk
 #include "TrkDetDescrInterfaces/IDetachedTrackingVolumeBuilder.h"
-#include "TrkGeometry/MagneticFieldProperties.h"
 #include "TrkGeometry/MaterialProperties.h"
 #include "TrkGeometry/DetachedTrackingVolume.h"
 #include "TrkGeometry/TrackingVolume.h"
@@ -36,7 +35,6 @@ namespace Trk {
  class ITrackingVolumeHelper;
  class ILayerBuilder;
  class ILayerArrayCreator;
- class IMagneticFieldTool;
  class ExtendedMaterialProperties;
 }
 
@@ -77,8 +75,8 @@ namespace Muon {
       void glueComponents(const Trk::DetachedTrackingVolume* ) const;    
       void encloseLayers( const Trk::DetachedTrackingVolume* ) const; 
       void identifyLayers(const Trk::DetachedTrackingVolume*, int, int ) const;
-      void identifyPrototype(const Trk::TrackingVolume*, int, int, HepGeom::Transform3D ) const;
-      void getObjsForTranslation(const GeoVPhysVol* pv, std::string name, HepGeom::Transform3D , std::vector<std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<HepGeom::Transform3D> > >& vols, std::vector<std::string>& volNames ) const;
+      void identifyPrototype(const Trk::TrackingVolume*, int, int, Amg::Transform3D ) const;
+      void getObjsForTranslation(const GeoVPhysVol* pv, std::string name, Amg::Transform3D , std::vector<std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<Amg::Transform3D> > >& vols, std::vector<std::string>& volNames ) const;
   
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       const MdtIdHelper*            m_mdtIdHelper;           //!< 
@@ -89,9 +87,6 @@ namespace Muon {
       const MmIdHelper*            m_mmIdHelper;           //!< 
       std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
 
-      unsigned int                              m_magFieldMode;           //!< set the magnetic field properties
-      ToolHandle<Trk::IMagneticFieldTool>       m_magFieldTool;           //!< Tracking Interface to Magnetic Field
-
       ToolHandle<Muon::MuonStationTypeBuilder>  m_muonStationTypeBuilder; //!< Helper Tool to create TrackingVolume Arrays
 
       ToolHandle<Trk::ITrackingVolumeHelper>    m_trackingVolumeHelper;   //!< Helper Tool to create TrackingVolumes
@@ -100,7 +95,6 @@ namespace Muon {
       mutable std::pair<bool,Trk::MaterialProperties>   m_sTgcMaterial;  //!< the material
       mutable std::pair<bool,Trk::MaterialProperties>   m_mmMaterial;    //!< the material
       mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
-      mutable Trk::MagneticFieldProperties  m_muonMagneticField;          //!< the magnetic Field
       Trk::GeoShapeConverter*             m_geoShapeConverter;          //!< shape converter
       Trk::GeoMaterialConverter*          m_materialConverter;          //!< material converter
       bool                                m_buildBarrel;

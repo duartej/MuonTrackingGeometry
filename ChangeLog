@@ -1,3 +1,7 @@
+2013-08-22 Sarka Todorova <sarka.todorova@cern.ch>
+	* migration to Eigen and new Trk::BinUtilities 
+	* tagged as MuonTrackingGeometry-01-00-00
+
 2013-05-12 Sarka Todorova <sarka.todorova@cern.ch>
 	* bugfix in the position of NSW layers 
 	* tagged as MuonTrackingGeometry-00-05-55

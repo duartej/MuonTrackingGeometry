@@ -5,23 +5,18 @@
 // Muon
 #include "MuonTrackingGeometry/MuonTrackingGeometryBuilder.h"
 #include "MuonReadoutGeometry/GlobalUtilities.h" 
+// Amg
+#include "GeoPrimitives/GeoPrimitives.h"
 // Trk
 #include "TrkDetDescrInterfaces/ITrackingVolumeArrayCreator.h"
 #include "TrkDetDescrInterfaces/ITrackingVolumeHelper.h"
 #include "TrkDetDescrInterfaces/ITrackingVolumeDisplayer.h"
-#include "TrkDetDescrUtils/BinUtility1DR.h"
-#include "TrkDetDescrUtils/BinUtility1DZ.h"
-#include "TrkDetDescrUtils/BinUtility1DZZ.h"
-#include "TrkDetDescrUtils/BinUtility1DF.h"
-#include "TrkDetDescrUtils/BinUtility1DH.h"
-#include "TrkDetDescrUtils/BinUtility2DPhiZ.h"
-#include "TrkDetDescrUtils/BinUtility2DZPhi.h"
-#include "TrkDetDescrUtils/BinUtility2DZF.h"
-#include "TrkDetDescrUtils/BinUtility3DZFH.h"
+#include "TrkDetDescrUtils/GenericBinUtility.h"
+//#include "TrkDetDescrUtils/BinUtility3DZFH.h"
 #include "TrkDetDescrUtils/BinnedArray.h"
 #include "TrkDetDescrUtils/BinnedArray1D.h"
 #include "TrkDetDescrUtils/BinnedArray2D.h"
-#include "TrkDetDescrUtils/BinnedArray3D.h"
+#include "TrkDetDescrUtils/BinnedArray1D1D1D.h"
 //#include "TrkDetDescrUtils/BinningType.h"
 #include "TrkDetDescrUtils/GeometryStatics.h"
 #include "TrkDetDescrUtils/SharedObject.h"
@@ -36,23 +31,11 @@
 #include "TrkVolumes/PrismVolumeBounds.h"
 #include "TrkVolumes/BoundarySurface.h"
 //#include "TrkGeometry/SimplifiedMaterialProperties.h"
-#include "TrkMagFieldInterfaces/IMagneticFieldTool.h"
-#include "TrkMagFieldUtils/MagneticFieldMode.h"
-#include "TrkMagFieldUtils/MagneticFieldMap.h"
-#include "TrkMagFieldUtils/MagneticFieldMapConstant.h"
-#include "TrkMagFieldUtils/MagneticFieldMapGrid3D.h"
-#include "TrkMagFieldUtils/MagneticFieldMapSolenoid.h"
 #include "TrkGeometry/TrackingGeometry.h"
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkGeometry/GlueVolumesDescriptor.h"
 #include "TrkGeometry/BendingCorrector.h"
 #include<fstream>
-
-// BField
-#include "BFieldAth/MagFieldAthena.h"
-
-//CLHEP
-#include "CLHEP/Units/SystemOfUnits.h"
 
 // STD
 #include <map>
@@ -61,8 +44,6 @@
 // constructor
 Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string& t, const std::string& n, const IInterface* p) :
   AthAlgTool(t,n,p),
-  m_magFieldMode(Trk::RealisticField),
-  m_magFieldTool("Trk::MagneticFieldTool/AtlasMagneticFieldTool"),
   m_stationBuilder("Muon::MuonStationBuilder/MuonStationBuilder"),
   m_inertBuilder("Muon::MuonInertMaterialBuilder/MuonInertMaterialBuilder"),
   m_trackingVolumeArrayCreator("Trk::TrackingVolumeArrayCreator/TrackingVolumeArrayCreator"),
@@ -119,8 +100,6 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   declareProperty("BuildActiveMaterial",              m_muonActive);  
   declareProperty("BuildInertMaterial",               m_muonInert);
   declareProperty("InertMaterialBuilder",             m_inertBuilder);
-  declareProperty("MagneticFieldMode",                m_magFieldMode);
-  declareProperty("MagneticFieldTool",                m_magFieldTool);  
   // the overall dimensions
   declareProperty("InnerBarrelRadius",              m_innerBarrelRadius);
   declareProperty("OuterBarrelRadius",              m_outerBarrelRadius);
@@ -152,16 +131,7 @@ Muon::MuonTrackingGeometryBuilder::~MuonTrackingGeometryBuilder()
 // initialize
 StatusCode Muon::MuonTrackingGeometryBuilder::initialize()
 {
-  
-  // Retrieve the magnetic field tool   ----------------------------------------------------    
-  if (m_magFieldMode && m_magFieldTool.retrieve().isFailure())
-    {
-      ATH_MSG_FATAL("Failed to retrieve tool " << m_magFieldTool );
-      return StatusCode::FAILURE;
-    } else
-    ATH_MSG_INFO( "Retrieved tool " << m_magFieldTool );
-  
-  
+ 
   // Retrieve the tracking volume helper   -------------------------------------------------    
   if (m_trackingVolumeHelper.retrieve().isFailure())
     {
@@ -262,13 +232,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
   m_muonMaterial = Trk::MaterialProperties(m_muonMaterialProperties[0],
 					   m_muonMaterialProperties[1],
 					   m_muonMaterialProperties[2]);
-  
-  // magnetic field steering
-  if (!m_magFieldMode)
-      m_muonMagneticField = Trk::MagneticFieldProperties();
-  else      
-      m_muonMagneticField = Trk::MagneticFieldProperties(&(*m_magFieldTool), (Trk::MagneticFieldMode)m_magFieldMode);
-  
+    
   // dummy substructures
   const Trk::LayerArray* dummyLayers = 0;
   const Trk::TrackingVolumeArray* dummyVolumes = 0;
@@ -277,10 +241,9 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
   if (m_muonSimple) {             
     Trk::VolumeBounds* globalBounds = new Trk::CylinderVolumeBounds(m_outerBarrelRadius,
 								    m_outerEndcapZ);
-    Trk::TrackingVolume* topVolume = new Trk::TrackingVolume(new HepGeom::Transform3D,
+    Trk::TrackingVolume* topVolume = new Trk::TrackingVolume(0,
 							     globalBounds,
 							     m_muonMaterial,
-							     m_muonMagneticField,
 							     dummyLayers,dummyVolumes,
 							     "GlobalVolume",bcorr);
     m_standaloneTrackingVolume = topVolume;
@@ -386,10 +349,9 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 	Trk::CylinderVolumeBounds* barrelRBounds = new Trk::CylinderVolumeBounds(enclosedDetectorOuterRadius,
 										 m_innerBarrelRadius,
 										 enclosedDetectorHalfZ);
-	const Trk::TrackingVolume* barrelRBuffer = new Trk::TrackingVolume(new HepGeom::Transform3D(),
+	const Trk::TrackingVolume* barrelRBuffer = new Trk::TrackingVolume(0,
 									   barrelRBounds,
 									   m_muonMaterial,
-									   m_muonMagneticField,
 									   dummyLayers,dummyVolumes,
 									   "BarrelRBuffer", bcorr);
 	
@@ -411,16 +373,14 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 	Trk::CylinderVolumeBounds* barrelZMBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
 										 0.5*(m_barrelZ - enclosedDetectorHalfZ) );
 	double zbShift =  0.5*(m_barrelZ + enclosedDetectorHalfZ);
-	const Trk::TrackingVolume* barrelZPBuffer = new Trk::TrackingVolume(new HepGeom::Transform3D(HepGeom::TranslateZ3D(zbShift)),
+	const Trk::TrackingVolume* barrelZPBuffer = new Trk::TrackingVolume(new Amg::Transform3D(Amg::Translation3D(Amg::Vector3D(0.,0.,zbShift))),
 									    barrelZPBounds,
 									    m_muonMaterial,
-									    m_muonMagneticField,
 									    dummyLayers,dummyVolumes,
 									    "BarrelRZPosBuffer", bcorr);
-	const Trk::TrackingVolume* barrelZMBuffer = new Trk::TrackingVolume(new HepGeom::Transform3D(HepGeom::TranslateZ3D(-zbShift)),
+	const Trk::TrackingVolume* barrelZMBuffer = new Trk::TrackingVolume(new Amg::Transform3D(Amg::Translation3D(Amg::Vector3D(0.,0.,-zbShift))),
 									    barrelZMBounds,
 									    m_muonMaterial,
-									    m_muonMagneticField,
 									    dummyLayers,dummyVolumes,
 									    "BarrelRZNegBuffer", bcorr);
 	
@@ -455,10 +415,9 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
     
     if (!enclosedBounds) enclosedBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
 									m_barrelZ);
-    enclosed = new Trk::TrackingVolume(new HepGeom::Transform3D(),
+    enclosed = new Trk::TrackingVolume(0,
 				       enclosedBounds,
 				       m_muonMaterial,
-				       m_muonMagneticField,
 				       dummyLayers,dummyVolumes,
 				       m_entryVolume, bcorr);
     enclosed->registerColorCode(0); 
@@ -469,14 +428,14 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
   
   negDiskShieldBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
 						      0.5*(m_diskShieldZ - m_barrelZ) );
-  CLHEP::Hep3Vector negDiskShieldPosition(0.,0.,-0.5*(m_diskShieldZ+m_barrelZ));
-  Trk::Volume negDiskVol(new HepGeom::Transform3D(Trk::s_idRotation,negDiskShieldPosition),negDiskShieldBounds);
+  Amg::Vector3D negDiskShieldPosition(0.,0.,-0.5*(m_diskShieldZ+m_barrelZ));
+  Trk::Volume negDiskVol(new Amg::Transform3D(Amg::Translation3D(negDiskShieldPosition)),negDiskShieldBounds);
   negDiskShield = processShield(&negDiskVol,2,"Muons::Detectors::NegativeDiskShield");
 
   posDiskShieldBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
 						      0.5*(m_diskShieldZ - m_barrelZ) );
-  CLHEP::Hep3Vector posDiskShieldPosition(0.,0., 0.5*(m_diskShieldZ+m_barrelZ));
-  Trk::Volume posDiskVol(new HepGeom::Transform3D(Trk::s_idRotation,posDiskShieldPosition),posDiskShieldBounds);
+  Amg::Vector3D posDiskShieldPosition(0.,0., 0.5*(m_diskShieldZ+m_barrelZ));
+  Trk::Volume posDiskVol(new Amg::Transform3D(Amg::Translation3D(posDiskShieldPosition)),posDiskShieldBounds);
   posDiskShield = processShield(&posDiskVol,2,"Muons::Detectors::PositiveDiskShield");
 	   
   ATH_MSG_INFO( name() << "glue enclosed  + disk shields" );
@@ -494,7 +453,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
   barrelBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
 					       m_outerBarrelRadius,
 					       m_diskShieldZ);
-  Trk::Volume barrelVol(new HepGeom::Transform3D(),barrelBounds);
+  Trk::Volume barrelVol(0,barrelBounds);
 // process volume
 // barrel
   if (m_adjustStatic && m_static3d) muonBarrel = processVolume( &barrelVol,0,"Muon::Detectors::Barrel"); 
@@ -507,8 +466,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    negativeSmallWheelBounds = new Trk::CylinderVolumeBounds(m_innerShieldRadius,
 							    m_outerBarrelRadius,
 							    smallWheelZHalfSize);
-   CLHEP::Hep3Vector negSmallWheelPosition(0.,0.,-m_ectZ+smallWheelZHalfSize);
-   HepGeom::Transform3D* negSmallWheelTransf = new HepGeom::Transform3D(Trk::s_idRotation,negSmallWheelPosition);
+   Amg::Vector3D negSmallWheelPosition(0.,0.,-m_ectZ+smallWheelZHalfSize);
+   Amg::Transform3D* negSmallWheelTransf = new Amg::Transform3D(Amg::Translation3D(negSmallWheelPosition));
    Trk::Volume negSWVol(negSmallWheelTransf,negativeSmallWheelBounds);
    if (m_adjustStatic && m_static3d) negativeMuonSmallWheel = processVolume( &negSWVol,1,"Muon::Detectors::NegativeSmallWheel" ); 
    else if (m_adjustStatic) negativeMuonSmallWheel = processVolume( &negSWVol,-1,"Muon::Detectors::NegativeSmallWheel" ); 
@@ -516,8 +475,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 						"Muon::Detectors::NegativeSmallWheel" ); 
    //checkVolume(negativeMuonSmallWheel);
    //
-   CLHEP::Hep3Vector posSmallWheelShift(0.,0.,2*(m_ectZ-smallWheelZHalfSize));
-   Trk::Volume posSWVol(negSWVol,*(new HepGeom::Transform3D(Trk::s_idRotation,posSmallWheelShift)));
+   Amg::Vector3D posSmallWheelShift(0.,0.,2*(m_ectZ-smallWheelZHalfSize));
+   Trk::Volume posSWVol(negSWVol,*(new Amg::Transform3D(Amg::Translation3D(posSmallWheelShift))));
    if (m_adjustStatic && m_static3d) positiveMuonSmallWheel = processVolume( &posSWVol,1,"Muon::Detectors::PositiveSmallWheel" ); 
    else if (m_adjustStatic) positiveMuonSmallWheel = processVolume( &posSWVol,-1,"Muon::Detectors::PositiveSmallWheel" ); 
    else positiveMuonSmallWheel = processVolume( &posSWVol,m_innerEndcapEtaPartition,m_phiPartition,
@@ -528,8 +487,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    negativeECTBounds = new Trk::CylinderVolumeBounds(m_innerShieldRadius,
 						     m_outerBarrelRadius,
 						     ectZHalfSize);
-   CLHEP::Hep3Vector negECTPosition(0.,0.,-m_ectZ-ectZHalfSize);
-   HepGeom::Transform3D* negECTTransf = new HepGeom::Transform3D(Trk::s_idRotation,negECTPosition);
+   Amg::Vector3D negECTPosition(0.,0.,-m_ectZ-ectZHalfSize);
+   Amg::Transform3D* negECTTransf = new Amg::Transform3D(Amg::Translation3D(negECTPosition));
    Trk::Volume negECTVol(negECTTransf,negativeECTBounds);
    if (m_adjustStatic && m_static3d) negativeECT = processVolume( &negECTVol,2,"Muon::Detectors::NegativeECT" ); 
    else if (m_adjustStatic) negativeECT = processVolume( &negECTVol,-1,"Muon::Detectors::NegativeECT" ); 
@@ -537,8 +496,8 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 						"Muon::Detectors::NegativeECT" ); 
    //checkVolume(negativeECT);
    //
-   CLHEP::Hep3Vector posECTShift(0.,0.,2*(m_ectZ+ectZHalfSize));
-   Trk::Volume posECTVol(negECTVol,*(new HepGeom::Transform3D(Trk::s_idRotation,posECTShift)));
+   Amg::Vector3D posECTShift(0.,0.,2*(m_ectZ+ectZHalfSize));
+   Trk::Volume posECTVol(negECTVol,*(new Amg::Transform3D(Amg::Translation3D(posECTShift))));
    if (m_adjustStatic && m_static3d) positiveECT = processVolume( &posECTVol,2,"Muon::Detectors::PositiveECT" ); 
    else if (m_adjustStatic) positiveECT = processVolume( &posECTVol,-1,"Muon::Detectors::PositiveECT" ); 
    else positiveECT = processVolume( &posECTVol,m_innerEndcapEtaPartition,m_phiPartition,
@@ -559,15 +518,15 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    negInnerShieldBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
 							m_innerShieldRadius,
 							innerEndcapZHalfSize);
-   CLHEP::Hep3Vector negInnerEndcapPosition(0.,0.,-m_diskShieldZ-innerEndcapZHalfSize);
-   Trk::Volume negisVol(new HepGeom::Transform3D(Trk::s_idRotation,negInnerEndcapPosition),negInnerShieldBounds);
+   Amg::Vector3D negInnerEndcapPosition(0.,0.,-m_diskShieldZ-innerEndcapZHalfSize);
+   Trk::Volume negisVol(new Amg::Transform3D(Amg::Translation3D(negInnerEndcapPosition)),negInnerShieldBounds);
    negInnerShield = processShield(&negisVol,1,"Muons::Detectors::NegativeInnerShield");
 
    posInnerShieldBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
 							m_innerShieldRadius,
 							innerEndcapZHalfSize);
-   CLHEP::Hep3Vector posInnerEndcapPosition(0.,0.,m_diskShieldZ+innerEndcapZHalfSize);
-   Trk::Volume posisVol(new HepGeom::Transform3D(Trk::s_idRotation,posInnerEndcapPosition),posInnerShieldBounds);
+   Amg::Vector3D posInnerEndcapPosition(0.,0.,m_diskShieldZ+innerEndcapZHalfSize);
+   Trk::Volume posisVol(new Amg::Transform3D(Amg::Translation3D(posInnerEndcapPosition)),posInnerShieldBounds);
    posInnerShield = processShield(&posisVol,1,"Muons::Detectors::PositiveInnerShield");
 
 // outer Endcap
@@ -577,16 +536,16 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    negativeOuterWheelBounds = new Trk::CylinderVolumeBounds(m_outerShieldRadius,
 							    m_outerBarrelRadius,
 							    outerWheelZHalfSize);
-   CLHEP::Hep3Vector negOuterWheelPosition(0.,0.,-m_outerEndcapZ+outerWheelZHalfSize);
-   HepGeom::Transform3D* negOuterWheelTransf = new HepGeom::Transform3D(Trk::s_idRotation,negOuterWheelPosition);
+   Amg::Vector3D negOuterWheelPosition(0.,0.,-m_outerEndcapZ+outerWheelZHalfSize);
+   Amg::Transform3D* negOuterWheelTransf = new Amg::Transform3D(Amg::Translation3D(negOuterWheelPosition));
    Trk::Volume negOWVol(negOuterWheelTransf,negativeOuterWheelBounds);
    if (m_adjustStatic && m_static3d) negativeMuonOuterWheel = processVolume( &negOWVol,3,"Muon::Detectors::NegativeOuterWheel" ); 
    else if (m_adjustStatic) negativeMuonOuterWheel = processVolume( &negOWVol,-1,"Muon::Detectors::NegativeOuterWheel" ); 
    else negativeMuonOuterWheel = processVolume( &negOWVol,m_outerEndcapEtaPartition,m_phiPartition,
 						"Muon::Detectors::NegativeOuterWheel" ); 
    //
-   CLHEP::Hep3Vector posOuterWheelShift(0.,0.,2*(m_outerEndcapZ-outerWheelZHalfSize));
-   Trk::Volume posOWVol(negOWVol,*(new HepGeom::Transform3D(Trk::s_idRotation,posOuterWheelShift)));
+   Amg::Vector3D posOuterWheelShift(0.,0.,2*(m_outerEndcapZ-outerWheelZHalfSize));
+   Trk::Volume posOWVol(negOWVol,*(new Amg::Transform3D(Amg::Translation3D(posOuterWheelShift))));
    if (m_adjustStatic && m_static3d) positiveMuonOuterWheel = processVolume( &posOWVol,3,"Muon::Detectors::PositiveOuterWheel" ); 
    else if (m_adjustStatic) positiveMuonOuterWheel = processVolume( &posOWVol,-1,"Muon::Detectors::PositiveOuterWheel" ); 
    else positiveMuonOuterWheel = processVolume( &posOWVol,m_outerEndcapEtaPartition,m_phiPartition,
@@ -596,16 +555,16 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    negativeOuterBufferBounds = new Trk::CylinderVolumeBounds(m_outerShieldRadius,
 							     m_outerBarrelRadius,
 							     outerBufferZHalfSize);
-   CLHEP::Hep3Vector negOuterBufferPosition(0.,0.,-m_bigWheel-outerBufferZHalfSize);
-   HepGeom::Transform3D* negOuterBufferTransf = new HepGeom::Transform3D(Trk::s_idRotation,negOuterBufferPosition);
+   Amg::Vector3D negOuterBufferPosition(0.,0.,-m_bigWheel-outerBufferZHalfSize);
+   Amg::Transform3D* negOuterBufferTransf = new Amg::Transform3D(Amg::Translation3D(negOuterBufferPosition));
    Trk::Volume negBuffVol(negOuterBufferTransf,negativeOuterBufferBounds);
    if (m_adjustStatic && m_static3d) negativeMuonOuterBuffer = processVolume( &negBuffVol,3,"Muon::Detectors::NegativeOuterBuffer" ); 
    else if (m_adjustStatic) negativeMuonOuterBuffer = processVolume( &negBuffVol,-1,"Muon::Detectors::NegativeOuterBuffer" ); 
    else negativeMuonOuterBuffer = processVolume( &negBuffVol,m_outerEndcapEtaPartition,m_phiPartition,
 						"Muon::Detectors::NegativeOuterBuffer" ); 
    //
-   CLHEP::Hep3Vector posOuterBufferShift(0.,0.,2*(m_bigWheel+outerBufferZHalfSize));
-   Trk::Volume posBuffVol(negBuffVol,*(new HepGeom::Transform3D(Trk::s_idRotation,posOuterBufferShift)));
+   Amg::Vector3D posOuterBufferShift(0.,0.,2*(m_bigWheel+outerBufferZHalfSize));
+   Trk::Volume posBuffVol(negBuffVol,*(new Amg::Transform3D(Amg::Translation3D(posOuterBufferShift))));
    if (m_adjustStatic && m_static3d) positiveMuonOuterBuffer = processVolume( &posBuffVol,3,"Muon::Detectors::PositiveOuterBuffer" ); 
    else if (m_adjustStatic) positiveMuonOuterBuffer = processVolume( &posBuffVol,-1,"Muon::Detectors::PositiveOuterBuffer" ); 
    else positiveMuonOuterBuffer = processVolume( &posBuffVol,m_outerEndcapEtaPartition,m_phiPartition,
@@ -615,16 +574,16 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
    negativeBigWheelBounds = new Trk::CylinderVolumeBounds(m_outerShieldRadius,
 							  m_outerBarrelRadius,
 							  bigWheelZHalfSize);
-   CLHEP::Hep3Vector negBigWheelPosition(0.,0.,-m_innerEndcapZ-bigWheelZHalfSize);
-   HepGeom::Transform3D* negBigWheelTransf = new HepGeom::Transform3D(Trk::s_idRotation,negBigWheelPosition);
+   Amg::Vector3D negBigWheelPosition(0.,0.,-m_innerEndcapZ-bigWheelZHalfSize);
+   Amg::Transform3D* negBigWheelTransf = new Amg::Transform3D(Amg::Translation3D(negBigWheelPosition));
    Trk::Volume negBWVol(negBigWheelTransf,negativeBigWheelBounds);
    if (m_adjustStatic && m_static3d) negativeMuonBigWheel = processVolume( &negBWVol,3,"Muon::Detectors::NegativeBigWheel" ); 
    else if (m_adjustStatic) negativeMuonBigWheel = processVolume( &negBWVol,-1,"Muon::Detectors::NegativeBigWheel" ); 
    else negativeMuonBigWheel = processVolume( &negBWVol,m_outerEndcapEtaPartition,m_phiPartition,
 						"Muon::Detectors::NegativeBigWheel" ); 
    //
-   CLHEP::Hep3Vector posBigWheelShift(0.,0.,2*(m_innerEndcapZ+bigWheelZHalfSize));
-   Trk::Volume posBWVol(negBWVol,*(new HepGeom::Transform3D(Trk::s_idRotation,posBigWheelShift)));
+   Amg::Vector3D posBigWheelShift(0.,0.,2*(m_innerEndcapZ+bigWheelZHalfSize));
+   Trk::Volume posBWVol(negBWVol,*(new Amg::Transform3D(Amg::Translation3D(posBigWheelShift))));
    if (m_adjustStatic && m_static3d) positiveMuonBigWheel = processVolume( &posBWVol,3,"Muon::Detectors::PositiveBigWheel" ); 
    else if (m_adjustStatic) positiveMuonBigWheel = processVolume( &posBWVol,-1,"Muon::Detectors::PositiveBigWheel" ); 
    else positiveMuonBigWheel = processVolume( &posBWVol,m_outerEndcapEtaPartition,m_phiPartition,
@@ -648,18 +607,18 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 // outer shields   
    double outerEndcapZHalfSize = 0.5*(m_outerEndcapZ-m_innerEndcapZ);
    double outerEndcapPosition  = 0.5*(m_outerEndcapZ+m_innerEndcapZ);
-   CLHEP::Hep3Vector negOuterShieldPosition(0.,0.,-outerEndcapPosition);
+   Amg::Vector3D negOuterShieldPosition(0.,0.,-outerEndcapPosition);
    negOuterShieldBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
 							m_outerShieldRadius,
 							outerEndcapZHalfSize);
-   Trk::Volume negosVol(new HepGeom::Transform3D(Trk::s_idRotation,negOuterShieldPosition),negOuterShieldBounds);
+   Trk::Volume negosVol(new Amg::Transform3D(Amg::Translation3D(negOuterShieldPosition)),negOuterShieldBounds);
    negOuterShield = processShield(&negosVol,0,"Muons::Detectors::NegativeOuterShield");
 
    posOuterShieldBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
 							m_outerShieldRadius,
 							outerEndcapZHalfSize);
-   CLHEP::Hep3Vector posOuterShieldPosition(0.,0.,outerEndcapPosition);
-   Trk::Volume pososVol(new HepGeom::Transform3D(Trk::s_idRotation,posOuterShieldPosition),posOuterShieldBounds);
+   Amg::Vector3D posOuterShieldPosition(0.,0.,outerEndcapPosition);
+   Trk::Volume pososVol(new Amg::Transform3D(Amg::Translation3D(posOuterShieldPosition)),posOuterShieldBounds);
    posOuterShield = processShield(&pososVol,0,"Muons::Detectors::PositiveOuterShield");
 
 // beamPipe
@@ -667,11 +626,11 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
                                                   outerEndcapZHalfSize+innerEndcapZHalfSize);
    posBeamPipeBounds = new Trk::CylinderVolumeBounds(m_beamPipeRadius,
                                                   outerEndcapZHalfSize+innerEndcapZHalfSize);
-   CLHEP::Hep3Vector posBeamPipePosition(0.,0., m_outerEndcapZ-innerEndcapZHalfSize-outerEndcapZHalfSize);
-   CLHEP::Hep3Vector negBeamPipePosition(0.,0.,-m_outerEndcapZ+innerEndcapZHalfSize+outerEndcapZHalfSize);
-   Trk::Volume negbpVol(new HepGeom::Transform3D(Trk::s_idRotation,negBeamPipePosition),negBeamPipeBounds);
+   Amg::Vector3D posBeamPipePosition(0.,0., m_outerEndcapZ-innerEndcapZHalfSize-outerEndcapZHalfSize);
+   Amg::Vector3D negBeamPipePosition(0.,0.,-m_outerEndcapZ+innerEndcapZHalfSize+outerEndcapZHalfSize);
+   Trk::Volume negbpVol(new Amg::Transform3D(Amg::Translation3D(negBeamPipePosition)),negBeamPipeBounds);
    negBeamPipe = processVolume(&negbpVol,1,1,"Muons::Gaps::NegativeBeamPipe");
-   Trk::Volume posbpVol(new HepGeom::Transform3D(Trk::s_idRotation,posBeamPipePosition),posBeamPipeBounds);
+   Trk::Volume posbpVol(new Amg::Transform3D(Amg::Translation3D(posBeamPipePosition)),posBeamPipeBounds);
    posBeamPipe = processVolume(&posbpVol,1,1,"Muons::Gaps::PositiveBeamPipe");
 
    negBeamPipe->registerColorCode(0); 
@@ -795,7 +754,7 @@ StatusCode Muon::MuonTrackingGeometryBuilder::finalize()
     ATH_MSG_INFO( name() <<" finalize() successful" );
     return StatusCode::SUCCESS;
 }
-const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::VolumeBounds* volBounds, HepGeom::Transform3D transform, double zTol, double phiTol) const
+const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::VolumeBounds* volBounds, Amg::Transform3D transform, double zTol, double phiTol) const
 {
   if (!volBounds) return 0;
   // volume shape
@@ -829,69 +788,69 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
   double minZ = m_outerEndcapZ ; double maxZ = - m_outerEndcapZ;
   double minPhi = 2*M_PI; double maxPhi = 0.;
   double minR = m_outerBarrelRadius; double maxR = 0.;
-  std::vector<Trk::GlobalPosition> edges;
+  std::vector<Amg::Vector3D> edges;
   edges.reserve(16);
   Muon::Span span;  
   span.reserve(6); 
   
   double cylZcorr = 0.; 
   if (box) {
-    edges.push_back( Trk::GlobalPosition(box->halflengthX(),box->halflengthY(),box->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-box->halflengthX(),box->halflengthY(),box->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(box->halflengthX(),-box->halflengthY(),box->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-box->halflengthX(),-box->halflengthY(),box->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(box->halflengthX(),box->halflengthY(),-box->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-box->halflengthX(),box->halflengthY(),-box->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(box->halflengthX(),-box->halflengthY(),-box->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-box->halflengthX(),-box->halflengthY(),-box->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(0.,0.,-box->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(0.,0., box->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-box->halflengthX(),0.,0.) );
-    edges.push_back( Trk::GlobalPosition( box->halflengthX(),0.,0.) );
-    edges.push_back( Trk::GlobalPosition(0.,-box->halflengthY(),0.) );
-    edges.push_back( Trk::GlobalPosition(0., box->halflengthY(),0.) );
+    edges.push_back( Amg::Vector3D(box->halflengthX(),box->halflengthY(),box->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-box->halflengthX(),box->halflengthY(),box->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(box->halflengthX(),-box->halflengthY(),box->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-box->halflengthX(),-box->halflengthY(),box->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(box->halflengthX(),box->halflengthY(),-box->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-box->halflengthX(),box->halflengthY(),-box->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(box->halflengthX(),-box->halflengthY(),-box->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-box->halflengthX(),-box->halflengthY(),-box->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(0.,0.,-box->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(0.,0., box->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-box->halflengthX(),0.,0.) );
+    edges.push_back( Amg::Vector3D( box->halflengthX(),0.,0.) );
+    edges.push_back( Amg::Vector3D(0.,-box->halflengthY(),0.) );
+    edges.push_back( Amg::Vector3D(0., box->halflengthY(),0.) );
   }
   if (trd) {
-    edges.push_back( Trk::GlobalPosition(trd->maxHalflengthX(),trd->halflengthY(),trd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-trd->maxHalflengthX(),trd->halflengthY(),trd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(trd->minHalflengthX(),-trd->halflengthY(),trd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-trd->minHalflengthX(),-trd->halflengthY(),trd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(trd->maxHalflengthX(),trd->halflengthY(),-trd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-trd->maxHalflengthX(),trd->halflengthY(),-trd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(trd->minHalflengthX(),-trd->halflengthY(),-trd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-trd->minHalflengthX(),-trd->halflengthY(),-trd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(0.,0.,-trd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(0.,0., trd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-0.5*(trd->minHalflengthX()+trd->maxHalflengthX()),0.,0.) );
-    edges.push_back( Trk::GlobalPosition( 0.5*(trd->minHalflengthX()+trd->maxHalflengthX()),0.,0.) );
-    edges.push_back( Trk::GlobalPosition(0.,-trd->halflengthY(),0.) );
-    edges.push_back( Trk::GlobalPosition(0., trd->halflengthY(),0.) );
+    edges.push_back( Amg::Vector3D(trd->maxHalflengthX(),trd->halflengthY(),trd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-trd->maxHalflengthX(),trd->halflengthY(),trd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(trd->minHalflengthX(),-trd->halflengthY(),trd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-trd->minHalflengthX(),-trd->halflengthY(),trd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(trd->maxHalflengthX(),trd->halflengthY(),-trd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-trd->maxHalflengthX(),trd->halflengthY(),-trd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(trd->minHalflengthX(),-trd->halflengthY(),-trd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-trd->minHalflengthX(),-trd->halflengthY(),-trd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(0.,0.,-trd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(0.,0., trd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-0.5*(trd->minHalflengthX()+trd->maxHalflengthX()),0.,0.) );
+    edges.push_back( Amg::Vector3D( 0.5*(trd->minHalflengthX()+trd->maxHalflengthX()),0.,0.) );
+    edges.push_back( Amg::Vector3D(0.,-trd->halflengthY(),0.) );
+    edges.push_back( Amg::Vector3D(0., trd->halflengthY(),0.) );
   }
   if (dtrd) {
-    edges.push_back( Trk::GlobalPosition( dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),dtrd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),dtrd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition( dtrd->medHalflengthX(),0.,dtrd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-dtrd->medHalflengthX(),0.,dtrd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition( dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),dtrd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),dtrd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition( dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),-dtrd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),-dtrd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition( dtrd->medHalflengthX(),0.,-dtrd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-dtrd->medHalflengthX(),0.,-dtrd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition( dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),-dtrd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(-dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),-dtrd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(0.,0.,-dtrd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(0.,0., dtrd->halflengthZ()) );
-    edges.push_back( Trk::GlobalPosition(0.,-2*dtrd->halflengthY1(),0.) );
-    edges.push_back( Trk::GlobalPosition(0., 2*dtrd->halflengthY2(),0.) );
+    edges.push_back( Amg::Vector3D( dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),dtrd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),dtrd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D( dtrd->medHalflengthX(),0.,dtrd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-dtrd->medHalflengthX(),0.,dtrd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D( dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),dtrd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),dtrd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D( dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),-dtrd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-dtrd->maxHalflengthX(),2*dtrd->halflengthY2(),-dtrd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D( dtrd->medHalflengthX(),0.,-dtrd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-dtrd->medHalflengthX(),0.,-dtrd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D( dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),-dtrd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(-dtrd->minHalflengthX(),-2*dtrd->halflengthY1(),-dtrd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(0.,0.,-dtrd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(0.,0., dtrd->halflengthZ()) );
+    edges.push_back( Amg::Vector3D(0.,-2*dtrd->halflengthY1(),0.) );
+    edges.push_back( Amg::Vector3D(0., 2*dtrd->halflengthY2(),0.) );
   }
   if (bcyl) {
-    edges.push_back( Trk::GlobalPosition(0.,0.,bcyl->halflengthZ()));
-    edges.push_back( Trk::GlobalPosition(0.,0.,-bcyl->halflengthZ()));
+    edges.push_back( Amg::Vector3D(0.,0.,bcyl->halflengthZ()));
+    edges.push_back( Amg::Vector3D(0.,0.,-bcyl->halflengthZ()));
   }
   if (cyl) {
-    edges.push_back( Trk::GlobalPosition(0.,0.,cyl->halflengthZ()));
-    edges.push_back( Trk::GlobalPosition(0.,0.,-cyl->halflengthZ()));
+    edges.push_back( Amg::Vector3D(0.,0.,cyl->halflengthZ()));
+    edges.push_back( Amg::Vector3D(0.,0.,-cyl->halflengthZ()));
   }
   if (spb) {
 #ifdef TRKDETDESCR_USEFLOATPRECISON
@@ -902,8 +861,8 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
 #undef double
 #endif      
     for (unsigned int i=0;i<vtcs.size();i++) {
-      edges.push_back( Trk::GlobalPosition(vtcs[i].first,vtcs[i].second, spb->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(vtcs[i].first,vtcs[i].second, -spb->halflengthZ()) );
+      edges.push_back( Amg::Vector3D(vtcs[i].first,vtcs[i].second, spb->halflengthZ()) );
+      edges.push_back( Amg::Vector3D(vtcs[i].first,vtcs[i].second, -spb->halflengthZ()) );
     }
   }
   if (prism) {
@@ -915,20 +874,20 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
 #undef double
 #endif      
     for (unsigned int i=0;i<vtcs.size();i++) {
-      edges.push_back( Trk::GlobalPosition(vtcs[i].first,vtcs[i].second, prism->halflengthZ()) );
-      edges.push_back( Trk::GlobalPosition(vtcs[i].first,vtcs[i].second, -prism->halflengthZ()) );
+      edges.push_back( Amg::Vector3D(vtcs[i].first,vtcs[i].second, prism->halflengthZ()) );
+      edges.push_back( Amg::Vector3D(vtcs[i].first,vtcs[i].second, -prism->halflengthZ()) );
     }
   }
   // apply transform and get span
   double minP0=M_PI; double maxP0 = 0.; double minP1=2*M_PI; double maxP1=M_PI;
   for (unsigned int ie=0; ie < edges.size() ; ie++) {
-    Trk::GlobalPosition gp = transform*edges[ie];
+    Amg::Vector3D gp = transform*edges[ie];
     double phi = gp.phi()+M_PI; 
     ATH_MSG_VERBOSE( "edges:"<< ie<<","<<gp<<","<< phi);
     double rad = gp.perp();
     if (cyl || bcyl) {
       double radius = 0.; double hz = 0.;
-      Trk::GlobalDirection dir = (transform*Trk::GlobalDirection(0.,0.,1.));
+      Amg::Vector3D dir = (transform*Amg::Vector3D(0.,0.,1.));
       double thAx = dir.theta();
       if (cyl) { radius = cyl->outerRadius(); hz = cyl->halflengthZ();}
       if (bcyl) { radius = bcyl->outerRadius(); hz = bcyl->halflengthZ();}
@@ -999,7 +958,7 @@ const std::vector<std::vector<std::pair<const Trk::DetachedTrackingVolume*,const
   // split MS into 9 blocks to speed up the build-up of geometry
   for (unsigned int i=0;i<9;i++) (*spans)[i] = new std::vector<std::pair<const Trk::DetachedTrackingVolume*,const Span*> >; 
   for (unsigned int iobj=0; iobj<objs->size(); iobj++) {
-    HepGeom::Transform3D  transform = (*objs)[iobj]->trackingVolume()->transform();
+    Amg::Transform3D  transform = (*objs)[iobj]->trackingVolume()->transform();
     const Muon::Span* span = findVolumeSpan(&((*objs)[iobj]->trackingVolume()->volumeBounds()), transform, zTol, phiTol);
     ATH_MSG_VERBOSE( "span:"<<(*objs)[iobj]->name()<< ","<<(*span)[0]<<","<< (*span)[1]<<","<<(*span)[2]<<","
     << (*span)[3]<<","<< (*span)[4]<<","<< (*span)[5] );  
@@ -1072,7 +1031,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	if (colorCode>0) colorCode = 26 - colorCode;
         // define subvolume
         double posZ = (vol->center())[2]+ etaSect * (2.*eta+1.-etaN) ;
-        HepGeom::Transform3D  transf( HepGeom::RotateZ3D( phiSect*(2*phi+1))*HepGeom::TranslateZ3D(posZ));
+        Amg::Transform3D  transf(Amg::AngleAxis3D(phiSect*(2*phi+1), Amg::Vector3D(0.,0.,1.))*Amg::Translation3D(Amg::Vector3D(0.,0.,posZ)));
         const Trk::Volume* subVol= new Trk::Volume(*protVol, transf);     
         // enclosed muon objects ?   
 	std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) ; 
@@ -1080,7 +1039,6 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( subVol, blendVols);
         const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( *subVol,
 								   m_muonMaterial,
-								   m_muonMagneticField,
 								   detVols,
 								   volName );
         // statistics
@@ -1098,9 +1056,9 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         //
         sVol->registerColorCode(colorCode); 
 	// reference position 
-	HepGeom::Point3D<double> gp(subBds->outerRadius(),0.,0.);
+	Amg::Vector3D gp(subBds->outerRadius(),0.,0.);
 	subVolumes.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
-                                                             Trk::GlobalPosition(transf*gp)));
+                                                             Amg::Vector3D(transf*gp)));
         //glue subVolumes
         sVols.push_back(sVol); 
         if (eta==0)      sVolsNeg.push_back(sVol); 
@@ -1119,13 +1077,19 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
       }
     }
 
-    Trk::BinUtility2DPhiZ* volBinUtil=new Trk::BinUtility2DPhiZ(phiN,etaN,subBds->outerRadius(),cyl->halflengthZ(),M_PI, new HepGeom::Transform3D(vol->transform()));
+    //Trk::BinUtility2DPhiZ* volBinUtil=new Trk::BinUtility2DPhiZ(phiN,etaN,subBds->outerRadius(),cyl->halflengthZ(),M_PI, new Amg::Transform3D(vol->transform()));
+    Trk::GenericBinUtility buPhi( phiN, -M_PI, M_PI, Trk::closed, Trk::binPhi ); 
+    const Trk::GenericBinUtility   buZ( etaN, vol->transform().translation()[2]-cyl->halflengthZ(), 
+                                        vol->transform().translation()[2]+cyl->halflengthZ(), Trk::open, Trk::binZ ); 
+    buPhi += buZ; 
+
+    Trk::GenericBinUtility* volBinUtil=new Trk::GenericBinUtility(buPhi);        // TODO verify ordering PhiZ vs. ZPhi 
+
     delete protVol;
     Trk::BinnedArray2D<Trk::TrackingVolume>* subVols=new Trk::BinnedArray2D<Trk::TrackingVolume>(subVolumes,volBinUtil);
 
     tVol = new Trk::TrackingVolume( *vol,
                                     m_muonMaterial,
-				    m_muonMagneticField,
 				    0,subVols,
 				    volumeName);
     // register glue volumes
@@ -1142,7 +1106,6 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
     tVol = new Trk::TrackingVolume( *vol,
                                     m_muonMaterial,
-				    m_muonMagneticField,
 				    muonObjs,
 				    volumeName);
     // statistics
@@ -1186,7 +1149,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     return 0; 
   }
   // create vector of zSteps for this volume
-  std::vector<double> zSteps;
+  std::vector<float> zSteps;
   std::vector<int> zTypes;
   zSteps.clear(); zTypes.clear();
   double zPos = vol->center()[2];
@@ -1222,22 +1185,24 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
   if ( mode > -1 ) {
     // create z,phi bin utilities
-    Trk::BinUtility1DZZ* zBinUtil = new Trk::BinUtility1DZZ(zSteps);
-    Trk::BinUtility1DF* pBinUtil = new Trk::BinUtility1DF(m_adjustedPhi);
-    std::vector<std::vector<Trk::BinUtility1D*> >  hBinUtil;
+    //Trk::BinUtility1DZZ* zBinUtil = new Trk::BinUtility1DZZ(zSteps);
+    //Trk::BinUtility1DF* pBinUtil = new Trk::BinUtility1DF(m_adjustedPhi);
+    Trk::BinUtility* zBinUtil = new Trk::GenericBinUtility(zSteps, Trk::BinningOption::open, Trk::BinningValue::binZ );
+    Trk::BinUtility* pBinUtil = new Trk::GenericBinUtility(m_adjustedPhi,  Trk::BinningOption::closed, Trk::BinningValue::binPhi ); 
+    std::vector<std::vector<Trk::BinUtility*> >*  hBinUtil=new std::vector<std::vector<Trk::BinUtility*> >;
     for (unsigned iz=0;iz < zSteps.size()-1; iz++) {
-      std::vector<Trk::BinUtility1D*> phBinUtil; 
+      std::vector<Trk::BinUtility*> phBinUtil; 
       for (unsigned ip=0;ip < m_adjustedPhi.size(); ip++) {
         // retrieve reference phi
-	double phiRef = 0.5*m_adjustedPhi[ip];
+	float phiRef = 0.5*m_adjustedPhi[ip];
         if (ip<m_adjustedPhi.size()-1) phiRef += 0.5*m_adjustedPhi[ip+1] ;
 	else phiRef += 0.5*m_adjustedPhi[0]+M_PI ;
 
         if (m_adjustedPhiType[ip]>phiTypeMax) phiTypeMax = m_adjustedPhiType[ip];
 
-        phBinUtil.push_back(new Trk::BinUtility1DH(phiRef,m_hPartitions[mode][zTypes[iz]][m_adjustedPhiType[ip]]));
+        phBinUtil.push_back(new Trk::GenericBinUtility(phiRef,m_hPartitions[mode][zTypes[iz]][m_adjustedPhiType[ip]]));
       }
-      hBinUtil.push_back(phBinUtil);
+      hBinUtil->push_back(phBinUtil);
     }
 
     // create subvolumes & BinnedArray
@@ -1268,7 +1233,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	  posPhi += 0.5*m_adjustedPhi[0]+M_PI ;
           phiSect = 0.5*fabs(m_adjustedPhi[0]+2*M_PI-m_adjustedPhi[phi]);
 	}
-	std::vector<std::pair<int,double> > hSteps =  m_hPartitions[mode][zTypes[eta]][m_adjustedPhiType[phi]];
+	std::vector<std::pair<int,float> > hSteps =  m_hPartitions[mode][zTypes[eta]][m_adjustedPhiType[phi]];
 	std::vector<const Trk::TrackingVolume*> hSubs;
 	std::vector<Trk::TrackingVolumeOrderPosition> hSubsTr;
         int phiP = phiType[m_adjustedPhiType[phi]]; 
@@ -1278,7 +1243,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	  hCode = colorCode>0 ? 1 - hCode : 0; 
           // similar volume may exist already
 	  Trk::Volume* subVol=0;
-	  HepGeom::Transform3D* transf = new HepGeom::Transform3D(HepGeom::RotateZ3D(posPhi)*HepGeom::TranslateZ3D(posZ));
+	  Amg::Transform3D* transf = new Amg::Transform3D(Amg::AngleAxis3D(posPhi,Amg::Vector3D(0.,0.,1.))*Amg::Translation3D(Amg::Vector3D(0.,0.,posZ)));
           //
           int volType = 0;     // cylinder 
           if ( hSteps[h].first == 1 && hSteps[h+1].first == 0 ) volType = 1;  
@@ -1309,7 +1274,6 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
 	  const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( *subVol,
 								     m_muonMaterial,
-								     m_muonMagneticField,
 								     detVols,
 								     volName );
                                                                               
@@ -1328,11 +1292,11 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
           //
           sVol->registerColorCode(colorCode+pCode+hCode);
 	  // reference position 
-	  HepGeom::Point3D<double> gp(0.5*(hSteps[h].second+hSteps[h+1].second),0.,0.);
+	  Amg::Vector3D gp(0.5*(hSteps[h].second+hSteps[h+1].second),0.,0.);
 	  subVolumesVect.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, false),
-	                                                       Trk::GlobalPosition((*transf)*gp)));
+	                                                       Amg::Vector3D((*transf)*gp)));
 	  hSubsTr.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
-	                                                       Trk::GlobalPosition((*transf)*gp)));
+	                                                       Amg::Vector3D((*transf)*gp)));
 	  hSubs.push_back(sVol);
 
           // cleanup 
@@ -1364,7 +1328,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	  //
 	}
         phiSubs.push_back(hSubs); 
-	Trk::BinnedArray1D<Trk::TrackingVolume>* volBinArray = new Trk::BinnedArray1D<Trk::TrackingVolume>(hSubsTr,hBinUtil[eta][phi]->clone());
+	Trk::BinnedArray1D<Trk::TrackingVolume>* volBinArray = new Trk::BinnedArray1D<Trk::TrackingVolume>(hSubsTr,(*hBinUtil)[eta][phi]->clone());
         phBins.push_back(Trk::SharedObject<Trk::BinnedArray<Trk::TrackingVolume> >(volBinArray));
         // save link to current partition for cloning 
         if (phiP<0) phiType[m_adjustedPhiType[phi]] = phi;    
@@ -1394,13 +1358,12 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	for (unsigned int jj=0;jj<garbVol[j].size();jj++) delete garbVol[j][jj];
     }
 
-    Trk::BinUtility3DZFH* volBinUtil=new Trk::BinUtility3DZFH(zBinUtil,pBinUtil,hBinUtil,new HepGeom::Transform3D(vol->transform()));
+    //Trk::BinUtility3DZFH* volBinUtil=new Trk::BinUtility3DZFH(zBinUtil,pBinUtil,hBinUtil,new Amg::Transform3D(vol->transform()));
 
-    Trk::BinnedArray3D<Trk::TrackingVolume>* subVols=new Trk::BinnedArray3D<Trk::TrackingVolume>(subVolumesVect,volBinUtil);
+    Trk::BinnedArray1D1D1D<Trk::TrackingVolume>* subVols=new Trk::BinnedArray1D1D1D<Trk::TrackingVolume>(subVolumesVect,zBinUtil,pBinUtil,hBinUtil);
 
     tVol = new Trk::TrackingVolume( *vol,
                                     m_muonMaterial,
-				    m_muonMagneticField,
 				    0,subVols,
 				    volumeName);
     // register glue volumes
@@ -1451,7 +1414,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 					       cyl->outerRadius(),
 					       phiSect, 
 					       hZ);
-        HepGeom::Transform3D* transf = new HepGeom::Transform3D(HepGeom::RotateZ3D(posPhi)*HepGeom::TranslateZ3D(posZ));
+        Amg::Transform3D* transf = new Amg::Transform3D(Amg::AngleAxis3D(posPhi,Amg::Vector3D(0.,0.,1.))*Amg::Translation3D(Amg::Vector3D(0.,0.,posZ)));
         Trk::Volume subVol(transf, subBds);     
         // enclosed muon objects ?   
 	std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) ; 
@@ -1461,7 +1424,6 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( &subVol, blendVols);
         const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( subVol,
 								   m_muonMaterial,
-								   m_muonMagneticField,
 								   detVols,
 								   volName );
         // statistics
@@ -1479,11 +1441,11 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         //delete subVol;
         sVol->registerColorCode(colorCode); 
         // reference position 
-	HepGeom::Point3D<double> gp(subBds->outerRadius(),0.,0.);
+	Amg::Vector3D gp(subBds->outerRadius(),0.,0.);
 	//subVolumes.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
-        //                                                     Trk::GlobalPosition((*transf)*gp)));
+        //                                                     Amg::Vector3D((*transf)*gp)));
 	subVolumes[phi*etaN+eta] = Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, false),
-                                                             Trk::GlobalPosition((*transf)*gp));
+                                                             Amg::Vector3D((*transf)*gp));
         //glue subVolumes
         //sVols[phi*etaN+eta] = sVol; 
         sVols[phiN*eta+phi] = sVol; 
@@ -1503,13 +1465,18 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
       }
     }
 
-    Trk::BinUtility2DZF* volBinUtil=new Trk::BinUtility2DZF(zSteps,m_adjustedPhi,new HepGeom::Transform3D(vol->transform()));
+    //Trk::BinUtility2DZF* volBinUtil=new Trk::BinUtility2DZF(zSteps,m_adjustedPhi,new Amg::Transform3D(vol->transform()));
+    Trk::GenericBinUtility zBinUtil(zSteps, Trk::BinningOption::open, Trk::BinningValue::binZ );
+    const Trk::GenericBinUtility pBinUtil(m_adjustedPhi,  Trk::BinningOption::closed, Trk::BinningValue::binPhi ); 
+
+    zBinUtil += pBinUtil; 
+
+    Trk::GenericBinUtility* volBinUtil=new Trk::GenericBinUtility(zBinUtil);        // TODO verify ordering PhiZ vs. ZPhi 
 
     Trk::BinnedArray2D<Trk::TrackingVolume>* subVols=new Trk::BinnedArray2D<Trk::TrackingVolume>(subVolumes,volBinUtil);
 
     tVol = new Trk::TrackingVolume( *vol,
                                     m_muonMaterial,
-				    m_muonMagneticField,
 				    0,subVols,
 				    volumeName);
     // register glue volumes
@@ -1526,7 +1493,6 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
     tVol = new Trk::TrackingVolume( *vol,
                                     m_muonMaterial,
-				    m_muonMagneticField,
 				    muonObjs,
 				    volumeName);
     // statistics
@@ -1565,7 +1531,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
     return 0; 
   }
   // create vector of zSteps for this volume
-  std::vector<double> zSteps;
+  std::vector<float> zSteps;
   zSteps.clear();
   double zPos = vol->center()[2];
   double hz = cyl->halflengthZ();
@@ -1586,15 +1552,18 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
   unsigned int etaN = zSteps.size()-1;
 
   // create z,h bin utilities
-  Trk::BinUtility1DZZ* zBinUtil = new Trk::BinUtility1DZZ(zSteps);
-  Trk::BinUtility1DF* pBinUtil = new Trk::BinUtility1DF(m_adjustedPhi);
-  std::vector<std::vector<Trk::BinUtility1D*> >  hBinUtil;
-  double phiRef = 0.;
+  //Trk::BinUtility1DZZ* zBinUtil = new Trk::BinUtility1DZZ(zSteps);
+  //Trk::BinUtility1DF* pBinUtil = new Trk::BinUtility1DF(m_adjustedPhi);
+  Trk::BinUtility* zBinUtil = new Trk::GenericBinUtility(zSteps, Trk::BinningOption::open, Trk::BinningValue::binZ );
+  Trk::BinUtility* pBinUtil = new Trk::GenericBinUtility(m_adjustedPhi,  Trk::BinningOption::closed, Trk::BinningValue::binPhi ); 
+  std::vector<std::vector<Trk::BinUtility*> >*  hBinUtil=new std::vector<std::vector<Trk::BinUtility*> >;
+  float phiRef = 0.;
   for (unsigned iz=0;iz < zSteps.size()-1; iz++) {
-    std::vector<Trk::BinUtility1D*> phBinUtil;
-    phBinUtil.push_back(new Trk::BinUtility1DH(phiRef,m_shieldHPart[type]) );
-    hBinUtil.push_back(phBinUtil);
+    std::vector<Trk::BinUtility*> phBinUtil;
+    phBinUtil.push_back(new Trk::GenericBinUtility(phiRef,m_shieldHPart[type]) );
+    hBinUtil->push_back(phBinUtil);
   }
+
   // subvolume boundaries
   Trk::CylinderVolumeBounds* subBds=0;
 
@@ -1615,7 +1584,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
     int phi = 0;
     double posPhi = 0.;
     double phiSect = M_PI;
-    std::vector<std::pair<int,double> > hSteps =  m_shieldHPart[type];
+    std::vector<std::pair<int,float> > hSteps =  m_shieldHPart[type];
     std::vector<const Trk::TrackingVolume*> hSubs;
     std::vector<Trk::TrackingVolumeOrderPosition> hSubsTr;
     unsigned int hCode = 1; 
@@ -1626,7 +1595,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
 					     hSteps[h+1].second,
 					     phiSect, 
 					     hZ);
-      HepGeom::Transform3D* transf = new HepGeom::Transform3D(HepGeom::RotateZ3D(posPhi)*HepGeom::TranslateZ3D(posZ));
+      Amg::Transform3D* transf = new Amg::Transform3D(Amg::AngleAxis3D(posPhi,Amg::Vector3D(0.,0.,1.))*Amg::Translation3D(Amg::Vector3D(0.,0.,posZ)));
       Trk::Volume subVol(transf, subBds);
       
       // enclosed muon objects ? also adjusts material properties in case of material blend  
@@ -1636,7 +1605,6 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
       
       const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( subVol,
 								 m_muonMaterial,
-								 m_muonMagneticField,
 								 detVols,
 								 volName );
       
@@ -1655,11 +1623,11 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
       //
       sVol->registerColorCode(colorCode+hCode);
       // reference position 
-      HepGeom::Point3D<double> gp(subBds->mediumRadius(),0.,0.);
+      Amg::Vector3D gp(subBds->mediumRadius(),0.,0.);
       subVolumesVect.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, false),
-								Trk::GlobalPosition((*transf)*gp)));
+								Amg::Vector3D((*transf)*gp)));
       hSubsTr.push_back(Trk::TrackingVolumeOrderPosition(Trk::SharedObject<const Trk::TrackingVolume>(sVol, true),
-							 Trk::GlobalPosition((*transf)*gp)));
+							 Amg::Vector3D((*transf)*gp)));
       hSubs.push_back(sVol);
       
       //glue subVolume
@@ -1676,7 +1644,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
       if ( etaN>1 && eta>0) m_trackingVolumeHelper->setOutsideTrackingVolumeArray(*sVol, Trk::negativeFaceXY, hBins[eta-1][phi]);     
     }	
     phiSubs.push_back(hSubs); 
-    Trk::BinnedArray1D<Trk::TrackingVolume>* volBinArray = new Trk::BinnedArray1D<Trk::TrackingVolume>(hSubsTr,hBinUtil[eta][phi]->clone());
+    Trk::BinnedArray1D<Trk::TrackingVolume>* volBinArray = new Trk::BinnedArray1D<Trk::TrackingVolume>(hSubsTr,(*hBinUtil)[eta][phi]->clone());
     phBins.push_back(Trk::SharedObject<Trk::BinnedArray<Trk::TrackingVolume> >(volBinArray));
 
     // finish eta gluing
@@ -1689,13 +1657,12 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
     hBins.push_back(phBins);
   }
     
-  Trk::BinUtility3DZFH* volBinUtil=new Trk::BinUtility3DZFH(zBinUtil,pBinUtil,hBinUtil,new HepGeom::Transform3D(vol->transform()));
+  //Trk::BinUtility3DZFH* volBinUtil=new Trk::BinUtility3DZFH(zBinUtil,pBinUtil,hBinUtil,new Amg::Transform3D(vol->transform()));
   
-  Trk::BinnedArray3D<Trk::TrackingVolume>* subVols=new Trk::BinnedArray3D<Trk::TrackingVolume>(subVolumesVect,volBinUtil);
+  Trk::BinnedArray1D1D1D<Trk::TrackingVolume>* subVols=new Trk::BinnedArray1D1D1D<Trk::TrackingVolume>(subVolumesVect,zBinUtil,pBinUtil,hBinUtil);
   
   tVol = new Trk::TrackingVolume( *vol,
 				  m_muonMaterial,
-				  m_muonMagneticField,
 				  0,subVols,
 				  volumeName);
   // register glue volumes
@@ -1739,7 +1706,7 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
     if (type>1) rMaxc *=1./cos(dphi);
   } else return 0;
  
-  HepGeom::Point3D<double> center(rmed,0.,0.);
+  Amg::Vector3D center(rmed,0.,0.);
   center = vol->transform() * center;
 
   double zMin = center[2] - hz; 
@@ -1863,7 +1830,7 @@ bool Muon::MuonTrackingGeometryBuilder::enclosed(const Trk::Volume* vol, const M
     if (type>1) rMaxc *=1./cos(dphi);
   } else return 0;
  
-  HepGeom::Point3D<double> center(rmed,0.,0.);
+  Amg::Vector3D center(rmed,0.,0.);
   center = vol->transform() * center;
 
   double zMin = center[2] - hz; 
@@ -2082,58 +2049,58 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
 
   // 0: barrel 2x2
   // non BT sector
-  std::vector<std::pair<int,double> >  barrelZ0F0;
-  barrelZ0F0.push_back( std::pair<int,double>(0,m_innerBarrelRadius) );
+  std::vector<std::pair<int,float> >  barrelZ0F0;
+  barrelZ0F0.push_back( std::pair<int,float>(0,m_innerBarrelRadius) );
   if (m_activeAdjustLevel>0) {
-    barrelZ0F0.push_back( std::pair<int,double>(0,4450.) );                // for DiskShieldingBackDisk
-    barrelZ0F0.push_back( std::pair<int,double>(0,6500.) );                // BI/BM
-    barrelZ0F0.push_back( std::pair<int,double>(0,8900.) );                // BM/BO
+    barrelZ0F0.push_back( std::pair<int,float>(0,4450.) );                // for DiskShieldingBackDisk
+    barrelZ0F0.push_back( std::pair<int,float>(0,6500.) );                // BI/BM
+    barrelZ0F0.push_back( std::pair<int,float>(0,8900.) );                // BM/BO
   }
-  barrelZ0F0.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+  barrelZ0F0.push_back( std::pair<int,float>(0,m_outerBarrelRadius) );
 
-  std::vector<std::pair<int,double> >  barrelZ0F1;
-  barrelZ0F1.push_back( std::pair<int,double>(0,m_innerBarrelRadius) );
+  std::vector<std::pair<int,float> >  barrelZ0F1;
+  barrelZ0F1.push_back( std::pair<int,float>(0,m_innerBarrelRadius) );
   if (m_inertAdjustLevel>0) {
-    barrelZ0F1.push_back( std::pair<int,double>(1,4500.) );
-    barrelZ0F1.push_back( std::pair<int,double>(1,5900.) );
-  } else if (m_activeAdjustLevel>0) barrelZ0F1.push_back( std::pair<int,double>(0,4450.) );                
-  if (m_activeAdjustLevel>0) barrelZ0F1.push_back( std::pair<int,double>(0,6500.) );
-  if (m_inertAdjustLevel>0)  barrelZ0F1.push_back( std::pair<int,double>(1,8900.) );
-  else if (m_activeAdjustLevel>0)  barrelZ0F1.push_back( std::pair<int,double>(0,8900.) );
-  if (m_inertAdjustLevel>0)  barrelZ0F1.push_back( std::pair<int,double>(1,10100.) );
-  barrelZ0F1.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+    barrelZ0F1.push_back( std::pair<int,float>(1,4500.) );
+    barrelZ0F1.push_back( std::pair<int,float>(1,5900.) );
+  } else if (m_activeAdjustLevel>0) barrelZ0F1.push_back( std::pair<int,float>(0,4450.) );                
+  if (m_activeAdjustLevel>0) barrelZ0F1.push_back( std::pair<int,float>(0,6500.) );
+  if (m_inertAdjustLevel>0)  barrelZ0F1.push_back( std::pair<int,float>(1,8900.) );
+  else if (m_activeAdjustLevel>0)  barrelZ0F1.push_back( std::pair<int,float>(0,8900.) );
+  if (m_inertAdjustLevel>0)  barrelZ0F1.push_back( std::pair<int,float>(1,10100.) );
+  barrelZ0F1.push_back( std::pair<int,float>(0,m_outerBarrelRadius) );
 
   // BT sector
-  std::vector<std::pair<int,double> >  barrelZ1F0;
-  barrelZ1F0.push_back( std::pair<int,double>(0,m_innerBarrelRadius) );
-  if (m_activeAdjustLevel+m_inertAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,double>(0,4450.) );                
+  std::vector<std::pair<int,float> >  barrelZ1F0;
+  barrelZ1F0.push_back( std::pair<int,float>(0,m_innerBarrelRadius) );
+  if (m_activeAdjustLevel+m_inertAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,float>(0,4450.) );                
   if (m_inertAdjustLevel>0) {
-    barrelZ1F0.push_back( std::pair<int,double>(1,5800.) );
-    barrelZ1F0.push_back( std::pair<int,double>(1,6500.) );
-  } else if (m_activeAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,double>(0,6500.) );
+    barrelZ1F0.push_back( std::pair<int,float>(1,5800.) );
+    barrelZ1F0.push_back( std::pair<int,float>(1,6500.) );
+  } else if (m_activeAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,float>(0,6500.) );
   if (m_inertAdjustLevel>0) {
-    barrelZ1F0.push_back( std::pair<int,double>(1,6750.) );
-    barrelZ1F0.push_back( std::pair<int,double>(1,8400.) );
+    barrelZ1F0.push_back( std::pair<int,float>(1,6750.) );
+    barrelZ1F0.push_back( std::pair<int,float>(1,8400.) );
   }
-  if (m_activeAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,double>(0,8750.) );  // adapted for cryoring (from 8900)
-  if (m_inertAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,double>(1,9850.) );   // adapted for cryoring (from 9600)
-  barrelZ1F0.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+  if (m_activeAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,float>(0,8750.) );  // adapted for cryoring (from 8900)
+  if (m_inertAdjustLevel>0) barrelZ1F0.push_back( std::pair<int,float>(1,9850.) );   // adapted for cryoring (from 9600)
+  barrelZ1F0.push_back( std::pair<int,float>(0,m_outerBarrelRadius) );
 
-  std::vector<std::pair<int,double> >  barrelZ1F1;
-  barrelZ1F1.push_back( std::pair<int,double>(0,m_innerBarrelRadius) );
+  std::vector<std::pair<int,float> >  barrelZ1F1;
+  barrelZ1F1.push_back( std::pair<int,float>(0,m_innerBarrelRadius) );
   if (m_inertAdjustLevel>0) {
-    barrelZ1F1.push_back( std::pair<int,double>(1,4500.) );
-    barrelZ1F1.push_back( std::pair<int,double>(1,6000.) );
-  } else if (m_activeAdjustLevel>0) barrelZ1F1.push_back( std::pair<int,double>(0,4450.) );
-  if (m_activeAdjustLevel>0) barrelZ1F1.push_back( std::pair<int,double>(0,6500.) );
-  if (m_inertAdjustLevel>0) barrelZ1F1.push_back( std::pair<int,double>(1,6800.) );
+    barrelZ1F1.push_back( std::pair<int,float>(1,4500.) );
+    barrelZ1F1.push_back( std::pair<int,float>(1,6000.) );
+  } else if (m_activeAdjustLevel>0) barrelZ1F1.push_back( std::pair<int,float>(0,4450.) );
+  if (m_activeAdjustLevel>0) barrelZ1F1.push_back( std::pair<int,float>(0,6500.) );
+  if (m_inertAdjustLevel>0) barrelZ1F1.push_back( std::pair<int,float>(1,6800.) );
   if (m_inertAdjustLevel>0) {
-    barrelZ1F1.push_back( std::pair<int,double>(1,8900.) );
-    barrelZ1F1.push_back( std::pair<int,double>(1,10100.) );
-  } else if (m_activeAdjustLevel>0) barrelZ1F1.push_back( std::pair<int,double>(0,8900.) );
-  barrelZ1F1.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+    barrelZ1F1.push_back( std::pair<int,float>(1,8900.) );
+    barrelZ1F1.push_back( std::pair<int,float>(1,10100.) );
+  } else if (m_activeAdjustLevel>0) barrelZ1F1.push_back( std::pair<int,float>(0,8900.) );
+  barrelZ1F1.push_back( std::pair<int,float>(0,m_outerBarrelRadius) );
 
-  std::vector<std::vector<std::vector<std::pair<int,double> > > >  barrelZF(2);
+  std::vector<std::vector<std::vector<std::pair<int,float> > > >  barrelZF(2);
   barrelZF[0].push_back(barrelZ0F0);
   barrelZF[0].push_back(barrelZ0F1);
   barrelZF[1].push_back(barrelZ1F0);
@@ -2141,140 +2108,140 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
 
   // small wheel 1x2 ( no z BT sector) 
   // non BT sector
-  std::vector<std::pair<int,double> >  swZ0F0;
-  swZ0F0.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
+  std::vector<std::pair<int,float> >  swZ0F0;
+  swZ0F0.push_back( std::pair<int,float>(0,m_innerShieldRadius) );
   if (m_activeAdjustLevel>1) {
-    swZ0F0.push_back( std::pair<int,double>(0,2700.) );                
+    swZ0F0.push_back( std::pair<int,float>(0,2700.) );                
   }
-  if (m_activeAdjustLevel+m_inertAdjustLevel>0) swZ0F0.push_back( std::pair<int,double>(0,4450.) );                
+  if (m_activeAdjustLevel+m_inertAdjustLevel>0) swZ0F0.push_back( std::pair<int,float>(0,4450.) );                
   if (m_activeAdjustLevel>0) {
-    swZ0F0.push_back( std::pair<int,double>(0,6560.) );                // BI/BM
-    swZ0F0.push_back( std::pair<int,double>(0,8900.) );                // BM/BO
+    swZ0F0.push_back( std::pair<int,float>(0,6560.) );                // BI/BM
+    swZ0F0.push_back( std::pair<int,float>(0,8900.) );                // BM/BO
   }
-  swZ0F0.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+  swZ0F0.push_back( std::pair<int,float>(0,m_outerBarrelRadius) );
 
   // phi BT sector
-  std::vector<std::pair<int,double> >  swZ0F1;
-  swZ0F1.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
-  if (m_activeAdjustLevel>1) swZ0F1.push_back( std::pair<int,double>(0,2700.) );               
-  if (m_inertAdjustLevel+m_activeAdjustLevel>0) swZ0F1.push_back( std::pair<int,double>(0,4450.) );
-  if (m_inertAdjustLevel>0) swZ0F1.push_back( std::pair<int,double>(1,5900.) );
-  if (m_activeAdjustLevel>0) swZ0F1.push_back( std::pair<int,double>(0,6560.) );
+  std::vector<std::pair<int,float> >  swZ0F1;
+  swZ0F1.push_back( std::pair<int,float>(0,m_innerShieldRadius) );
+  if (m_activeAdjustLevel>1) swZ0F1.push_back( std::pair<int,float>(0,2700.) );               
+  if (m_inertAdjustLevel+m_activeAdjustLevel>0) swZ0F1.push_back( std::pair<int,float>(0,4450.) );
+  if (m_inertAdjustLevel>0) swZ0F1.push_back( std::pair<int,float>(1,5900.) );
+  if (m_activeAdjustLevel>0) swZ0F1.push_back( std::pair<int,float>(0,6560.) );
   if (m_inertAdjustLevel>0) {
-    swZ0F1.push_back( std::pair<int,double>(1,8900.) );
-    swZ0F1.push_back( std::pair<int,double>(1,10100.) );
-  } else if (m_activeAdjustLevel>0) swZ0F1.push_back( std::pair<int,double>(0,8900.) );
-  swZ0F1.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+    swZ0F1.push_back( std::pair<int,float>(1,8900.) );
+    swZ0F1.push_back( std::pair<int,float>(1,10100.) );
+  } else if (m_activeAdjustLevel>0) swZ0F1.push_back( std::pair<int,float>(0,8900.) );
+  swZ0F1.push_back( std::pair<int,float>(0,m_outerBarrelRadius) );
 
-  std::vector<std::vector<std::vector<std::pair<int,double> > > >  swZF(1);
+  std::vector<std::vector<std::vector<std::pair<int,float> > > >  swZF(1);
   swZF[0].push_back(swZ0F0);
   swZF[0].push_back(swZ0F1);
 
   // inner endcap/ECT 2x3
   // ect coil, non-BT z
-  std::vector<std::pair<int,double> >  innerZ0F0;
-  innerZ0F0.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
-  if (m_inertAdjustLevel>0) innerZ0F0.push_back( std::pair<int,double>(0,1100.) );
-  if (m_inertAdjustLevel>1) innerZ0F0.push_back( std::pair<int,double>(1,5150.) );
-  if (m_inertAdjustLevel>0) innerZ0F0.push_back( std::pair<int,double>(1,5300.) );
+  std::vector<std::pair<int,float> >  innerZ0F0;
+  innerZ0F0.push_back( std::pair<int,float>(0,m_innerShieldRadius) );
+  if (m_inertAdjustLevel>0) innerZ0F0.push_back( std::pair<int,float>(0,1100.) );
+  if (m_inertAdjustLevel>1) innerZ0F0.push_back( std::pair<int,float>(1,5150.) );
+  if (m_inertAdjustLevel>0) innerZ0F0.push_back( std::pair<int,float>(1,5300.) );
   if (m_activeAdjustLevel>0) {
-    innerZ0F0.push_back( std::pair<int,double>(0,6500.) );
-    innerZ0F0.push_back( std::pair<int,double>(0,8900.) );
+    innerZ0F0.push_back( std::pair<int,float>(0,6500.) );
+    innerZ0F0.push_back( std::pair<int,float>(0,8900.) );
   }
-  innerZ0F0.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+  innerZ0F0.push_back( std::pair<int,float>(0,m_outerBarrelRadius) );
 
   // coil gap, non-BT z
-  std::vector<std::pair<int,double> >  innerZ0F1;
-  innerZ0F1.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
-  if (m_inertAdjustLevel>0) innerZ0F1.push_back( std::pair<int,double>(0,1100.) );
+  std::vector<std::pair<int,float> >  innerZ0F1;
+  innerZ0F1.push_back( std::pair<int,float>(0,m_innerShieldRadius) );
+  if (m_inertAdjustLevel>0) innerZ0F1.push_back( std::pair<int,float>(0,1100.) );
   if (m_inertAdjustLevel>1) {
-    innerZ0F1.push_back( std::pair<int,double>(1,1400.) );
-    innerZ0F1.push_back( std::pair<int,double>(1,1685.) );
+    innerZ0F1.push_back( std::pair<int,float>(1,1400.) );
+    innerZ0F1.push_back( std::pair<int,float>(1,1685.) );
   }
   if (m_inertAdjustLevel>0) {
-    innerZ0F1.push_back( std::pair<int,double>(1,4700.) );
-    innerZ0F1.push_back( std::pair<int,double>(1,5900.) );
+    innerZ0F1.push_back( std::pair<int,float>(1,4700.) );
+    innerZ0F1.push_back( std::pair<int,float>(1,5900.) );
   }
   if (m_activeAdjustLevel>0) {
-    innerZ0F1.push_back( std::pair<int,double>(0,6500.) );
-    innerZ0F1.push_back( std::pair<int,double>(0,8900.) );
+    innerZ0F1.push_back( std::pair<int,float>(0,6500.) );
+    innerZ0F1.push_back( std::pair<int,float>(0,8900.) );
   }
-  innerZ0F1.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+  innerZ0F1.push_back( std::pair<int,float>(0,m_outerBarrelRadius) );
 
   // BT coil, no-BT z 
-  std::vector<std::pair<int,double> >  innerZ0F2;
-  innerZ0F2.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
-  if (m_inertAdjustLevel>0) innerZ0F2.push_back( std::pair<int,double>(0,1100.) );
+  std::vector<std::pair<int,float> >  innerZ0F2;
+  innerZ0F2.push_back( std::pair<int,float>(0,m_innerShieldRadius) );
+  if (m_inertAdjustLevel>0) innerZ0F2.push_back( std::pair<int,float>(0,1100.) );
   if (m_inertAdjustLevel>1) {
-    innerZ0F2.push_back( std::pair<int,double>(1,1400.) );
-    innerZ0F2.push_back( std::pair<int,double>(1,1685.) );
+    innerZ0F2.push_back( std::pair<int,float>(1,1400.) );
+    innerZ0F2.push_back( std::pair<int,float>(1,1685.) );
   }
   if (m_inertAdjustLevel>0) {
-    innerZ0F2.push_back( std::pair<int,double>(1,4450.) );
-    innerZ0F2.push_back( std::pair<int,double>(1,5900.) );
+    innerZ0F2.push_back( std::pair<int,float>(1,4450.) );
+    innerZ0F2.push_back( std::pair<int,float>(1,5900.) );
   }
-  if (m_activeAdjustLevel>0) innerZ0F2.push_back( std::pair<int,double>(0,6500.) );
+  if (m_activeAdjustLevel>0) innerZ0F2.push_back( std::pair<int,float>(0,6500.) );
   if (m_inertAdjustLevel>0) {
-    innerZ0F2.push_back( std::pair<int,double>(1,8900.) );
-    innerZ0F2.push_back( std::pair<int,double>(1,10100.) );
-  } else if (m_activeAdjustLevel>0) innerZ0F2.push_back( std::pair<int,double>(0,8900.) );
-  innerZ0F2.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+    innerZ0F2.push_back( std::pair<int,float>(1,8900.) );
+    innerZ0F2.push_back( std::pair<int,float>(1,10100.) );
+  } else if (m_activeAdjustLevel>0) innerZ0F2.push_back( std::pair<int,float>(0,8900.) );
+  innerZ0F2.push_back( std::pair<int,float>(0,m_outerBarrelRadius) );
 
   // ect coil, z BT sector
-  std::vector<std::pair<int,double> >  innerZ1F0;
-  innerZ1F0.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
-  if (m_inertAdjustLevel>0) innerZ1F0.push_back( std::pair<int,double>(0,1100.) );
-  if (m_inertAdjustLevel>1) innerZ1F0.push_back( std::pair<int,double>(1,5150.) );
-  if (m_inertAdjustLevel>0) innerZ1F0.push_back( std::pair<int,double>(1,5300.) );
-  if (m_inertAdjustLevel>0) innerZ1F0.push_back( std::pair<int,double>(1,5800.) );
-  if (m_inertAdjustLevel>0) innerZ1F0.push_back( std::pair<int,double>(1,6750.) );
-  else if (m_activeAdjustLevel>0) innerZ1F0.push_back( std::pair<int,double>(0,6500.) );
+  std::vector<std::pair<int,float> >  innerZ1F0;
+  innerZ1F0.push_back( std::pair<int,float>(0,m_innerShieldRadius) );
+  if (m_inertAdjustLevel>0) innerZ1F0.push_back( std::pair<int,float>(0,1100.) );
+  if (m_inertAdjustLevel>1) innerZ1F0.push_back( std::pair<int,float>(1,5150.) );
+  if (m_inertAdjustLevel>0) innerZ1F0.push_back( std::pair<int,float>(1,5300.) );
+  if (m_inertAdjustLevel>0) innerZ1F0.push_back( std::pair<int,float>(1,5800.) );
+  if (m_inertAdjustLevel>0) innerZ1F0.push_back( std::pair<int,float>(1,6750.) );
+  else if (m_activeAdjustLevel>0) innerZ1F0.push_back( std::pair<int,float>(0,6500.) );
   if (m_inertAdjustLevel>0) {
-    innerZ1F0.push_back( std::pair<int,double>(1,8400.) );
-    innerZ1F0.push_back( std::pair<int,double>(1,9600.) );
-  } else if (m_activeAdjustLevel>0) innerZ1F0.push_back( std::pair<int,double>(0,8900.) );
-  innerZ1F0.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+    innerZ1F0.push_back( std::pair<int,float>(1,8400.) );
+    innerZ1F0.push_back( std::pair<int,float>(1,9600.) );
+  } else if (m_activeAdjustLevel>0) innerZ1F0.push_back( std::pair<int,float>(0,8900.) );
+  innerZ1F0.push_back( std::pair<int,float>(0,m_outerBarrelRadius) );
 
   // coil gap, BT z sector
-  std::vector<std::pair<int,double> >  innerZ1F1;
-  innerZ1F1.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
-  if (m_inertAdjustLevel>0)  innerZ1F1.push_back( std::pair<int,double>(0,1100.) );
+  std::vector<std::pair<int,float> >  innerZ1F1;
+  innerZ1F1.push_back( std::pair<int,float>(0,m_innerShieldRadius) );
+  if (m_inertAdjustLevel>0)  innerZ1F1.push_back( std::pair<int,float>(0,1100.) );
   if (m_inertAdjustLevel>1) {
-    innerZ1F1.push_back( std::pair<int,double>(1,1400.) );
-    innerZ1F1.push_back( std::pair<int,double>(1,1685.) );
+    innerZ1F1.push_back( std::pair<int,float>(1,1400.) );
+    innerZ1F1.push_back( std::pair<int,float>(1,1685.) );
   }
   if (m_inertAdjustLevel>0) {
-    innerZ1F1.push_back( std::pair<int,double>(1,4700.) );
-    innerZ1F1.push_back( std::pair<int,double>(1,5800.) );
-    innerZ1F1.push_back( std::pair<int,double>(1,6750.) );
-  } else if (m_activeAdjustLevel>0) innerZ1F1.push_back( std::pair<int,double>(0,6500.) );
+    innerZ1F1.push_back( std::pair<int,float>(1,4700.) );
+    innerZ1F1.push_back( std::pair<int,float>(1,5800.) );
+    innerZ1F1.push_back( std::pair<int,float>(1,6750.) );
+  } else if (m_activeAdjustLevel>0) innerZ1F1.push_back( std::pair<int,float>(0,6500.) );
   if (m_inertAdjustLevel>0) {
-    innerZ1F1.push_back( std::pair<int,double>(1,8400.) );
-    innerZ1F1.push_back( std::pair<int,double>(1,9600.) );
-  } else if (m_activeAdjustLevel>0) innerZ1F1.push_back( std::pair<int,double>(0,8900.) );
-  innerZ1F1.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+    innerZ1F1.push_back( std::pair<int,float>(1,8400.) );
+    innerZ1F1.push_back( std::pair<int,float>(1,9600.) );
+  } else if (m_activeAdjustLevel>0) innerZ1F1.push_back( std::pair<int,float>(0,8900.) );
+  innerZ1F1.push_back( std::pair<int,float>(0,m_outerBarrelRadius) );
 
   // BT coil, BT z sector
-  std::vector<std::pair<int,double> >  innerZ1F2;
-  innerZ1F2.push_back( std::pair<int,double>(0,m_innerShieldRadius) );
-  if (m_inertAdjustLevel>0) innerZ1F2.push_back( std::pair<int,double>(0,1100.) );
+  std::vector<std::pair<int,float> >  innerZ1F2;
+  innerZ1F2.push_back( std::pair<int,float>(0,m_innerShieldRadius) );
+  if (m_inertAdjustLevel>0) innerZ1F2.push_back( std::pair<int,float>(0,1100.) );
   if (m_inertAdjustLevel>1) {
-    innerZ1F2.push_back( std::pair<int,double>(1,1400.) );
-    innerZ1F2.push_back( std::pair<int,double>(1,1685.) );
+    innerZ1F2.push_back( std::pair<int,float>(1,1400.) );
+    innerZ1F2.push_back( std::pair<int,float>(1,1685.) );
   }
-  innerZ1F2.push_back( std::pair<int,double>(0,4150.) );
+  innerZ1F2.push_back( std::pair<int,float>(0,4150.) );
   if (m_inertAdjustLevel>0) {
-    innerZ1F2.push_back( std::pair<int,double>(1,4700.) );
-    innerZ1F2.push_back( std::pair<int,double>(1,5900.) );
-    innerZ1F2.push_back( std::pair<int,double>(1,6800.) );
-  } else if (m_activeAdjustLevel>0) innerZ1F2.push_back( std::pair<int,double>(0,6500.) );
+    innerZ1F2.push_back( std::pair<int,float>(1,4700.) );
+    innerZ1F2.push_back( std::pair<int,float>(1,5900.) );
+    innerZ1F2.push_back( std::pair<int,float>(1,6800.) );
+  } else if (m_activeAdjustLevel>0) innerZ1F2.push_back( std::pair<int,float>(0,6500.) );
   if (m_inertAdjustLevel>0) {
-    innerZ1F2.push_back( std::pair<int,double>(1,8900.) );
-    innerZ1F2.push_back( std::pair<int,double>(1,10100.) );
-  } else if (m_activeAdjustLevel>0) innerZ1F2.push_back( std::pair<int,double>(0,8900.) );
-  innerZ1F2.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+    innerZ1F2.push_back( std::pair<int,float>(1,8900.) );
+    innerZ1F2.push_back( std::pair<int,float>(1,10100.) );
+  } else if (m_activeAdjustLevel>0) innerZ1F2.push_back( std::pair<int,float>(0,8900.) );
+  innerZ1F2.push_back( std::pair<int,float>(0,m_outerBarrelRadius) );
 
-  std::vector<std::vector<std::vector<std::pair<int,double> > > >  innerZF(2);
+  std::vector<std::vector<std::vector<std::pair<int,float> > > >  innerZF(2);
   innerZF[0].push_back(innerZ0F0);
   innerZF[0].push_back(innerZ0F1);
   innerZF[0].push_back(innerZ0F2);
@@ -2283,24 +2250,24 @@ void Muon::MuonTrackingGeometryBuilder::getHParts() const
   innerZF[1].push_back(innerZ1F2);
 
   // outer 1x1
-  std::vector<std::pair<int,double> >  outerZ0F0;
-  outerZ0F0.push_back( std::pair<int,double>(0,m_outerShieldRadius) );
-  outerZ0F0.push_back( std::pair<int,double>(0,2275.) );
-  outerZ0F0.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+  std::vector<std::pair<int,float> >  outerZ0F0;
+  outerZ0F0.push_back( std::pair<int,float>(0,m_outerShieldRadius) );
+  outerZ0F0.push_back( std::pair<int,float>(0,2275.) );
+  outerZ0F0.push_back( std::pair<int,float>(0,m_outerBarrelRadius) );
 
-  std::vector<std::pair<int,double> >  outerZ0F1;
-  outerZ0F1.push_back( std::pair<int,double>(0,m_outerShieldRadius) );
+  std::vector<std::pair<int,float> >  outerZ0F1;
+  outerZ0F1.push_back( std::pair<int,float>(0,m_outerShieldRadius) );
   if ( m_activeAdjustLevel>0 ) {
-    outerZ0F1.push_back( std::pair<int,double>(0,3600.) );
-    outerZ0F1.push_back( std::pair<int,double>(0,5300.) );
-    outerZ0F1.push_back( std::pair<int,double>(0,7000.) );
-    outerZ0F1.push_back( std::pair<int,double>(0,8500.) );
-    outerZ0F1.push_back( std::pair<int,double>(0,10000.) );
-    outerZ0F1.push_back( std::pair<int,double>(0,12000.) );
+    outerZ0F1.push_back( std::pair<int,float>(0,3600.) );
+    outerZ0F1.push_back( std::pair<int,float>(0,5300.) );
+    outerZ0F1.push_back( std::pair<int,float>(0,7000.) );
+    outerZ0F1.push_back( std::pair<int,float>(0,8500.) );
+    outerZ0F1.push_back( std::pair<int,float>(0,10000.) );
+    outerZ0F1.push_back( std::pair<int,float>(0,12000.) );
   }
-  outerZ0F1.push_back( std::pair<int,double>(0,m_outerBarrelRadius) );
+  outerZ0F1.push_back( std::pair<int,float>(0,m_outerBarrelRadius) );
 
-  std::vector<std::vector<std::vector<std::pair<int,double> > > >  outerZF(2);
+  std::vector<std::vector<std::vector<std::pair<int,float> > > >  outerZF(2);
   outerZF[0].push_back(outerZ0F0);
   outerZF[0].push_back(outerZ0F0);
   outerZF[1].push_back(outerZ0F1);
@@ -2333,25 +2300,25 @@ void Muon::MuonTrackingGeometryBuilder::getShieldParts() const
 
   m_shieldHPart.clear();
 
-  std::vector<std::pair<int,double> >  outerShield;
-  outerShield.push_back(std::pair<int,double>(0,m_beamPipeRadius));
-  outerShield.push_back(std::pair<int,double>(0,600.));
-  outerShield.push_back(std::pair<int,double>(0,1150.));
-  outerShield.push_back(std::pair<int,double>(0,m_outerShieldRadius));
+  std::vector<std::pair<int,float> >  outerShield;
+  outerShield.push_back(std::pair<int,float>(0,m_beamPipeRadius));
+  outerShield.push_back(std::pair<int,float>(0,600.));
+  outerShield.push_back(std::pair<int,float>(0,1150.));
+  outerShield.push_back(std::pair<int,float>(0,m_outerShieldRadius));
   m_shieldHPart.push_back(outerShield);
 
-  std::vector<std::pair<int,double> >  innerShield;
-  innerShield.push_back(std::pair<int,double>(0,m_beamPipeRadius));
-  innerShield.push_back(std::pair<int,double>(0,530.));
-  innerShield.push_back(std::pair<int,double>(0,m_innerShieldRadius));
+  std::vector<std::pair<int,float> >  innerShield;
+  innerShield.push_back(std::pair<int,float>(0,m_beamPipeRadius));
+  innerShield.push_back(std::pair<int,float>(0,530.));
+  innerShield.push_back(std::pair<int,float>(0,m_innerShieldRadius));
   m_shieldHPart.push_back(innerShield);
 
-  std::vector<std::pair<int,double> >  diskShield;
-  diskShield.push_back(std::pair<int,double>(0,0.));
-  diskShield.push_back(std::pair<int,double>(0,540.));
-  diskShield.push_back(std::pair<int,double>(0,750.));
-  diskShield.push_back(std::pair<int,double>(0,2700.));
-  diskShield.push_back(std::pair<int,double>(0,m_innerBarrelRadius));
+  std::vector<std::pair<int,float> >  diskShield;
+  diskShield.push_back(std::pair<int,float>(0,0.));
+  diskShield.push_back(std::pair<int,float>(0,540.));
+  diskShield.push_back(std::pair<int,float>(0,750.));
+  diskShield.push_back(std::pair<int,float>(0,2700.));
+  diskShield.push_back(std::pair<int,float>(0,m_innerBarrelRadius));
   m_shieldHPart.push_back(diskShield);
 
   return;

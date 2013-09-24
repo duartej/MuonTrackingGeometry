@@ -7,7 +7,6 @@
 
 //Trk
 #include "TrkDetDescrInterfaces/IGeometryBuilder.h"
-#include "TrkDetDescrInterfaces/ITrackingVolumesSvc.h"
 #include "TrkDetDescrUtils/GeometrySignature.h"
 #include "TrkGeometry/MaterialProperties.h"
 // Gaudi
@@ -23,13 +22,14 @@ namespace Trk {
  class VolumeBounds;
  class ITrackingVolumeBuilder;
  class ITrackingVolumeHelper;
- class ITrackingVolumeDisplayer;
  class ITrackingVolumeArrayCreator;
 
  typedef std::pair< SharedObject<const TrackingVolume>, Amg::Vector3D> TrackingVolumeOrderPosition;
  typedef std::pair< SharedObject<const TrackingVolume>, const Amg::Transform3D*> TrackingVolumeNavOrder;
 
 }
+
+class IEnvelopeDefSvc; 
  
 namespace Muon {
 
@@ -100,10 +100,7 @@ namespace Muon {
 
       ToolHandle<Trk::ITrackingVolumeHelper>               m_trackingVolumeHelper;          //!< Helper Tool to create TrackingVolumes
 
-      ToolHandle<Trk::ITrackingVolumeDisplayer>            m_trackingVolumeDisplayer;       //!< Displayer Tool to create TrackingVolumes
-
-      ServiceHandle<ITrackingVolumesSvc>                   m_tvSvc;       //!< service to provide input volume size
-
+      ServiceHandle<IEnvelopeDefSvc>                       m_enclosingEnvelopeSvc;   //!< service to provide input volume size  
    
       bool                                m_muonSimple;
       bool                                m_loadMSentry;
@@ -126,7 +123,6 @@ namespace Muon {
 
       mutable Trk::MaterialProperties       m_muonMaterial;               //!< the (empty) material
 
-      mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
       mutable Trk::TrackingVolume*        m_standaloneTrackingVolume;   // muon standalone tracking volume                 
       int                                 m_barrelEtaPartition;
       int                                 m_innerEndcapEtaPartition;

@@ -104,7 +104,6 @@ namespace Muon {
       bool                                m_buildSupports;              // build other 
       double                              m_blendLimit;                 // volume limit for blending (except shields) 
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
-      mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system
 //mw
       Trk::GeoMaterialConverter*           m_materialConverter;          //!< material converter
       Trk::GeoShapeConverter*              m_geoShapeConverter;          //!< shape converter

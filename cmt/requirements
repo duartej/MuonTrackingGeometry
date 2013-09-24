@@ -36,3 +36,4 @@ use MuonReadoutGeometry    MuonReadoutGeometry-*      MuonSpectrometer/MuonDetDe
 use StoreGate           StoreGate-*           Control
 use TrkGeometrySurfaces    TrkGeometrySurfaces-*      Tracking/TrkDetDescr 
 use TrkSurfaces            TrkSurfaces-*              Tracking/TrkDetDescr 
+use SubDetectorEnvelopes   SubDetectorEnvelopes-*     AtlasGeometryCommon

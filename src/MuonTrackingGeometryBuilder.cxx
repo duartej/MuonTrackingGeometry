@@ -5,19 +5,18 @@
 // Muon
 #include "MuonTrackingGeometry/MuonTrackingGeometryBuilder.h"
 #include "MuonReadoutGeometry/GlobalUtilities.h" 
+// EnvelopeDefinitionService
+#include "SubDetectorEnvelopes/IEnvelopeDefSvc.h"
 // Amg
 #include "GeoPrimitives/GeoPrimitives.h"
 // Trk
 #include "TrkDetDescrInterfaces/ITrackingVolumeArrayCreator.h"
 #include "TrkDetDescrInterfaces/ITrackingVolumeHelper.h"
-#include "TrkDetDescrInterfaces/ITrackingVolumeDisplayer.h"
-#include "TrkDetDescrUtils/GenericBinUtility.h"
-//#include "TrkDetDescrUtils/BinUtility3DZFH.h"
+#include "TrkDetDescrUtils/BinUtility.h"
 #include "TrkDetDescrUtils/BinnedArray.h"
 #include "TrkDetDescrUtils/BinnedArray1D.h"
 #include "TrkDetDescrUtils/BinnedArray2D.h"
 #include "TrkDetDescrUtils/BinnedArray1D1D1D.h"
-//#include "TrkDetDescrUtils/BinningType.h"
 #include "TrkDetDescrUtils/GeometryStatics.h"
 #include "TrkDetDescrUtils/SharedObject.h"
 #include "TrkVolumes/CylinderVolumeBounds.h"
@@ -30,11 +29,9 @@
 #include "TrkVolumes/SimplePolygonBrepVolumeBounds.h"
 #include "TrkVolumes/PrismVolumeBounds.h"
 #include "TrkVolumes/BoundarySurface.h"
-//#include "TrkGeometry/SimplifiedMaterialProperties.h"
 #include "TrkGeometry/TrackingGeometry.h"
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkGeometry/GlueVolumesDescriptor.h"
-#include "TrkGeometry/BendingCorrector.h"
 #include<fstream>
 
 // STD
@@ -48,8 +45,7 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_inertBuilder("Muon::MuonInertMaterialBuilder/MuonInertMaterialBuilder"),
   m_trackingVolumeArrayCreator("Trk::TrackingVolumeArrayCreator/TrackingVolumeArrayCreator"),
   m_trackingVolumeHelper("Trk::TrackingVolumeHelper/TrackingVolumeHelper"),
-  m_trackingVolumeDisplayer("Trk::TrackingVolumeDisplayer/TrackingVolumeDisplayer"),
-  m_tvSvc("Trk::TrackingVolumesSvc/TrackingVolumesSvc",n),
+  m_enclosingEnvelopeSvc("AtlasEnvelopeDefSvc", n),
   m_muonSimple(false),
   m_loadMSentry(false),
   m_muonActive(true),
@@ -101,23 +97,24 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   declareProperty("BuildInertMaterial",               m_muonInert);
   declareProperty("InertMaterialBuilder",             m_inertBuilder);
   // the overall dimensions
-  declareProperty("InnerBarrelRadius",              m_innerBarrelRadius);
-  declareProperty("OuterBarrelRadius",              m_outerBarrelRadius);
-  declareProperty("BarrelZ",                        m_barrelZ);
-  declareProperty("InnerEndcapZ",                   m_innerEndcapZ);
-  declareProperty("OuterEndcapZ",                   m_outerEndcapZ);
-  declareProperty("EtaBarrelPartitions",            m_barrelEtaPartition);
-  declareProperty("EtaInnerEndcapPartitions",       m_innerEndcapEtaPartition);
-  declareProperty("EtaOuterEndcapPartitions",       m_outerEndcapEtaPartition);
-  declareProperty("PhiPartitions",                  m_phiPartition);
-  declareProperty("AdjustStatic",                   m_adjustStatic);
-  declareProperty("StaticPartition3D",              m_static3d);
-  declareProperty("ActiveAdjustLevel",              m_activeAdjustLevel);
-  declareProperty("InertAdjustLevel",               m_inertAdjustLevel);
-  declareProperty("BlendInertMaterial",             m_blendInertMaterial);
-  declareProperty("RemoveBlendedMaterialObjects",   m_removeBlended);
-  declareProperty("AlignmentPositionTolerance",     m_alignTolerance);
-  declareProperty("ColorCode",                      m_colorCode);
+  declareProperty("EnvelopeDefinitionSvc",            m_enclosingEnvelopeSvc );
+  declareProperty("InnerBarrelRadius",                m_innerBarrelRadius);
+  declareProperty("OuterBarrelRadius",                m_outerBarrelRadius);
+  declareProperty("BarrelZ",                          m_barrelZ);
+  declareProperty("InnerEndcapZ",                     m_innerEndcapZ);
+  declareProperty("OuterEndcapZ",                     m_outerEndcapZ);
+  declareProperty("EtaBarrelPartitions",              m_barrelEtaPartition);
+  declareProperty("EtaInnerEndcapPartitions",         m_innerEndcapEtaPartition);
+  declareProperty("EtaOuterEndcapPartitions",         m_outerEndcapEtaPartition);
+  declareProperty("PhiPartitions",                    m_phiPartition);
+  declareProperty("AdjustStatic",                     m_adjustStatic);
+  declareProperty("StaticPartition3D",                m_static3d);
+  declareProperty("ActiveAdjustLevel",                m_activeAdjustLevel);
+  declareProperty("InertAdjustLevel",                 m_inertAdjustLevel);
+  declareProperty("BlendInertMaterial",               m_blendInertMaterial);
+  declareProperty("RemoveBlendedMaterialObjects",     m_removeBlended);
+  declareProperty("AlignmentPositionTolerance",       m_alignTolerance);
+  declareProperty("ColorCode",                        m_colorCode);
   // calo entry volume & exit volume
   declareProperty("EntryVolumeName",                   m_entryVolume);
   declareProperty("ExitVolumeName",                    m_exitVolume);  
@@ -148,7 +145,6 @@ StatusCode Muon::MuonTrackingGeometryBuilder::initialize()
     } else
     ATH_MSG_INFO( "Retrieved tool " << m_trackingVolumeArrayCreator );
   
-  
   // Retrieve the station builder (if configured) -------------------------------------------    
   if (m_muonActive) { 
     
@@ -175,9 +171,9 @@ StatusCode Muon::MuonTrackingGeometryBuilder::initialize()
   if ( !m_muonInert ) m_inertAdjustLevel = 0;
   
   if (m_loadMSentry ) {
-    // Retrieve the tracking volumes Svc (if configured) -------------------------------------------    
-    if (m_tvSvc.retrieve().isFailure()) {
-      ATH_MSG_WARNING( "Failed to load " << m_tvSvc << " switch to default volume size" );
+    // retrieve envelope definition service --------------------------------------------------
+    if ( m_enclosingEnvelopeSvc.retrieve().isFailure() ){
+      ATH_MSG_WARNING( "Could not retrieve EnvelopeDefinition service. Abort.");
       m_loadMSentry = false;
     }
   }
@@ -220,23 +216,12 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
   if (!m_inertSpan)   m_inertSpan = findVolumesSpan(m_inertObjs,0.,0.);
  
   // 0) Preparation //////////////////////////////////////////////////////////////////////////////////////
-  // if no muon materials are declared, take default ones
-  if (m_muonMaterialProperties.size() < 3){
-    // set 0. / 0. / 0. / 0.
-    m_muonMaterialProperties = std::vector<double>();
-    m_muonMaterialProperties.push_back(0.);
-    m_muonMaterialProperties.push_back(10e10);
-    m_muonMaterialProperties.push_back(0.);
-  }
   
-  m_muonMaterial = Trk::MaterialProperties(m_muonMaterialProperties[0],
-					   m_muonMaterialProperties[1],
-					   m_muonMaterialProperties[2]);
+  m_muonMaterial = Trk::MaterialProperties(10e10,10e10,0.,0.,0.);      // default material properties
     
   // dummy substructures
   const Trk::LayerArray* dummyLayers = 0;
   const Trk::TrackingVolumeArray* dummyVolumes = 0;
-  Trk::BendingCorrector* bcorr = 0;
   
   if (m_muonSimple) {             
     Trk::VolumeBounds* globalBounds = new Trk::CylinderVolumeBounds(m_outerBarrelRadius,
@@ -245,7 +230,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 							     globalBounds,
 							     m_muonMaterial,
 							     dummyLayers,dummyVolumes,
-							     "GlobalVolume",bcorr);
+							     "GlobalVolume");
     m_standaloneTrackingVolume = topVolume;
     return new Trk::TrackingGeometry(topVolume);
   }     
@@ -353,7 +338,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 									   barrelRBounds,
 									   m_muonMaterial,
 									   dummyLayers,dummyVolumes,
-									   "BarrelRBuffer", bcorr);
+									   "BarrelRBuffer");
 	
 	ATH_MSG_INFO( name() << "glue barrel R buffer + ID/Calo volumes" );
 	barrelR = m_trackingVolumeHelper->glueTrackingVolumeArrays(*barrelRBuffer,Trk::tubeInnerCover,
@@ -377,12 +362,12 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 									    barrelZPBounds,
 									    m_muonMaterial,
 									    dummyLayers,dummyVolumes,
-									    "BarrelRZPosBuffer", bcorr);
+									    "BarrelRZPosBuffer");
 	const Trk::TrackingVolume* barrelZMBuffer = new Trk::TrackingVolume(new Amg::Transform3D(Amg::Translation3D(Amg::Vector3D(0.,0.,-zbShift))),
 									    barrelZMBounds,
 									    m_muonMaterial,
 									    dummyLayers,dummyVolumes,
-									    "BarrelRZNegBuffer", bcorr);
+									    "BarrelRZNegBuffer");
 	
 	ATH_MSG_INFO( name() << "glue barrel R  + barrel Z buffer" );
 	const Trk::TrackingVolume* barrelZP = m_trackingVolumeHelper->glueTrackingVolumeArrays(*barrelR, Trk::positiveFaceXY,
@@ -399,16 +384,19 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
     }
     
   } else {     // no input, create the enclosed volume
-    if (m_loadMSentry && m_tvSvc ) {
-      const Trk::CylinderVolumeBounds* cylMS = dynamic_cast<const Trk::CylinderVolumeBounds*> (&(m_tvSvc->volume(ITrackingVolumesSvc::MuonSpectrometerEntryLayer).volumeBounds()));
-      if ( cylMS ) {
-        double rMS = cylMS->outerRadius();
-        double zMS = cylMS->halflengthZ();
-        if ( rMS <= m_innerBarrelRadius && zMS <= m_barrelZ ) {
-	  enclosedBounds = new Trk::CylinderVolumeBounds(m_innerBarrelRadius,
-							 m_barrelZ);
+    if (m_loadMSentry && m_enclosingEnvelopeSvc ) {
+      RZPairVector& envelopeDefs = m_enclosingEnvelopeSvc->getCaloRZValues();
+      // to be implemented in detail - for the moment, take just maximal extent
+      double rmax = 0.; double zmax = 0.;
+      for (unsigned int i=0; i<envelopeDefs.size(); i++) { 
+	if ( envelopeDefs[i].first>rmax ) rmax= envelopeDefs[i].first;
+	if ( fabs(envelopeDefs[i].second)>zmax ) zmax= fabs(envelopeDefs[i].second);
+      }
+      if (envelopeDefs.size()) {
+        if ( rmax>0. && rmax <= m_innerBarrelRadius && zmax>0. && zmax <= m_barrelZ ) {
+	  enclosedBounds = new Trk::CylinderVolumeBounds(rmax,zmax);
 	} else {
-	  ATH_MSG_INFO( name() << " input MSEntrance size (R,Z:"<< rMS <<","<<zMS<<") clashes with MS material, switch to default values (R,Z:" << m_innerBarrelRadius <<","<< m_barrelZ << ")" );
+	  ATH_MSG_INFO( name() << " input MSEntrance size (R,Z:"<< rmax <<","<<zmax<<") clashes with MS material, switch to default values (R,Z:" << m_innerBarrelRadius <<","<< m_barrelZ << ")" );
 	}
       }
     }
@@ -419,7 +407,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 				       enclosedBounds,
 				       m_muonMaterial,
 				       dummyLayers,dummyVolumes,
-				       m_entryVolume, bcorr);
+				       m_entryVolume);
     enclosed->registerColorCode(0); 
   }
   
@@ -1078,12 +1066,12 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     }
 
     //Trk::BinUtility2DPhiZ* volBinUtil=new Trk::BinUtility2DPhiZ(phiN,etaN,subBds->outerRadius(),cyl->halflengthZ(),M_PI, new Amg::Transform3D(vol->transform()));
-    Trk::GenericBinUtility buPhi( phiN, -M_PI, M_PI, Trk::closed, Trk::binPhi ); 
-    const Trk::GenericBinUtility   buZ( etaN, vol->transform().translation()[2]-cyl->halflengthZ(), 
+    Trk::BinUtility buPhi( phiN, -M_PI, M_PI, Trk::closed, Trk::binPhi ); 
+    const Trk::BinUtility   buZ( etaN, vol->transform().translation()[2]-cyl->halflengthZ(), 
                                         vol->transform().translation()[2]+cyl->halflengthZ(), Trk::open, Trk::binZ ); 
     buPhi += buZ; 
 
-    Trk::GenericBinUtility* volBinUtil=new Trk::GenericBinUtility(buPhi);        // TODO verify ordering PhiZ vs. ZPhi 
+    Trk::BinUtility* volBinUtil=new Trk::BinUtility(buPhi);        // TODO verify ordering PhiZ vs. ZPhi 
 
     delete protVol;
     Trk::BinnedArray2D<Trk::TrackingVolume>* subVols=new Trk::BinnedArray2D<Trk::TrackingVolume>(subVolumes,volBinUtil);
@@ -1187,8 +1175,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     // create z,phi bin utilities
     //Trk::BinUtility1DZZ* zBinUtil = new Trk::BinUtility1DZZ(zSteps);
     //Trk::BinUtility1DF* pBinUtil = new Trk::BinUtility1DF(m_adjustedPhi);
-    Trk::BinUtility* zBinUtil = new Trk::GenericBinUtility(zSteps, Trk::BinningOption::open, Trk::BinningValue::binZ );
-    Trk::BinUtility* pBinUtil = new Trk::GenericBinUtility(m_adjustedPhi,  Trk::BinningOption::closed, Trk::BinningValue::binPhi ); 
+    Trk::BinUtility* zBinUtil = new Trk::BinUtility(zSteps, Trk::BinningOption::open, Trk::BinningValue::binZ );
+    Trk::BinUtility* pBinUtil = new Trk::BinUtility(m_adjustedPhi,  Trk::BinningOption::closed, Trk::BinningValue::binPhi ); 
     std::vector<std::vector<Trk::BinUtility*> >*  hBinUtil=new std::vector<std::vector<Trk::BinUtility*> >;
     for (unsigned iz=0;iz < zSteps.size()-1; iz++) {
       std::vector<Trk::BinUtility*> phBinUtil; 
@@ -1200,7 +1188,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
         if (m_adjustedPhiType[ip]>phiTypeMax) phiTypeMax = m_adjustedPhiType[ip];
 
-        phBinUtil.push_back(new Trk::GenericBinUtility(phiRef,m_hPartitions[mode][zTypes[iz]][m_adjustedPhiType[ip]]));
+        phBinUtil.push_back(new Trk::BinUtility(phiRef,m_hPartitions[mode][zTypes[iz]][m_adjustedPhiType[ip]]));
       }
       hBinUtil->push_back(phBinUtil);
     }
@@ -1466,12 +1454,12 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     }
 
     //Trk::BinUtility2DZF* volBinUtil=new Trk::BinUtility2DZF(zSteps,m_adjustedPhi,new Amg::Transform3D(vol->transform()));
-    Trk::GenericBinUtility zBinUtil(zSteps, Trk::BinningOption::open, Trk::BinningValue::binZ );
-    const Trk::GenericBinUtility pBinUtil(m_adjustedPhi,  Trk::BinningOption::closed, Trk::BinningValue::binPhi ); 
+    Trk::BinUtility zBinUtil(zSteps, Trk::BinningOption::open, Trk::BinningValue::binZ );
+    const Trk::BinUtility pBinUtil(m_adjustedPhi,  Trk::BinningOption::closed, Trk::BinningValue::binPhi ); 
 
     zBinUtil += pBinUtil; 
 
-    Trk::GenericBinUtility* volBinUtil=new Trk::GenericBinUtility(zBinUtil);        // TODO verify ordering PhiZ vs. ZPhi 
+    Trk::BinUtility* volBinUtil=new Trk::BinUtility(zBinUtil);        // TODO verify ordering PhiZ vs. ZPhi 
 
     Trk::BinnedArray2D<Trk::TrackingVolume>* subVols=new Trk::BinnedArray2D<Trk::TrackingVolume>(subVolumes,volBinUtil);
 
@@ -1554,13 +1542,13 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
   // create z,h bin utilities
   //Trk::BinUtility1DZZ* zBinUtil = new Trk::BinUtility1DZZ(zSteps);
   //Trk::BinUtility1DF* pBinUtil = new Trk::BinUtility1DF(m_adjustedPhi);
-  Trk::BinUtility* zBinUtil = new Trk::GenericBinUtility(zSteps, Trk::BinningOption::open, Trk::BinningValue::binZ );
-  Trk::BinUtility* pBinUtil = new Trk::GenericBinUtility(m_adjustedPhi,  Trk::BinningOption::closed, Trk::BinningValue::binPhi ); 
+  Trk::BinUtility* zBinUtil = new Trk::BinUtility(zSteps, Trk::BinningOption::open, Trk::BinningValue::binZ );
+  Trk::BinUtility* pBinUtil = new Trk::BinUtility(m_adjustedPhi,  Trk::BinningOption::closed, Trk::BinningValue::binPhi ); 
   std::vector<std::vector<Trk::BinUtility*> >*  hBinUtil=new std::vector<std::vector<Trk::BinUtility*> >;
   float phiRef = 0.;
   for (unsigned iz=0;iz < zSteps.size()-1; iz++) {
     std::vector<Trk::BinUtility*> phBinUtil;
-    phBinUtil.push_back(new Trk::GenericBinUtility(phiRef,m_shieldHPart[type]) );
+    phBinUtil.push_back(new Trk::BinUtility(phiRef,m_shieldHPart[type]) );
     hBinUtil->push_back(phBinUtil);
   }
 

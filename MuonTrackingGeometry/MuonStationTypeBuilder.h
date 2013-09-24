@@ -21,7 +21,6 @@ namespace Trk {
  class TrackingGeometry;
  class TrackingVolume;
  class DetachedTrackingVolume;
- class ExtendedMaterialProperties;
  class LayerMaterialProperties;
  class Volume;
  class Layer;
@@ -76,7 +75,7 @@ namespace Muon {
       const Trk::LayerArray* processCSCDiamondComponent(const GeoVPhysVol*&, Trk::DoubleTrapezoidVolumeBounds*&, Amg::Transform3D*&) const;
       const Trk::LayerArray* processTGCComponent(const GeoVPhysVol*&, Trk::TrapezoidVolumeBounds*&, Amg::Transform3D*&) const;
       std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>* > createLayerRepresentation(const Trk::TrackingVolume* trVol) const; 
-      const Trk::Layer* createLayer(const Trk::TrackingVolume* trVol,Trk::ExtendedMaterialProperties*, Amg::Transform3D&) const; 
+      const Trk::Layer* createLayer(const Trk::TrackingVolume* trVol,Trk::MaterialProperties*, Amg::Transform3D&) const; 
       Identifier identifyNSW( std::string, Amg::Transform3D ) const;
    
       void printChildren(const GeoVPhysVol*) const ;
@@ -84,9 +83,9 @@ namespace Muon {
       double get_x_size(const GeoVPhysVol*) const ;
       double decodeX(const GeoShape*) const ;
       double getVolume(const GeoShape*) const;
-      Trk::ExtendedMaterialProperties* getAveragedLayerMaterial(const GeoVPhysVol*,double,double) const;
-      void collectMaterial(const GeoVPhysVol*,Trk::ExtendedMaterialProperties*& ,double) const;
-      Trk::ExtendedMaterialProperties collectStationMaterial(const Trk::TrackingVolume* trVol,double) const; 
+      Trk::MaterialProperties* getAveragedLayerMaterial(const GeoVPhysVol*,double,double) const;
+      void collectMaterial(const GeoVPhysVol*,Trk::MaterialProperties*& ,double) const;
+      Trk::MaterialProperties collectStationMaterial(const Trk::TrackingVolume* trVol,double) const; 
 
   private:
      /** Private method to fill default material */
@@ -101,19 +100,19 @@ namespace Muon {
 
       mutable Trk::MaterialProperties*     m_muonMaterial;               //!< the material
  
-      mutable Trk::ExtendedMaterialProperties*    m_mdtTubeMat;                  //
-      mutable std::vector<Trk::ExtendedMaterialProperties*>    m_mdtFoamMat;                  //
-      mutable Trk::ExtendedMaterialProperties*    m_rpc46;                  
-      mutable std::vector<Trk::ExtendedMaterialProperties*>    m_rpcDed;                
-      mutable Trk::ExtendedMaterialProperties*    m_rpcLayer;                  
-      mutable Trk::ExtendedMaterialProperties*    m_rpcExtPanel;                  
-      mutable Trk::ExtendedMaterialProperties*    m_rpcMidPanel;                  
-      mutable Trk::ExtendedMaterialProperties*    m_matCSC01;                  //
-      mutable Trk::ExtendedMaterialProperties*    m_matCSCspacer1;                  //
-      mutable Trk::ExtendedMaterialProperties*    m_matCSC02;                  //
-      mutable Trk::ExtendedMaterialProperties*    m_matCSCspacer2;                  //
-      mutable Trk::ExtendedMaterialProperties*    m_matTGC01;                  //
-      mutable Trk::ExtendedMaterialProperties*    m_matTGC06;                  //
+      mutable Trk::MaterialProperties*    m_mdtTubeMat;                  //
+      mutable std::vector<Trk::MaterialProperties*>    m_mdtFoamMat;                  //
+      mutable Trk::MaterialProperties*    m_rpc46;                  
+      mutable std::vector<Trk::MaterialProperties*>    m_rpcDed;                
+      mutable Trk::MaterialProperties*    m_rpcLayer;                  
+      mutable Trk::MaterialProperties*    m_rpcExtPanel;                  
+      mutable Trk::MaterialProperties*    m_rpcMidPanel;                  
+      mutable Trk::MaterialProperties*    m_matCSC01;                  //
+      mutable Trk::MaterialProperties*    m_matCSCspacer1;                  //
+      mutable Trk::MaterialProperties*    m_matCSC02;                  //
+      mutable Trk::MaterialProperties*    m_matCSCspacer2;                  //
+      mutable Trk::MaterialProperties*    m_matTGC01;                  //
+      mutable Trk::MaterialProperties*    m_matTGC06;                  //
       Trk::GeoMaterialConverter*                  m_materialConverter;
 
     };

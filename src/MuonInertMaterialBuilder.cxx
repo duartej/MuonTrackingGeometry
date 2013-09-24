@@ -37,7 +37,7 @@
 #include "TrkGeometry/SubtractedCylinderLayer.h"
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkGeometry/TrackingGeometry.h"
-#include "TrkGeometry/HomogenousLayerMaterial.h"
+//#include "TrkGeometry/HomogeneousLayerMaterial.h"
 
 // StoreGate
 #include "StoreGate/StoreGateSvc.h"
@@ -137,17 +137,8 @@ StatusCode Muon::MuonInertMaterialBuilder::initialize()
     ATH_MSG_INFO( m_muonMgr->geometryVersion()); 
  
     // if no muon materials are declared, take default ones
-    if (m_muonMaterialProperties.size() < 3){
-      // set 0. / 0. / 0. / 0.
-      m_muonMaterialProperties = std::vector<double>();
-      m_muonMaterialProperties.push_back(0.);
-      m_muonMaterialProperties.push_back(0.);
-      m_muonMaterialProperties.push_back(0.);
-    }
-
-    m_muonMaterial = Trk::MaterialProperties(m_muonMaterialProperties[0],
-                                             m_muonMaterialProperties[1],
-                                             m_muonMaterialProperties[2]);
+  
+    m_muonMaterial = Trk::MaterialProperties(10e10,10e10,0.,0.,0.);      // default material properties
 
 // mw
     m_materialConverter= new Trk::GeoMaterialConverter();
@@ -320,13 +311,14 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<Amg::
       }
     }
 
-    // add some extra material to the endcap
+    // add some extra material to the endcap     // ST this should be phased out eventually ?
     if (m_extraMaterial) {
       // scaling
       float scmat1 = m_extraX0*m_extraFraction/10.*88.93;
       float scmat2 = m_extraX0*(1.-m_extraFraction)/10.*88.93;
-      Trk::MaterialProperties mat1(1.,88.93/scmat1,scmat1*0.0013);
-      Trk::MaterialProperties mat2(1.,88.93/scmat2,scmat2*0.0013);
+      // used : z = 14; A=28 ; rho = 2.33 g/cm^3, X0 = 93.7 mmm, l0 = 465.2 mm (Silicium)
+      Trk::MaterialProperties mat1(93.7/scmat1,465.2/scmat1,scmat1*14,scmat1*28,0.0023,0.);
+      Trk::MaterialProperties mat2(93.7/scmat2,465.2/scmat2,scmat2*14,scmat2*28,0.0023,0.);
       const Trk::LayerArray* dummyLayers = 0;
       const Trk::TrackingVolumeArray* dummyVolumes = 0;
       Trk::VolumeBounds* extraBounds1 = new Trk::CylinderVolumeBounds(850.,13000.,5.);
@@ -442,16 +434,18 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
     delete confinedVols;    
   } else if (m_simplify &&  constituents.front().second.first>0.5 ) { 
     simpleMode = 2;
-    if (constituents.size()==1) {   // simplified volume
+    if (constituents.size()==1) {   // simplified volume : the scale factor refers to the density scaling
       double fraction = constituents.front().second.first;
-      Trk::MaterialProperties mat(1.,trVol->x0()/fraction,fraction*trVol->zOverAtimesRho());
+      // simplified material rescales X0, l0 and density
+      Trk::MaterialProperties mat(trVol->x0()/fraction,trVol->l0()/fraction,trVol->averageA(),trVol->averageZ(),fraction*trVol->zOverAtimesRho());
       newVol = new Trk::TrackingVolume( *envelope, mat,  0, 0, envName);  
       delete trVol;  
       delete confinedVols;
     } else {  // enclose simplified constituents
       for (unsigned int ic=0;ic<constituents.size();ic++) { 
 	double fraction = constituents[ic].second.first;
-	Trk::MaterialProperties mat(1.,trVol->x0()/fraction,fraction*trVol->zOverAtimesRho());
+	// simplified material rescales X0, l0 and density
+	Trk::MaterialProperties mat(trVol->x0()/fraction,trVol->l0()/fraction,trVol->averageA(),trVol->averageZ(),fraction*trVol->zOverAtimesRho());
 	Trk::TrackingVolume* trc = new Trk::TrackingVolume(*(constituents[ic].first),mat, 0, 0, trVol->volumeName());
         confinedVols->push_back(trc);
       }  

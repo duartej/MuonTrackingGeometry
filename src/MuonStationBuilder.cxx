@@ -24,7 +24,7 @@
 #include "TrkDetDescrInterfaces/ITrackingVolumeArrayCreator.h"
 #include "TrkDetDescrInterfaces/ITrackingVolumeHelper.h"
 #include "TrkDetDescrInterfaces/IDetachedTrackingVolumeBuilder.h"
-#include "TrkDetDescrUtils/GenericBinUtility.h"
+#include "TrkDetDescrUtils/BinUtility.h"
 #include "TrkDetDescrUtils/BinnedArray.h"
 #include "TrkDetDescrUtils/GeometryStatics.h"
 #include "TrkDetDescrUtils/SharedObject.h"
@@ -41,7 +41,7 @@
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkGeometry/TrackingGeometry.h"
 #include "TrkGeometry/Layer.h"
-#include "TrkGeometry/HomogenousLayerMaterial.h"
+#include "TrkGeometry/HomogeneousLayerMaterial.h"
 #include<fstream>
 #include "GeoModelKernel/GeoShape.h"
 #include "GeoModelKernel/GeoShapeShift.h"
@@ -141,17 +141,8 @@ StatusCode Muon::MuonStationBuilder::initialize()
      ATH_MSG_INFO( "Retrieved tool " << m_muonStationTypeBuilder );
 
     // if no muon materials are declared, take default ones
-    if (m_muonMaterialProperties.size() < 3){
-      // set 0. / 0. / 0. / 0.
-      m_muonMaterialProperties = std::vector<double>();
-      m_muonMaterialProperties.push_back(0.);
-      m_muonMaterialProperties.push_back(0.);
-      m_muonMaterialProperties.push_back(0.);
-    }
-
-    m_muonMaterial = Trk::MaterialProperties(m_muonMaterialProperties[0],
-                                             m_muonMaterialProperties[1],
-                                             m_muonMaterialProperties[2]);
+  
+    m_muonMaterial = Trk::MaterialProperties(10e10,10e10,0.,0.,0.);      // default material properties
 
     m_materialConverter= new Trk::GeoMaterialConverter();
     m_geoShapeConverter= new Trk::GeoShapeConverter();
@@ -190,15 +181,15 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<Amg::Transform3D> > > objs;
 	
 	std::vector<const GeoShape*> input_shapes;
-	std::vector<std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<Amg::Transform3D> > > vols;
+	std::vector<std::pair<std::pair<const GeoLogVol*,Trk::MaterialProperties*>,std::vector<Amg::Transform3D> > > vols;
 	std::vector<std::string> volNames;
 	
 	bool simpleTree = false;
 	if ( !cv->getNChildVols() ) {
 	  std::vector<Amg::Transform3D > volTr;
 	  volTr.push_back(Amg::CLHEPTransformToEigen(vol.getTransform())); 
-	  std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*> cpair(clv,0);
-	  vols.push_back(std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<Amg::Transform3D> > (cpair,volTr) );
+	  std::pair<const GeoLogVol*,Trk::MaterialProperties*> cpair(clv,0);
+	  vols.push_back(std::pair<std::pair<const GeoLogVol*,Trk::MaterialProperties*>,std::vector<Amg::Transform3D> > (cpair,volTr) );
           volNames.push_back(vname);
 	  simpleTree = true;
 	} else {
@@ -245,7 +236,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
             if (mm) layTransf = mm->transform(nswId);
 	  }
 
-          const Trk::HomogenousLayerMaterial mat(*(vols[ish].first.second));  
+          const Trk::HomogeneousLayerMaterial mat(*(vols[ish].first.second),0.);  
 
 	  const Trk::Layer* layer=0;
 
@@ -1355,14 +1346,14 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
 }
 
 
-void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std::string name, Amg::Transform3D transform, std::vector<std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*> , std::vector<Amg::Transform3D> > >& vols, std::vector< std::string >& volNames ) const
+void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std::string name, Amg::Transform3D transform, std::vector<std::pair<std::pair<const GeoLogVol*,Trk::MaterialProperties*> , std::vector<Amg::Transform3D> > >& vols, std::vector< std::string >& volNames ) const
 {
   // subcomponents 
   unsigned int nc = pv->getNChildVols();
   //std::cout << "getObjsForTranslation from:"<< pv->getLogVol()->getName()<<","<<pv->getLogVol()->getMaterial()->getName()<<", looping over "<< nc << " children" << std::endl;
   double thick = 2*m_muonStationTypeBuilder->get_x_size(pv);
   double vol = m_muonStationTypeBuilder->getVolume(pv->getLogVol()->getShape()); 
-  Trk::ExtendedMaterialProperties* matComb = m_muonStationTypeBuilder->getAveragedLayerMaterial(pv,vol,thick);
+  Trk::MaterialProperties* matComb = m_muonStationTypeBuilder->getAveragedLayerMaterial(pv,vol,thick);
   //if (matComb) std::cout << "thickness, averaged x0:"<< matComb->thickness()<<","<< matComb->x0()<< std::endl;
   //double dInX0 = matComb->thickness()/matComb->x0(); 
   for (unsigned int ic=0; ic<nc; ic++) {
@@ -1408,12 +1399,14 @@ void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std:
       if (!found) {
 	std::vector<Amg::Transform3D > volTr;
 	volTr.push_back(transform*transf);
-        // divide mother material ?
-	Trk::ExtendedMaterialProperties* nMat=new Trk::ExtendedMaterialProperties(*matComb);
-        if (matMode) nMat->scaleThicknessInX0(1./nc); 
-        //double dX0= matMode ? dInX0/nc : dInX0;
-	std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*> cpair(clv,nMat);
-	vols.push_back(std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<Amg::Transform3D> > (cpair,volTr) );
+        // divide mother material ? seems strange - check !
+        double scale =  1.;     // 1./nc;
+	Trk::MaterialProperties* nMat=new Trk::MaterialProperties(matComb->x0()/scale,matComb->l0()/scale,
+								  matComb->averageZ(),matComb->averageA(),
+								  matComb->averageRho()*scale);
+
+	std::pair<const GeoLogVol*,Trk::MaterialProperties*> cpair(clv,nMat);
+	vols.push_back(std::pair<std::pair<const GeoLogVol*,Trk::MaterialProperties*>,std::vector<Amg::Transform3D> > (cpair,volTr) );
         volNames.push_back(cName);
 	//std::cout << "new volume added:"<< cName <<","<<clv->getMaterial()->getName()<<","<< volTr.back().translation().z()<<","<<volTr.back().translation().phi()<<":mat:"<<matComb->thicknessInX0()<<std::endl;
 	//printInfo(cv);

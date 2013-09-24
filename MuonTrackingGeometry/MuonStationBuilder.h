@@ -76,7 +76,7 @@ namespace Muon {
       void encloseLayers( const Trk::DetachedTrackingVolume* ) const; 
       void identifyLayers(const Trk::DetachedTrackingVolume*, int, int ) const;
       void identifyPrototype(const Trk::TrackingVolume*, int, int, Amg::Transform3D ) const;
-      void getObjsForTranslation(const GeoVPhysVol* pv, std::string name, Amg::Transform3D , std::vector<std::pair<std::pair<const GeoLogVol*,Trk::ExtendedMaterialProperties*>,std::vector<Amg::Transform3D> > >& vols, std::vector<std::string>& volNames ) const;
+      void getObjsForTranslation(const GeoVPhysVol* pv, std::string name, Amg::Transform3D , std::vector<std::pair<std::pair<const GeoLogVol*,Trk::MaterialProperties*>,std::vector<Amg::Transform3D> > >& vols, std::vector<std::string>& volNames ) const;
   
       const MuonGM::MuonDetectorManager*  m_muonMgr;               //!< the MuonDetectorManager
       const MdtIdHelper*            m_mdtIdHelper;           //!< 
@@ -94,7 +94,6 @@ namespace Muon {
       mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
       mutable std::pair<bool,Trk::MaterialProperties>   m_sTgcMaterial;  //!< the material
       mutable std::pair<bool,Trk::MaterialProperties>   m_mmMaterial;    //!< the material
-      mutable std::vector< double >       m_muonMaterialProperties;     //!< The material properties of the created muon system 
       Trk::GeoShapeConverter*             m_geoShapeConverter;          //!< shape converter
       Trk::GeoMaterialConverter*          m_materialConverter;          //!< material converter
       bool                                m_buildBarrel;

@@ -15,7 +15,7 @@
 #include "TrkDetDescrInterfaces/ILayerArrayCreator.h"
 #include "TrkDetDescrInterfaces/ITrackingVolumeArrayCreator.h"
 #include "TrkDetDescrInterfaces/ILayerBuilder.h"
-#include "TrkDetDescrUtils/GenericBinUtility.h"
+#include "TrkDetDescrUtils/BinUtility.h"
 #include "TrkDetDescrUtils/BinningType.h"
 #include "TrkDetDescrUtils/BinnedArray.h"
 #include "TrkDetDescrUtils/NavBinnedArray1D.h"
@@ -39,9 +39,9 @@
 #include "TrkGeometry/DiscLayer.h"
 #include "TrkGeometry/PlaneLayer.h"
 #include "TrkGeometry/SubtractedPlaneLayer.h"
-#include "TrkGeometry/ExtendedMaterialProperties.h"
+#include "TrkGeometry/MaterialProperties.h"
 #include "TrkGeometry/LayerMaterialProperties.h"
-#include "TrkGeometry/HomogenousLayerMaterial.h"
+#include "TrkGeometry/HomogeneousLayerMaterial.h"
 #include "TrkGeometry/OverlapDescriptor.h"
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkGeometry/DetachedTrackingVolume.h"
@@ -132,7 +132,7 @@ StatusCode Muon::MuonStationTypeBuilder::initialize()
       ATH_MSG_INFO("Retrieved tool " << m_trackingVolumeArrayCreator);
 
     // default (trivial) muon material properties 
-    m_muonMaterial = new Trk::MaterialProperties(0.,10e8,0.);
+    m_muonMaterial = new Trk::MaterialProperties(10e10,10e10,0.,0.,0.);      
 
     m_materialConverter= new Trk::GeoMaterialConverter();
      
@@ -416,7 +416,7 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
       }
       // create VolumeArray (1DX) 
       const Trk::TrackingVolumeArray* components = 0;
-      Trk::BinUtility* binUtility = new Trk::GenericBinUtility( volSteps, Trk::BinningOption::open, Trk::BinningValue::binX);
+      Trk::BinUtility* binUtility = new Trk::BinUtility( volSteps, Trk::BinningOption::open, Trk::BinningValue::binX);
       if (m_trackingVolumeArrayCreator)  components = m_trackingVolumeArrayCreator->cuboidVolumesArrayNav( trkVols, binUtility, false);
       // std::cout << "tracking volume array created" << std::endl;
 
@@ -700,7 +700,7 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
       // create VolumeArray (1DX) 
       const Trk::TrackingVolumeArray* components = 0;
       //Trk::BinUtility* binUtility = new Trk::BinUtility1DX( -( envelope->halflengthZ() ), volSteps);
-      Trk::BinUtility* binUtility = new Trk::GenericBinUtility( volSteps, Trk::BinningOption::open, Trk::BinningValue::binX );
+      Trk::BinUtility* binUtility = new Trk::BinUtility( volSteps, Trk::BinningOption::open, Trk::BinningValue::binX );
       if (m_trackingVolumeArrayCreator)  components = m_trackingVolumeArrayCreator->trapezoidVolumesArrayNav( trkVols, binUtility, false);
       // std::cout << "tracking volume array created" << std::endl;
 
@@ -738,7 +738,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
   std::vector<const Trk::PlaneLayer*> layers;
   std::vector<double> x_array;
   std::vector<double> x_ref;
-  std::vector<Trk::ExtendedMaterialProperties> x_mat;
+  std::vector<Trk::MaterialProperties> x_mat;
   std::vector<double> x_thickness;
   std::vector<int> x_active;
   double currX = -100000; 
@@ -749,7 +749,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
     Amg::Transform3D transfc = Amg::CLHEPTransformToEigen(gv->getXToChildVol(ich));        
     //std::cout << "MDT component:"<<ich<<":" << clv->getName() <<", made of "<<clv->getMaterial()->getName()<<","<<clv->getShape()->type()<<","<<transfc.getTranslation()<<std::endl;
     // printChildren(cv);
-    Trk::ExtendedMaterialProperties mdtMat(0.,10e8,10e8,0.,0.,0.);
+    Trk::MaterialProperties mdtMat(10e8,10e8,0.,0.,0.);
     double xv = 0.;
     int active = 0;
     if ( (clv->getName()).substr(0,3)=="MDT") {
@@ -799,7 +799,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
 	// std::cout << "layer info included:" << clv->getName()<<"," << 2*xv <<","<< currX<< std::endl; 
       } else {
 	std::vector<double>::iterator xIter=x_array.begin();
-	std::vector<Trk::ExtendedMaterialProperties>::iterator mIter=x_mat.begin();
+	std::vector<Trk::MaterialProperties>::iterator mIter=x_mat.begin();
 	std::vector<double>::iterator tIter=x_thickness.begin();
 	std::vector<double>::iterator rIter=x_ref.begin();
 	std::vector<int>::iterator aIter=x_active.begin();
@@ -837,7 +837,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
       Amg::Transform3D* cTr = new Amg::Transform3D( (*transf) * Amg::Translation3D(x_array[iloop],0.,0.)*
 						    Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,1.,0.))*
 						    Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,0.,1.)));
-      Trk::HomogenousLayerMaterial mdtMaterial(x_mat[iloop]);  
+      Trk::HomogeneousLayerMaterial mdtMaterial(x_mat[iloop], 0.);  
       layer = new Trk::PlaneLayer(cTr,
                                   bounds,
                                   mdtMaterial,
@@ -875,7 +875,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtBox(Trk::Volu
     binSteps.push_back(transf->translation()[0]+volBounds->halflengthX());
   }
   //Trk::BinUtility* binUtility = new Trk::BinUtility1DX( minX, new std::vector<double>(binSteps));
-  Trk::BinUtility* binUtility = new Trk::GenericBinUtility( binSteps, Trk::BinningOption::open, Trk::BinningValue::binX);
+  Trk::BinUtility* binUtility = new Trk::BinUtility( binSteps, Trk::BinningOption::open, Trk::BinningValue::binX);
 
   Trk::LayerArray* mdtLayerArray = 0;
   mdtLayerArray = new Trk::NavBinnedArray1D<Trk::Layer>(layerOrder, binUtility, new Amg::Transform3D(Trk::s_idTransform));     
@@ -893,7 +893,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
    // std::cout << "processing MDT, number of children volumes:"<< gv->getNChildVols() <<std::endl; 
   std::vector<const Trk::PlaneLayer*> layers;
   std::vector<double> x_array;
-  std::vector<Trk::ExtendedMaterialProperties> x_mat;
+  std::vector<Trk::MaterialProperties> x_mat;
   std::vector<double> x_thickness;
   std::vector<double> x_ref;
   std::vector<int> x_active;
@@ -911,7 +911,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
       double x2v = trd->getXHalfLength2();
       if ( x1v==x2v ) xv = x1v;
     }
-    Trk::ExtendedMaterialProperties mdtMat(0.,10e8,10e8,0.,0.,0.); 
+    Trk::MaterialProperties mdtMat(10e8,10e8,0.,0.,0.); 
     if ( (clv->getName()).substr(0,3)=="MDT") {
       xv = 13.0055;  // the half-thickness
       if (!m_mdtTubeMat ) {
@@ -952,7 +952,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
 	x_active.push_back(active);
       } else {
 	std::vector<double>::iterator xIter=x_array.begin();
-	std::vector<Trk::ExtendedMaterialProperties>::iterator mIter=x_mat.begin();
+	std::vector<Trk::MaterialProperties>::iterator mIter=x_mat.begin();
 	std::vector<double>::iterator tIter=x_thickness.begin();
 	std::vector<double>::iterator rIter=x_ref.begin();
 	std::vector<int>::iterator aIter=x_active.begin();
@@ -980,7 +980,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
     Trk::SharedObject<const Trk::SurfaceBounds> bounds(tbounds);
     for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {      
       thickness = x_thickness[iloop];
-      Trk::HomogenousLayerMaterial mdtMaterial(x_mat[iloop]);
+      Trk::HomogeneousLayerMaterial mdtMaterial(x_mat[iloop],0.);
       Amg::Transform3D* cTr = new Amg::Transform3D( (*transf) * Amg::Translation3D(0.,0.,x_array[iloop]) );
       layer = new Trk::PlaneLayer(cTr,
                                   bounds,
@@ -1029,7 +1029,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processMdtTrd(Trk::Volu
     */
     
     //Trk::BinUtility* binUtility = new Trk::BinUtility1DX( minX, new std::vector<double>(binSteps));
-    Trk::BinUtility* binUtility = new Trk::GenericBinUtility( binSteps, Trk::BinningOption::open, Trk::BinningValue::binX );
+    Trk::BinUtility* binUtility = new Trk::BinUtility( binSteps, Trk::BinningOption::open, Trk::BinningValue::binX );
     Trk::LayerArray* mdtLayerArray = 0;
     mdtLayerArray = new Trk::NavBinnedArray1D<Trk::Layer>(layerOrder, binUtility, new Amg::Transform3D(Trk::s_idTransform));     
     std::string name="MDT";
@@ -1075,7 +1075,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
       Amg::Transform3D* cTr = new Amg::Transform3D( transfc[ic] *
 						    Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,1.,0.))*
 						    Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,0.,1.)));
-      Trk::ExtendedMaterialProperties rpcMat(0.,10e8,10e8,0.,0.,0.);               // default
+      Trk::MaterialProperties rpcMat(10e8,10e8,0.,0.,0.);               // default
       if ( (glv->getName()).substr(0,3)=="Ded" ) {
         // find if material exists already
         bool found = false;
@@ -1084,7 +1084,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
         } 
 	if (!found) {
 	  double vol = 8*xs*ys*zs;
-	  Trk::ExtendedMaterialProperties* rpcDed = getAveragedLayerMaterial(gv[ic],vol,2*xs);
+	  Trk::MaterialProperties* rpcDed = getAveragedLayerMaterial(gv[ic],vol,2*xs);
 	  m_rpcDed.push_back(rpcDed);
 	  rpcMat = *rpcDed;
 	}
@@ -1099,7 +1099,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
         } else { ATH_MSG_WARNING( name() << "RPC module thickness different from 46:" << thickness ); }
       }
           
-      Trk::HomogenousLayerMaterial rpcMaterial(rpcMat);
+      Trk::HomogeneousLayerMaterial rpcMaterial(rpcMat,0.);
       layer = new Trk::PlaneLayer(cTr,
 				  bounds,
 				  rpcMaterial,
@@ -1129,7 +1129,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
         Amg::Transform3D* cTr = new Amg::Transform3D( transfc[ic] *
 						    Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,1.,0.))*
 						    Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,0.,1.)));
-        Trk::ExtendedMaterialProperties rpcMat(0.,10e8,10e8,0.,0.,0.);               // default
+        Trk::MaterialProperties rpcMat(10e8,10e8,0.,0.,0.);               // default
         if ( (glv->getName()).substr(0,3)=="Ded" ) {
 	  // find if material exists already
 	  bool found = false;
@@ -1138,12 +1138,12 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
 	  } 
 	  if (!found) {
 	    double vol = 8*xs1*ys1*zs;
-	    Trk::ExtendedMaterialProperties* rpcDed = getAveragedLayerMaterial(gv[ic],vol,2*xs1);
+	    Trk::MaterialProperties* rpcDed = getAveragedLayerMaterial(gv[ic],vol,2*xs1);
 	    m_rpcDed.push_back(rpcDed);
 	    rpcMat = *rpcDed;
 	  }
           // create Ded layer
-	  Trk::HomogenousLayerMaterial rpcMaterial(rpcMat);
+	  Trk::HomogeneousLayerMaterial rpcMaterial(rpcMat,0.);
 	  layer = new Trk::PlaneLayer(cTr, bounds, rpcMaterial, thickness, od );
           layers.push_back(layer);
 	  layer->setLayerType(0);
@@ -1186,7 +1186,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
 	      }
 	      // create Rpc panel layers 
 	      thickness = 2*gx;
-	      Trk::HomogenousLayerMaterial rpcMaterial(rpcMat);
+	      Trk::HomogeneousLayerMaterial rpcMaterial(rpcMat,0.);
 	      layer = new Trk::PlaneLayer(new Amg::Transform3D(Amg::Translation3D(trgc.translation())*(*cTr)),
 					  bounds, rpcMaterial, thickness, od );
 	      layers.push_back(layer);
@@ -1201,7 +1201,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
 	      rpcMat=*m_rpcLayer;
 	      // define 1 layer for 2 strip planes
 	      thickness = 2*gx;
-	      Trk::HomogenousLayerMaterial rpcMaterial(rpcMat);
+	      Trk::HomogeneousLayerMaterial rpcMaterial(rpcMat,0.);
 	      layer = new Trk::PlaneLayer(new Amg::Transform3D(Amg::Translation3D(trgc.translation())*(*cTr)),
 					  bounds, rpcMaterial, thickness, od );
 	      layers.push_back(layer);
@@ -1251,7 +1251,8 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
   for (unsigned int ic=0; ic<gv.size(); ++ic) {
     const GeoLogVol* clv = gv[ic]->getLogVol();        
     // std::cout << "Spacer component:"<<ic<<":" << clv->getName() <<", made of "<<clv->getMaterial()->getName()<<","<<clv->getShape()->type()<<","<<transf[ic].translation()<<","<<transform.translation()<<std::endl; 
-    Trk::ExtendedMaterialProperties cmat = m_materialConverter->convertExtended(clv->getMaterial());
+    // Trk::ExtendedMaterialProperties cmat = m_materialConverter->convertExtended(clv->getMaterial());
+    Trk::MaterialProperties cmat = m_materialConverter->convert(clv->getMaterial());
     Trk::OverlapDescriptor* od=0;
     if (clv->getShape()->type()=="Box") {
       const GeoBox* box = dynamic_cast<const GeoBox*> (clv->getShape());
@@ -1278,9 +1279,9 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 	thickness = 2*ys; 
 	cTr = new Amg::Transform3D( transf[ic] * Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(1.,0.,0.)));
       } 
-      Trk::ExtendedMaterialProperties material(thickness,cmat.x0(),cmat.l0(),cmat.averageA(),
+      Trk::MaterialProperties material(cmat.x0(),cmat.l0(),cmat.averageA(),
 					       cmat.averageZ(),cmat.averageRho());  
-      Trk::HomogenousLayerMaterial spacerMaterial(material);
+      Trk::HomogeneousLayerMaterial spacerMaterial(material,0.);
       Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds);
       
       layer = new Trk::PlaneLayer(cTr,
@@ -1298,13 +1299,13 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 	Trk::RectangleBounds* rbounds = new Trk::RectangleBounds(boxA->getYHalfLength(),boxA->getZHalfLength());
         double thickness = (boxA->getXHalfLength()-boxB->getXHalfLength());
         double shift     = 0.5*(boxA->getXHalfLength()+boxB->getXHalfLength());
-	Trk::ExtendedMaterialProperties material;
-	Trk::HomogenousLayerMaterial spacerMaterial;
+	Trk::MaterialProperties material;
+	Trk::HomogeneousLayerMaterial spacerMaterial;
 	Trk::SharedObject<const Trk::SurfaceBounds> bounds;
         if (thickness>0.) {
-	  material = Trk::ExtendedMaterialProperties(thickness,cmat.x0(),cmat.l0(),cmat.averageA(),
+	  material = Trk::MaterialProperties(cmat.x0(),cmat.l0(),cmat.averageA(),
 						   cmat.averageZ(),cmat.averageRho());  
-	  spacerMaterial = Trk::HomogenousLayerMaterial(material);
+	  spacerMaterial = Trk::HomogeneousLayerMaterial(material,0.);
 	  bounds = Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);
 	  Trk::PlaneLayer* layx = new Trk::PlaneLayer(new Amg::Transform3D( transf[ic]*Amg::Translation3D(shift,0.,0.)*
 									    Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,1.,0.))*
@@ -1316,9 +1317,9 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 	}
         thickness = (boxA->getYHalfLength()-boxB->getYHalfLength());
         if (thickness>0.) {
-	  material = Trk::ExtendedMaterialProperties(thickness,cmat.x0(),cmat.l0(),cmat.averageA(),
+	  material = Trk::MaterialProperties(cmat.x0(),cmat.l0(),cmat.averageA(),
 						     cmat.averageZ(),cmat.averageRho());  
-	  spacerMaterial = Trk::HomogenousLayerMaterial(material);
+	  spacerMaterial = Trk::HomogeneousLayerMaterial(material,0.);
 	  shift     = 0.5*(boxA->getYHalfLength()+boxB->getYHalfLength());
 	  rbounds = new Trk::RectangleBounds(boxB->getXHalfLength(),boxA->getZHalfLength());
 	  bounds = Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);
@@ -1331,8 +1332,8 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 	}
         thickness = (boxA->getZHalfLength()-boxB->getZHalfLength());
         if (thickness>0.) {
-	  material = Trk::ExtendedMaterialProperties(thickness,cmat.x0(),cmat.l0(),cmat.averageA(),cmat.averageZ(),cmat.averageRho());  
-	  spacerMaterial = Trk::HomogenousLayerMaterial(material);
+	  material = Trk::MaterialProperties(cmat.x0(),cmat.l0(),cmat.averageA(),cmat.averageZ(),cmat.averageRho());  
+	  spacerMaterial = Trk::HomogeneousLayerMaterial(material,0.);
 	  shift     = 0.5*(boxA->getZHalfLength()+boxB->getZHalfLength());
 	  rbounds = new Trk::RectangleBounds(boxB->getXHalfLength(),boxB->getYHalfLength());
 	  bounds = Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);
@@ -1380,9 +1381,9 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 					Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,1.,0.))*
 					Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,0.,1.))), bounds), 
 										  volExcl, false);
-	    Trk::ExtendedMaterialProperties material(thickness,cmat.x0(),cmat.l0(),cmat.averageA(),
+	    Trk::MaterialProperties material(cmat.x0(),cmat.l0(),cmat.averageA(),
 						     cmat.averageZ(),cmat.averageRho());  
-	    Trk::HomogenousLayerMaterial spacerMaterial(material);
+	    Trk::HomogeneousLayerMaterial spacerMaterial(material,0.);
 	    Trk::SubtractedPlaneLayer* layx = new Trk::SubtractedPlaneLayer(subPlane,spacerMaterial, thickness, od, 0 );
             delete subPlane;
 	    Trk::SubtractedPlaneLayer* layxx = new Trk::SubtractedPlaneLayer(*layx,Amg::Transform3D(Amg::Translation3D(-2*shift,0.,0.)));
@@ -1397,9 +1398,9 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 	    subPlane = new Trk::SubtractedPlaneSurface(Trk::PlaneSurface(new Amg::Transform3D(transf[ic]*
 											      Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(1.,0.,0.))),
 									 bounds), volEx, false);
-	    material = Trk::ExtendedMaterialProperties(thickness,cmat.x0(),cmat.l0(),cmat.averageA(),
+	    material = Trk::MaterialProperties(cmat.x0(),cmat.l0(),cmat.averageA(),
 							   cmat.averageZ(),cmat.averageRho());  
-	    spacerMaterial = Trk::HomogenousLayerMaterial(material);
+	    spacerMaterial = Trk::HomogeneousLayerMaterial(material,0.);
 	    Trk::SubtractedPlaneLayer* lay = new Trk::SubtractedPlaneLayer(subPlane,spacerMaterial, thickness, od, 0 );
             delete subPlane;
 	    layers.push_back(lay) ; 
@@ -1732,12 +1733,12 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processCscStation(const
   //for (unsigned int i=0;i<volSteps->size();i++) std::cout << i<<","<<(*volSteps)[i]<< std::endl;
   if (components.size() && isDiamond) {
     //Trk::BinUtility1DX* binUtil = new Trk::BinUtility1DX(-xTotal+xShift, volSteps);
-    Trk::BinUtility* binUtil = new Trk::GenericBinUtility( volSteps, Trk::BinningOption::open, Trk::BinningValue::binX);
+    Trk::BinUtility* binUtil = new Trk::BinUtility( volSteps, Trk::BinningOption::open, Trk::BinningValue::binX);
     if (m_trackingVolumeArrayCreator) compArray = m_trackingVolumeArrayCreator->doubleTrapezoidVolumesArrayNav( components, binUtil, false);
   }
   if (components.size() && !isDiamond) {
     //Trk::BinUtility1DX* binUtil = new Trk::BinUtility1DX(-xTotal+xShift, volSteps);
-    Trk::BinUtility* binUtil = new Trk::GenericBinUtility( volSteps, Trk::BinningOption::open, Trk::BinningValue::binX);
+    Trk::BinUtility* binUtil = new Trk::BinUtility( volSteps, Trk::BinningOption::open, Trk::BinningValue::binX);
     if (m_trackingVolumeArrayCreator) compArray = m_trackingVolumeArrayCreator->trapezoidVolumesArrayNav( components, binUtil, false);
   }
   // ready to build the station prototype
@@ -1905,12 +1906,12 @@ double Muon::MuonStationTypeBuilder::get_x_size(const GeoVPhysVol* pv) const
   return fmax( -xlow, xup ); 
 }
 
-Trk::ExtendedMaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerMaterial( const GeoVPhysVol* pv, double volume, double thickness) const
+Trk::MaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerMaterial( const GeoVPhysVol* pv, double volume, double thickness) const
 {  
 
   ATH_MSG_DEBUG( name() << "::getAveragedLayerMaterial:processing "); 
   // loop through the whole hierarchy; collect material
-  Trk::ExtendedMaterialProperties* total=new Trk::ExtendedMaterialProperties(0.,10.e8,10.e8,0.,0.,0.);
+  Trk::MaterialProperties* total=new Trk::MaterialProperties(10.e8,10.e8,0.,0.,0.);
   collectMaterial( pv, total, volume/thickness);
   ATH_MSG_VERBOSE(name() << " combined material thickness: "<< total->thickness() ); 
   ATH_MSG_VERBOSE(name() << " actual layer thickness: "<< thickness ); 
@@ -1918,13 +1919,12 @@ Trk::ExtendedMaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerM
   if (total->thickness() > 0 ) { 
     double scale = thickness/total->thickness();
     //std::cout << "scaling factor:"<<scale<<std::endl;
-    Trk::ExtendedMaterialProperties* scaled =
-      new Trk::ExtendedMaterialProperties(scale*total->thickness(),
-					  scale*total->x0(),
-					  scale*total->l0(),
-					  total->averageA(),
-					  total->averageZ(),
-					  total->averageRho()/scale);
+    Trk::MaterialProperties* scaled =
+      new Trk::MaterialProperties(scale*total->x0(),
+				  scale*total->l0(),
+				  total->averageA(),
+				  total->averageZ(),
+				  total->averageRho()/scale);
     delete total;    
     ATH_MSG_VERBOSE( "averaged material:d,x0,dInX0:"<<scaled->thickness()<<","<<scaled->x0()<<","<<scaled->thicknessInX0() );
 
@@ -1934,7 +1934,7 @@ Trk::ExtendedMaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerM
   return 0;
 }
 
- void Muon::MuonStationTypeBuilder::collectMaterial(const GeoVPhysVol* pv, Trk::ExtendedMaterialProperties*& matProp,double sf) const
+ void Muon::MuonStationTypeBuilder::collectMaterial(const GeoVPhysVol* pv, Trk::MaterialProperties*& matProp,double sf) const
 {
   // sf is surface of the new layer used to calculate the average 'thickness' of components
   // number of child volumes
@@ -1950,7 +1950,7 @@ Trk::ExtendedMaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerM
 
     //std::cout <<"current material:"<< lv->getMaterial()->getName()<< std::endl;
     // get material properties from GeoModel
-    Trk::ExtendedMaterialProperties newMP= m_materialConverter->convertExtended( lv->getMaterial() ); 
+    Trk::MaterialProperties newMP= m_materialConverter->convert( lv->getMaterial() ); 
     // current volume
     double vol = getVolume(lv->getShape());
     // subtract children volumes
@@ -1970,13 +1970,12 @@ Trk::ExtendedMaterialProperties* Muon::MuonStationTypeBuilder::getAveragedLayerM
     //std::cout << "old material:f,d,x0:"<< fold<<","<<matProp->thickness()<<","<<matProp->x0()<<std::endl;
     //std::cout << "new material:f,d,x0:"<< fnew<<","<<newMP.thickness()<<","<<newMP.x0()<<std::endl;
  
-    Trk::ExtendedMaterialProperties* newUpdate=new Trk::ExtendedMaterialProperties(totalThickness,
-                                              1./(fnew/newMP.x0()+fold/matProp->x0()),
-                                              1./(fnew/newMP.l0()+fold/matProp->l0()),
-                                              fnew*newMP.averageA()+fold*matProp->averageA(),
-                                              fnew*newMP.averageZ()+fold*matProp->averageZ(),
-                                              fnew*newMP.averageRho()+fold*matProp->averageRho());  
-
+    Trk::MaterialProperties* newUpdate=new Trk::MaterialProperties(1./(fnew/newMP.x0()+fold/matProp->x0()),
+								   1./(fnew/newMP.l0()+fold/matProp->l0()),
+								   fnew*newMP.averageA()+fold*matProp->averageA(),
+								   fnew*newMP.averageZ()+fold*matProp->averageZ(),
+								   fnew*newMP.averageRho()+fold*matProp->averageRho());  
+    
     delete matProp;
     matProp = newUpdate;
     //std::cout << "sum material:d,x0:"<<matProp->thickness()<<","<<matProp->x0()<<std::endl;
@@ -2027,12 +2026,12 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(cons
   //printChildren(pv);
   std::vector<const Trk::PlaneLayer*> layers;
   std::vector<double> x_array;
-  std::vector<Trk::ExtendedMaterialProperties> x_mat;
+  std::vector<Trk::MaterialProperties> x_mat;
   std::vector<double> x_thickness;
   std::vector<int> x_active;
   double currX = -100000;
   // while waiting for better suggestion, define a single material layer
-  Trk::ExtendedMaterialProperties matCSC(0.,10e8,10e8,0.,0.,0.);
+  Trk::MaterialProperties matCSC(10e8,10e8,0.,0.,0.);
   double thickness =2* compBounds->halflengthZ();
   double minX = compBounds->minHalflengthX();
   double maxX = compBounds->maxHalflengthX();
@@ -2070,8 +2069,8 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(cons
     } else if (x_array.size()==1) {
       double xthick = 2*fmin(x_array[0]+halfZ,halfZ-x_array[0]);
       double scale = xthick/thickness;
-      Trk::ExtendedMaterialProperties xmatCSC(scale*matCSC.thickness(),scale*matCSC.x0(),scale*matCSC.l0(),
-					      matCSC.averageA(),matCSC.averageZ(),matCSC.averageRho()/scale); 
+      Trk::MaterialProperties xmatCSC(scale*matCSC.x0(),scale*matCSC.l0(),
+				      matCSC.averageA(),matCSC.averageZ(),matCSC.averageRho()/scale); 
       x_mat.push_back(xmatCSC);
       x_thickness.push_back(xthick);
       x_active.push_back(1); 
@@ -2085,8 +2084,8 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(cons
           xthick = 2*fmin(x_array[il]-currX,halfZ-x_array[il]);
         }
 	x_thickness.push_back(xthick);
-	Trk::ExtendedMaterialProperties xmatCSC(xthick,matCSC.x0(),matCSC.l0(),
-					      matCSC.averageA(),matCSC.averageZ(),matCSC.averageRho()); 
+	Trk::MaterialProperties xmatCSC(matCSC.x0(),matCSC.l0(),
+					matCSC.averageA(),matCSC.averageZ(),matCSC.averageRho()); 
         x_mat.push_back(xmatCSC);
         currX = x_array[il]+0.5*x_thickness.back();
         x_active.push_back(1);
@@ -2110,7 +2109,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(cons
   Trk::SharedObject<const Trk::SurfaceBounds> bounds(tbounds);
   for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {
     Amg::Transform3D* cTr = new Amg::Transform3D( (*transf) * Amg::Translation3D(0.,0.,x_array[iloop])  ); // this won't work for multiple layers !!! //
-    Trk::HomogenousLayerMaterial cscMaterial(x_mat[iloop]);  
+    Trk::HomogeneousLayerMaterial cscMaterial(x_mat[iloop],0.);  
     layer = new Trk::PlaneLayer(cTr,
                                 bounds,
                                 cscMaterial,
@@ -2141,7 +2140,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(cons
     binSteps.push_back(compBounds->halflengthZ()+xShift);
   }
   //Trk::BinUtility* binUtility = new Trk::BinUtility1DX( lowX, new std::vector<double>(binSteps));
-  Trk::BinUtility* binUtility = new Trk::GenericBinUtility( binSteps, Trk::BinningOption::open, Trk::BinningValue::binX);
+  Trk::BinUtility* binUtility = new Trk::BinUtility( binSteps, Trk::BinningOption::open, Trk::BinningValue::binX);
   Trk::LayerArray* cscLayerArray = 0;
   cscLayerArray = new Trk::NavBinnedArray1D<Trk::Layer>(layerOrder, binUtility, new Amg::Transform3D());     
   
@@ -2158,12 +2157,12 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCDiamondComponent(
   //printChildren(pv);
   std::vector<const Trk::PlaneLayer*> layers;
   std::vector<double> x_array;
-  std::vector<Trk::ExtendedMaterialProperties> x_mat;
+  std::vector<Trk::MaterialProperties> x_mat;
   std::vector<double> x_thickness;
   std::vector<int> x_active;
   double currX = -100000;
   // while waiting for better suggestion, define a single material layer
-  Trk::ExtendedMaterialProperties matCSC(0.,10e8,10e8,0.,0.,0.);
+  Trk::MaterialProperties matCSC(10e8,10e8,0.,0.,0.);
   double thickness = 2*compBounds->halflengthZ();
   double minX = compBounds->minHalflengthX();
   double medX = compBounds->medHalflengthX();
@@ -2216,9 +2215,9 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCDiamondComponent(
           xthick = 2*fmin(x_array[il]-currX,halfZ-x_array[il]);
 	  x_thickness.push_back(xthick);
         }
-        Trk::ExtendedMaterialProperties xmatCSC(xthick,matCSC.x0(),
-						matCSC.l0(),matCSC.averageA(),
-						matCSC.averageZ(),matCSC.averageRho()); 
+        Trk::MaterialProperties xmatCSC(matCSC.x0(),
+					matCSC.l0(),matCSC.averageA(),
+					matCSC.averageZ(),matCSC.averageRho()); 
         x_mat.push_back(xmatCSC);
         currX = x_array[il]+0.5*x_thickness.back();
         x_active.push_back(1); 
@@ -2243,7 +2242,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCDiamondComponent(
   Trk::SharedObject<const Trk::SurfaceBounds> bounds(dbounds);
   for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {
     Amg::Transform3D* cTr = new Amg::Transform3D( (*transf)*Amg::Translation3D(0.,0.,x_array[iloop]) ); // this won't work for multiple layers !!! //
-    Trk::HomogenousLayerMaterial cscMaterial(x_mat[iloop]);  
+    Trk::HomogeneousLayerMaterial cscMaterial(x_mat[iloop],0.);  
     layer = new Trk::PlaneLayer(cTr,
                                 bounds,
                                 cscMaterial,
@@ -2274,7 +2273,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCDiamondComponent(
     binSteps.push_back(compBounds->halflengthZ()+xShift);
   }
   //Trk::BinUtility* binUtility = new Trk::BinUtility1DX( lowX, new std::vector<double>(binSteps));
-  Trk::BinUtility* binUtility = new Trk::GenericBinUtility( binSteps, Trk::BinningOption::open, Trk::BinningValue::binX);
+  Trk::BinUtility* binUtility = new Trk::BinUtility( binSteps, Trk::BinningOption::open, Trk::BinningValue::binX);
   Trk::LayerArray* cscLayerArray = 0;
   cscLayerArray = new Trk::NavBinnedArray1D<Trk::Layer>(layerOrder, binUtility, new Amg::Transform3D(Trk::s_idTransform));     
   
@@ -2290,11 +2289,11 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processTGCComponent(const G
   //printChildren(pv);
   std::vector<const Trk::PlaneLayer*> layers;
   std::vector<double> x_array;
-  std::vector<Trk::ExtendedMaterialProperties> x_mat;
+  std::vector<Trk::MaterialProperties> x_mat;
   std::vector<double> x_thickness;
   double currX = -100000;
   // while waiting for better suggestion, define a single material layer
-  Trk::ExtendedMaterialProperties matTGC(0.,10e8,10e8,0.,0.,0.);
+  Trk::MaterialProperties matTGC(10e8,10e8,0.,0.,0.);
   double minX = tgcBounds->minHalflengthX();
   double maxX = tgcBounds->maxHalflengthX();
   double halfY = tgcBounds->halflengthY();
@@ -2358,12 +2357,12 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processTGCComponent(const G
   // rescale material to match the combined thickness of active layers
   //std::cout << "thickness:active,env:" << activeThick <<"," << thickness << std::endl;
   double scale = activeThick/thickness;
-  matTGC = Trk::ExtendedMaterialProperties(scale*matTGC.thickness(),scale*matTGC.x0(),scale*matTGC.l0(),
-					   matTGC.averageA(),matTGC.averageZ(),matTGC.averageRho()/scale);
+  matTGC = Trk::MaterialProperties(scale*matTGC.x0(),scale*matTGC.l0(),
+				   matTGC.averageA(),matTGC.averageZ(),matTGC.averageRho()/scale);
 
   for (unsigned int il=0; il < x_array.size(); il++) {
-    Trk::ExtendedMaterialProperties xmatTGC(x_thickness[il],matTGC.x0(),matTGC.l0(),
-					    matTGC.averageA(),matTGC.averageZ(),matTGC.averageRho());
+    Trk::MaterialProperties xmatTGC(matTGC.x0(),matTGC.l0(),
+				    matTGC.averageA(),matTGC.averageZ(),matTGC.averageRho());
     x_mat.push_back(xmatTGC);
     //std::cout << "tgc active layers:" << il << "," << x_array[il]<< ","<<x_thickness[il] << std::endl;
   }    
@@ -2375,7 +2374,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processTGCComponent(const G
   Trk::SharedObject<const Trk::SurfaceBounds> bounds(tbounds);
   for (unsigned int iloop=0; iloop<x_array.size(); iloop++) {
     Amg::Transform3D* cTr = new Amg::Transform3D( Amg::Translation3D(x_array[iloop],0.,0.)*(*transf) ); // this won't work for multiple layers !!! //
-    Trk::HomogenousLayerMaterial tgcMaterial(x_mat[iloop]);  
+    Trk::HomogeneousLayerMaterial tgcMaterial(x_mat[iloop],0.);  
     layer = new Trk::PlaneLayer(cTr,
                                 bounds,
                                 tgcMaterial,
@@ -2408,7 +2407,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processTGCComponent(const G
      binSteps.push_back( halfZ+xShift);
   }
   //Trk::BinUtility* binUtility = new Trk::BinUtility1DX( lowX, new std::vector<double>(binSteps));
-  Trk::BinUtility* binUtility = new Trk::GenericBinUtility( binSteps, Trk::BinningOption::open, Trk::BinningValue::binX);
+  Trk::BinUtility* binUtility = new Trk::BinUtility( binSteps, Trk::BinningOption::open, Trk::BinningValue::binX);
   Trk::LayerArray* tgcLayerArray = 0;
   tgcLayerArray = new Trk::NavBinnedArray1D<Trk::Layer>(layerOrder, binUtility, new Amg::Transform3D(Trk::s_idTransform));     
 
@@ -2499,16 +2498,16 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
     Trk::RectangleBounds* rbounds=new Trk::RectangleBounds(cubBounds->halflengthY(),cubBounds->halflengthZ());
     Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds);
     Trk::OverlapDescriptor* od=0;
-    Trk::ExtendedMaterialProperties matProp = collectStationMaterial(trVol,sf);
+    Trk::MaterialProperties matProp = collectStationMaterial(trVol,sf);
     if (matProp.thickness() > thickness) {
       ATH_MSG_DEBUG( " thickness of combined station material exceeds station size:" << trVol->volumeName() );
     } else if (matProp.thickness()<thickness && matProp.thickness()>0.) {
       //if (matProp.thickness()> 0.)  matProp *= thickness/matProp.thickness();
       double scale = thickness/matProp.thickness();
-      matProp = Trk::ExtendedMaterialProperties(scale*matProp.thickness(),scale*matProp.x0(),scale*matProp.l0(),
-						matProp.averageA(),matProp.averageZ(),matProp.averageRho()/scale);
+      matProp = Trk::MaterialProperties(scale*matProp.x0(),scale*matProp.l0(),
+					matProp.averageA(),matProp.averageZ(),matProp.averageRho()/scale);
     }
-    Trk::HomogenousLayerMaterial mat(matProp);  
+    Trk::HomogeneousLayerMaterial mat(matProp,0.);  
     layer = new Trk::PlaneLayer(new Amg::Transform3D(trVol->transform()*
 						     Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,1.,0.))*
 						     Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,0.,1.))),
@@ -2520,11 +2519,11 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
       const std::vector<const Trk::TrackingVolume*> vols = trVol->confinedVolumes()->arrayObjects();
       if (vols.size()>1) {
       for (unsigned int i=0;i<vols.size();i++) {
-	Trk::ExtendedMaterialProperties matMulti = collectStationMaterial(vols[i],sf);
+	Trk::MaterialProperties matMulti = collectStationMaterial(vols[i],sf);
         multi->push_back(new Trk::PlaneLayer(new Amg::Transform3D(vols[i]->transform()*
 								  Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,1.,0.))*
 								  Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,0.,1.))),
-					     bounds, Trk::HomogenousLayerMaterial(matMulti), matMulti.thickness(), od, 1 ));
+					     bounds, Trk::HomogeneousLayerMaterial(matMulti,0.), matMulti.thickness(), od, 1 ));
 	//std::cout <<"multilayer added:"<< i<<","<<matMulti.thickness()<< std::endl;
       }}      
     }
@@ -2537,16 +2536,16 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
     const Trk::TrapezoidBounds* tbounds = dynamic_cast<const Trk::TrapezoidBounds*> (&(*(surfs))[0]->bounds());
     Trk::SharedObject<const Trk::SurfaceBounds> bounds(new Trk::TrapezoidBounds(*tbounds));
     Trk::OverlapDescriptor* od=0;
-    Trk::ExtendedMaterialProperties matProp = collectStationMaterial(trVol,sf);
+    Trk::MaterialProperties matProp = collectStationMaterial(trVol,sf);
     if (matProp.thickness() > thickness) {
       ATH_MSG_DEBUG( " thickness of combined station material exceeds station size:" << trVol->volumeName() );
     } else if (matProp.thickness()<thickness && matProp.thickness()>0.) {
       //if (matProp.thickness()> 0.)  matProp *= thickness/matProp.thickness();
       double scale = thickness/matProp.thickness();
-      matProp = Trk::ExtendedMaterialProperties(scale*matProp.thickness(),scale*matProp.x0(),scale*matProp.l0(),
-						matProp.averageA(),matProp.averageZ(),matProp.averageRho()/scale);
+      matProp = Trk::MaterialProperties(scale*matProp.x0(),scale*matProp.l0(),
+					matProp.averageA(),matProp.averageZ(),matProp.averageRho()/scale);
     }
-    Trk::HomogenousLayerMaterial mat(matProp);  
+    Trk::HomogeneousLayerMaterial mat(matProp,0.);  
     //std::cout <<"trd layer bounds:mat:"<<matProp.thickness()<<","<<matProp.x0()<<","<<thickness<<std::endl;
     layer = new Trk::PlaneLayer(new Amg::Transform3D(subt*trVol->transform()),
 				bounds, mat, thickness, od, 1 );
@@ -2557,9 +2556,9 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
       const std::vector<const Trk::TrackingVolume*> vols = trVol->confinedVolumes()->arrayObjects();
       if (vols.size()>1) {
       for (unsigned int i=0;i<vols.size();i++) {
-	Trk::ExtendedMaterialProperties matMulti = collectStationMaterial(vols[i],sf);
+	Trk::MaterialProperties matMulti = collectStationMaterial(vols[i],sf);
         multi->push_back(new Trk::PlaneLayer(new Amg::Transform3D(vols[i]->transform()),
-					     bounds, Trk::HomogenousLayerMaterial(matMulti), matMulti.thickness(), od, 1 ));
+					     bounds, Trk::HomogeneousLayerMaterial(matMulti,0.), matMulti.thickness(), od, 1 ));
 	//std::cout <<"multilayer added:"<< i<<","<<matMulti.thickness()<< std::endl;
       }}      
     }
@@ -2572,16 +2571,16 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
     const Trk::DiamondBounds* dbounds = dynamic_cast<const Trk::DiamondBounds*> (& (*(surfs))[0]->bounds());
     Trk::SharedObject<const Trk::SurfaceBounds> bounds(new Trk::DiamondBounds(*dbounds));
     Trk::OverlapDescriptor* od=0;
-    Trk::ExtendedMaterialProperties matProp = collectStationMaterial(trVol,sf);
+    Trk::MaterialProperties matProp = collectStationMaterial(trVol,sf);
     if (matProp.thickness() > thickness) {
       ATH_MSG_DEBUG( " thickness of combined station material exceeds station size:" << trVol->volumeName() );
     } else if (matProp.thickness()<thickness && matProp.thickness()>0.) {
       //if (matProp.thickness()> 0.)  matProp *= thickness/matProp.thickness();
       double scale = thickness/matProp.thickness();
-      matProp = Trk::ExtendedMaterialProperties(scale*matProp.thickness(),scale*matProp.x0(),scale*matProp.l0(),
+      matProp = Trk::MaterialProperties(scale*matProp.x0(),scale*matProp.l0(),
 						matProp.averageA(),matProp.averageZ(),matProp.averageRho()/scale);
     }
-    Trk::HomogenousLayerMaterial mat(matProp);  
+    Trk::HomogeneousLayerMaterial mat(matProp,0.);  
     layer = new Trk::PlaneLayer(new Amg::Transform3D(trVol->transform()),
                                 bounds, mat, thickness, od, 1 );
     for (size_t i=0; i<surfs->size(); i++) delete (*surfs)[i];
@@ -2591,9 +2590,9 @@ std::pair<const Trk::Layer*,const std::vector<const Trk::Layer*>*> Muon::MuonSta
       const std::vector<const Trk::TrackingVolume*> vols = trVol->confinedVolumes()->arrayObjects();
       if (vols.size()>1) {
       for (unsigned int i=0;i<vols.size();i++) {
-	Trk::ExtendedMaterialProperties matMulti = collectStationMaterial(vols[i],sf);
+	Trk::MaterialProperties matMulti = collectStationMaterial(vols[i],sf);
         multi->push_back(new Trk::PlaneLayer(new Amg::Transform3D(vols[i]->transform()),
-					     bounds, Trk::HomogenousLayerMaterial(matMulti), matMulti.thickness(), od, 1 ));
+					     bounds, Trk::HomogeneousLayerMaterial(matMulti,0.), matMulti.thickness(), od, 1 ));
 	//std::cout <<"multilayer added:"<< i<<","<<matMulti.thickness()<< std::endl;
       }}      
     }
@@ -2648,7 +2647,7 @@ Identifier Muon::MuonStationTypeBuilder::identifyNSW( std::string vName, Amg::Tr
   return id;
 }
 
-const Trk::Layer* Muon::MuonStationTypeBuilder::createLayer(const Trk::TrackingVolume* trVol, Trk::ExtendedMaterialProperties* matEx, Amg::Transform3D& transf) const
+const Trk::Layer* Muon::MuonStationTypeBuilder::createLayer(const Trk::TrackingVolume* trVol, Trk::MaterialProperties* matEx, Amg::Transform3D& transf) const
 {
   // identification first
 
@@ -2752,9 +2751,9 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayer(const Trk::TrackingV
     double thickness = 2*cubBounds->halflengthX();
     Trk::OverlapDescriptor* od=0;
     double scale = matEx->thickness()/thickness;
-    Trk::ExtendedMaterialProperties  matProp(thickness,matEx->x0()/scale,matEx->l0()/scale,
+    Trk::MaterialProperties  matProp(matEx->x0()/scale,matEx->l0()/scale,
 					     matEx->averageA(),matEx->averageZ(),scale*matEx->averageRho());
-    Trk::HomogenousLayerMaterial mat(matProp);  
+    Trk::HomogeneousLayerMaterial mat(matProp,0.);  
 
     Trk::RectangleBounds* rbounds=new Trk::RectangleBounds(cubBounds->halflengthY(),cubBounds->halflengthZ());
     Trk::SharedObject<const Trk::SurfaceBounds> bounds(rbounds);
@@ -2767,9 +2766,9 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayer(const Trk::TrackingV
     double thickness = 2*trdBounds->halflengthZ();
     Trk::OverlapDescriptor* od=0;
     double scale = matEx->thickness()/thickness;
-    Trk::ExtendedMaterialProperties  matProp(thickness,matEx->x0()/scale,matEx->l0()/scale,
+    Trk::MaterialProperties  matProp(matEx->x0()/scale,matEx->l0()/scale,
 					     matEx->averageA(),matEx->averageZ(),scale*matEx->averageRho());
-    Trk::HomogenousLayerMaterial mat(matProp);  
+    Trk::HomogeneousLayerMaterial mat(matProp,0.);  
     //double sf        = 2*(trdBounds->minHalflengthX()+trdBounds->maxHalflengthX())*trdBounds->halflengthY();
     if (rtrd) {
       Trk::TrapezoidBounds* tbounds = new Trk::TrapezoidBounds(rtrd->halflengthX(),rtrd->minHalflengthY(),rtrd->maxHalflengthY());
@@ -2796,9 +2795,9 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayer(const Trk::TrackingV
     Trk::SharedObject<const Trk::SurfaceBounds> bounds(new Trk::DiamondBounds(*dbounds));
     Trk::OverlapDescriptor* od=0;
     double scale = matEx->thickness()/thickness;
-    Trk::ExtendedMaterialProperties  matProp(thickness,matEx->x0()/scale,matEx->l0()/scale,
+    Trk::MaterialProperties  matProp(matEx->x0()/scale,matEx->l0()/scale,
 					     matEx->averageA(),matEx->averageZ(),scale*matEx->averageRho());
-    Trk::HomogenousLayerMaterial mat(matProp);   
+    Trk::HomogeneousLayerMaterial mat(matProp,0.);   
     layer = new Trk::PlaneLayer(new Amg::Transform3D(trVol->transform()),
                                 bounds, mat, thickness, od, 1 );
   }
@@ -2816,33 +2815,31 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayer(const Trk::TrackingV
 }
 
 
-Trk::ExtendedMaterialProperties Muon::MuonStationTypeBuilder::collectStationMaterial(const Trk::TrackingVolume* vol, double sf) const
+Trk::MaterialProperties Muon::MuonStationTypeBuilder::collectStationMaterial(const Trk::TrackingVolume* vol, double sf) const
 {
-  Trk::ExtendedMaterialProperties mat(0.,10.e8,10e8,0.,0.,0.);
+  Trk::MaterialProperties mat(10.e8,10e8,0.,0.,0.);
 
   // sf is surface of the new layer used to calculate the average 'thickness' of components
   // layers
   if (vol->confinedLayers()){
     const std::vector<const Trk::Layer*> lays = vol->confinedLayers()->arrayObjects();
     for (unsigned il=0; il<lays.size(); il++) {
-      const Trk::MaterialProperties* mProp = lays[il]->layerMaterialProperties()->fullMaterial(lays[il]->surfaceRepresentation().center());
-      const Trk::ExtendedMaterialProperties* mLay = dynamic_cast<const Trk::ExtendedMaterialProperties*> (mProp);
+      const Trk::MaterialProperties* mLay = lays[il]->layerMaterialProperties()->fullMaterial(lays[il]->surfaceRepresentation().center());
       if (mLay) {
 	double totalD = mat.thickness()+mLay->thickness();
 	double f1 = mat.thickness()/totalD; double f2 = mLay->thickness()/totalD;  
-	mat = Trk::ExtendedMaterialProperties(totalD, 1./(f1/mat.x0()+f2/mLay->x0()),
-					      1./(f1/mat.l0()+f2/mLay->l0()),
-					      f1*mat.averageA()+f2*mLay->averageA(),
-					      f1*mat.averageZ()+f2*mLay->averageZ(),
-					      f1*mat.averageRho()+f2*mLay->averageRho());
+	mat = Trk::MaterialProperties(1./(f1/mat.x0()+f2/mLay->x0()),
+				      1./(f1/mat.l0()+f2/mLay->l0()),
+				      f1*mat.averageA()+f2*mLay->averageA(),
+				      f1*mat.averageZ()+f2*mLay->averageZ(),
+				      f1*mat.averageRho()+f2*mLay->averageRho());
       }
     }
   } 
   if (vol->confinedArbitraryLayers()){
     const std::vector<const Trk::Layer*> lays = *(vol->confinedArbitraryLayers());
     for (unsigned il=0; il<lays.size(); il++) {
-      const Trk::MaterialProperties* mProp = lays[il]->layerMaterialProperties()->fullMaterial(lays[il]->surfaceRepresentation().center());
-      const Trk::ExtendedMaterialProperties* mLay = dynamic_cast<const Trk::ExtendedMaterialProperties*> (mProp);
+      const Trk::MaterialProperties* mLay = lays[il]->layerMaterialProperties()->fullMaterial(lays[il]->surfaceRepresentation().center());
       // scaling factor
       const Trk::RectangleBounds* rect = dynamic_cast<const Trk::RectangleBounds*> (&(lays[il]->surfaceRepresentation().bounds()));
       const Trk::TrapezoidBounds* trap = dynamic_cast<const Trk::TrapezoidBounds*> (&(lays[il]->surfaceRepresentation().bounds()));
@@ -2851,11 +2848,11 @@ Trk::ExtendedMaterialProperties Muon::MuonStationTypeBuilder::collectStationMate
 	  : 2*(trap->minHalflengthX()+trap->maxHalflengthX())*trap->halflengthY()/sf;
 	double totalD = mat.thickness()+scale*mLay->thickness();
 	double f1 = mat.thickness()/totalD; double f2 = scale*mLay->thickness()/totalD;  
-	mat = Trk::ExtendedMaterialProperties(totalD,1./(f1/mat.x0()+f2/mLay->x0()),
-					      1./(f1/mat.l0()+f2/mLay->l0()),
-					      f1*mat.averageA()+f2*mLay->averageA(),
-					      f1*mat.averageZ()+f2*mLay->averageZ(),
-					      f1*mat.averageRho()+f2*mLay->averageRho());
+	mat = Trk::MaterialProperties(1./(f1/mat.x0()+f2/mLay->x0()),
+				      1./(f1/mat.l0()+f2/mLay->l0()),
+				      f1*mat.averageA()+f2*mLay->averageA(),
+				      f1*mat.averageZ()+f2*mLay->averageZ(),
+				      f1*mat.averageRho()+f2*mLay->averageRho());
       }
     }
   } 
@@ -2866,22 +2863,20 @@ Trk::ExtendedMaterialProperties Muon::MuonStationTypeBuilder::collectStationMate
       if (subVols[iv]->confinedLayers()){
 	const std::vector<const Trk::Layer*> lays = subVols[iv]->confinedLayers()->arrayObjects();
 	for (unsigned il=0; il<lays.size(); il++) {
-	  const Trk::MaterialProperties* mProp = lays[il]->layerMaterialProperties()->fullMaterial(lays[il]->surfaceRepresentation().center());
-	  const Trk::ExtendedMaterialProperties* mLay = dynamic_cast<const Trk::ExtendedMaterialProperties*> (mProp);
+	  const Trk::MaterialProperties* mLay = lays[il]->layerMaterialProperties()->fullMaterial(lays[il]->surfaceRepresentation().center());
           if (mLay) { 
 	    double totalD = mat.thickness()+mLay->thickness();
 	    double f1 = mat.thickness()/totalD; double f2 = mLay->thickness()/totalD;  
-	    mat = Trk::ExtendedMaterialProperties(totalD, 1./(f1/mat.x0()+f2/mLay->x0()), 1./(f1/mat.l0()+f2/mLay->l0()),
-						  f1*mat.averageA()+f2*mLay->averageA(),f1*mat.averageZ()+f2*mLay->averageZ(),
-						  f1*mat.averageRho()+f2*mLay->averageRho());
+	    mat = Trk::MaterialProperties(1./(f1/mat.x0()+f2/mLay->x0()), 1./(f1/mat.l0()+f2/mLay->l0()),
+					  f1*mat.averageA()+f2*mLay->averageA(),f1*mat.averageZ()+f2*mLay->averageZ(),
+					  f1*mat.averageRho()+f2*mLay->averageRho());
 	  }
         }
       } 
       if (subVols[iv]->confinedArbitraryLayers()){
 	const std::vector<const Trk::Layer*> lays = *(subVols[iv]->confinedArbitraryLayers());
 	for (unsigned il=0; il<lays.size(); il++) {
-	  const Trk::MaterialProperties* mProp = lays[il]->layerMaterialProperties()->fullMaterial(lays[il]->surfaceRepresentation().center());
-	  const Trk::ExtendedMaterialProperties* mLay = dynamic_cast<const Trk::ExtendedMaterialProperties*> (mProp);
+	  const Trk::MaterialProperties* mLay = lays[il]->layerMaterialProperties()->fullMaterial(lays[il]->surfaceRepresentation().center());
 	  // scaling factor
 	  const Trk::RectangleBounds* rect = dynamic_cast<const Trk::RectangleBounds*> (&(lays[il]->surfaceRepresentation().bounds()));
 	  const Trk::TrapezoidBounds* trap = dynamic_cast<const Trk::TrapezoidBounds*> (&(lays[il]->surfaceRepresentation().bounds()));
@@ -2890,9 +2885,9 @@ Trk::ExtendedMaterialProperties Muon::MuonStationTypeBuilder::collectStationMate
 	      : 2*(trap->minHalflengthX()+trap->maxHalflengthX())*trap->halflengthY()/sf;
 	    double totalD = mat.thickness()+scale*mLay->thickness();
 	    double f1 = mat.thickness()/totalD; double f2 = scale*mLay->thickness()/totalD;  
-	    mat = Trk::ExtendedMaterialProperties(totalD, 1./(f1/mat.x0()+f2/mLay->x0()),1./(f1/mat.l0()+f2/mLay->l0()),
-						  f1*mat.averageA()+f2*mLay->averageA(),f1*mat.averageZ()+f2*mLay->averageZ(),
-						  f1*mat.averageRho()+f2*mLay->averageRho());
+	    mat = Trk::MaterialProperties(1./(f1/mat.x0()+f2/mLay->x0()),1./(f1/mat.l0()+f2/mLay->l0()),
+					  f1*mat.averageA()+f2*mLay->averageA(),f1*mat.averageZ()+f2*mLay->averageZ(),
+					  f1*mat.averageRho()+f2*mLay->averageRho());
 	  }
         }
       }     

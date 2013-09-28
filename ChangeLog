@@ -1,3 +1,7 @@
+2013-09-28 Niels van Eldik
+	* cleanup config
+	* tagged as MuonTrackingGeometry-01-00-02
+
 2013-09-24 Sarka Todorova <sarka.todorova@cern.ch>
 	* update (BinUtility,MaterialProperties) 
 	* tagged as MuonTrackingGeometry-01-00-01

@@ -24,15 +24,13 @@ class ConfiguredMuonTrackingGeometryBuilder( Muon__MuonTrackingGeometryBuilder )
             ToolSvc = ToolSvc()
 
         from MuonTrackingGeometry.MuonTrackingGeometryConf import Muon__MuonStationTypeBuilder
-        MuonStationTypeBuilder= Muon__MuonStationTypeBuilder(name = 'MuonStationTypeBuilder',
-                                                             MagneticFieldMode = TrkDetFlags.MagneticFieldMode())
+        MuonStationTypeBuilder= Muon__MuonStationTypeBuilder(name = 'MuonStationTypeBuilder')
 
         ToolSvc += MuonStationTypeBuilder
 
         # muon active/passive geometry setup
         from MuonTrackingGeometry.MuonTrackingGeometryConf import Muon__MuonStationBuilder
-        MuonStationBuilder= Muon__MuonStationBuilder(name = 'MuonStationBuilder',
-                                                             MagneticFieldMode = TrkDetFlags.MagneticFieldMode())
+        MuonStationBuilder= Muon__MuonStationBuilder(name = 'MuonStationBuilder' )
         ToolSvc += MuonStationBuilder
 
         from MuonTrackingGeometry.MuonTrackingGeometryConf import Muon__MuonInertMaterialBuilder
@@ -41,5 +39,4 @@ class ConfiguredMuonTrackingGeometryBuilder( Muon__MuonTrackingGeometryBuilder )
 
         Muon__MuonTrackingGeometryBuilder.__init__(self,name,\
                                                    EntryVolumeName=TrkDetFlags.MuonSystemEntryVolumeName(),\
-                                                   ExitVolumeName  = TrkDetFlags.MuonSystemContainerName(),\
-                                                   MagneticFieldMode = TrkDetFlags.MagneticFieldMode())
+                                                   ExitVolumeName  = TrkDetFlags.MuonSystemContainerName())

@@ -484,7 +484,7 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processTrdStationC
         }
         //std::cout << "dimensions:"<<halfX1<<","<<halfX2<<","<<halfY1<<","<<halfY2<<","<<halfZ<<std::endl;
         if ( clv->getShape()->type()!="Trd" && clv->getShape()->type()!="Box" ) {
- 	  std::cout<<"WARNING:component shape not Box nor Trapezoid, determining the x size from subcomponents"<<std::endl; 
+ 	  //std::cout<<"WARNING:component shape not Box nor Trapezoid, determining the x size from subcomponents"<<std::endl; 
 	  double xSize = get_x_size(cv);
           // printChildren(cv);
 	  if (clv->getName().substr(0,1)!="C" && clv->getName().substr(0,2)!="LB")
@@ -1250,8 +1250,8 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
   // translate into layers
   for (unsigned int ic=0; ic<gv.size(); ++ic) {
     const GeoLogVol* clv = gv[ic]->getLogVol();        
-    // std::cout << "Spacer component:"<<ic<<":" << clv->getName() <<", made of "<<clv->getMaterial()->getName()<<","<<clv->getShape()->type()<<","<<transf[ic].translation()<<","<<transform.translation()<<std::endl; 
-    // Trk::ExtendedMaterialProperties cmat = m_materialConverter->convertExtended(clv->getMaterial());
+    //std::cout << "Spacer component:"<<ic<<":" << clv->getName() <<", made of "<<clv->getMaterial()->getName()<<","<<clv->getShape()->type()<<","<<transf[ic].translation()<<std::endl; 
+    //Trk::ExtendedMaterialProperties cmat = m_materialConverter->convertExtended(clv->getMaterial());
     Trk::MaterialProperties cmat = m_materialConverter->convert(clv->getMaterial());
     Trk::OverlapDescriptor* od=0;
     if (clv->getShape()->type()=="Box") {
@@ -1311,9 +1311,15 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 									    Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,1.,0.))*
 									    Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,0.,1.))),
 						      bounds, spacerMaterial, thickness, od, 0 );
-	  Trk::PlaneLayer* layxx = new Trk::PlaneLayer(*layx,Amg::Transform3D(Amg::Translation3D(-2*shift,0.,0.)));
 	  layers.push_back(layx)  ; 
-	  layers.push_back(layxx) ; layxx->setLayerType(0);
+	  Trk::SharedObject<const Trk::SurfaceBounds> bounds2(bounds);
+	  Trk::PlaneLayer* layxx = new Trk::PlaneLayer(new Amg::Transform3D( transf[ic]*Amg::Translation3D(-shift,0.,0.)*
+									    Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,1.,0.))*
+									    Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,0.,1.))),
+						      bounds2, spacerMaterial, thickness, od, 0 );
+          // TODO find out why copy with shift crashes in the destructor ( double transform delete )
+	  //Trk::PlaneLayer* layxx = new Trk::PlaneLayer(*layx,Amg::Transform3D(Amg::Translation3D(-2*shift,0.,0.)));
+	  layers.push_back(layxx) ; 
 	}
         thickness = (boxA->getYHalfLength()-boxB->getYHalfLength());
         if (thickness>0.) {
@@ -1326,9 +1332,14 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 	  Trk::PlaneLayer* lay = new Trk::PlaneLayer(new Amg::Transform3D( transf[ic]*Amg::Translation3D(0.,shift,0.)*
 									   Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(1.,0.,0.))),
 						     bounds, spacerMaterial, thickness, od, 0 );
-	  Trk::PlaneLayer* layy = new Trk::PlaneLayer(*lay,Amg::Transform3D(Amg::Translation3D(0.,-2*shift,0.)));
 	  layers.push_back(lay)  ; 
-	  layers.push_back(layy) ; layy->setLayerType(0);
+	  Trk::SharedObject<const Trk::SurfaceBounds> bounds2(bounds);
+	  Trk::PlaneLayer* layy = new Trk::PlaneLayer(new Amg::Transform3D( transf[ic]*Amg::Translation3D(0.,-shift,0.)*
+									   Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(1.,0.,0.))),
+						     bounds2, spacerMaterial, thickness, od, 0 );
+          // TODO find out why copy with shift crashes in the destructor ( double transform delete )
+	  //Trk::PlaneLayer* layy = new Trk::PlaneLayer(*lay,Amg::Transform3D(Amg::Translation3D(0.,-2*shift,0.)));
+	  layers.push_back(layy) ; 
 	}
         thickness = (boxA->getZHalfLength()-boxB->getZHalfLength());
         if (thickness>0.) {
@@ -1337,10 +1348,15 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 	  shift     = 0.5*(boxA->getZHalfLength()+boxB->getZHalfLength());
 	  rbounds = new Trk::RectangleBounds(boxB->getXHalfLength(),boxB->getYHalfLength());
 	  bounds = Trk::SharedObject<const Trk::SurfaceBounds>(rbounds);
-	  Trk::PlaneLayer* layz = new Trk::PlaneLayer(new Amg::Transform3D( transf[ic]*Amg::Translation3D(0.,0.,shift)), bounds, spacerMaterial, thickness, od, 0 );
-	  Trk::PlaneLayer* layzz = new Trk::PlaneLayer(*layz,Amg::Transform3D(Amg::Translation3D(0.,0.,-2*shift)));
+	  Trk::PlaneLayer* layz = new Trk::PlaneLayer(new Amg::Transform3D( transf[ic]*Amg::Translation3D(0.,0.,shift)), 
+						      bounds, spacerMaterial, thickness, od, 0 );
 	  layers.push_back(layz)  ;
-	  layers.push_back(layzz) ; layzz->setLayerType(0);
+	  Trk::SharedObject<const Trk::SurfaceBounds> bounds2(bounds);
+	  Trk::PlaneLayer* layzz = new Trk::PlaneLayer(new Amg::Transform3D( transf[ic]*Amg::Translation3D(0.,0.,-shift)), 
+						       bounds2, spacerMaterial, thickness, od, 0 );
+          // TODO find out why copy with shift crashes in the destructor ( double transform delete )
+	  //Trk::PlaneLayer* layzz = new Trk::PlaneLayer(*layz,Amg::Transform3D(Amg::Translation3D(0.,0.,-2*shift)));
+	  layers.push_back(layzz) ; 
 	}
       } else if (sub) {
 	std::vector<std::pair<const GeoShape*,Amg::Transform3D> > subVs;
@@ -1385,10 +1401,12 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 						     cmat.averageZ(),cmat.averageRho());  
 	    Trk::HomogeneousLayerMaterial spacerMaterial(material,0.);
 	    Trk::SubtractedPlaneLayer* layx = new Trk::SubtractedPlaneLayer(subPlane,spacerMaterial, thickness, od, 0 );
-            delete subPlane;
-	    Trk::SubtractedPlaneLayer* layxx = new Trk::SubtractedPlaneLayer(*layx,Amg::Transform3D(Amg::Translation3D(-2*shift,0.,0.)));
 	    layers.push_back(layx) ; 
-	    layers.push_back(layxx) ; layxx->setLayerType(0);
+	    Trk::SubtractedPlaneSurface* subPlaneX=new Trk::SubtractedPlaneSurface(*subPlane,Amg::Transform3D(Amg::Translation3D(-2*shift,0.,0.)));
+	    Trk::SubtractedPlaneLayer* layxx = new Trk::SubtractedPlaneLayer(subPlaneX,spacerMaterial, thickness, od, 0 );
+	    // TODO find out why copy with shift crashes in the destructor ( double transform delete )
+	    layers.push_back(layxx) ;
+            delete subPlane;
 
 	    rbounds = new Trk::RectangleBounds(boxB->getXHalfLength(),box->getZHalfLength());
 	    thickness = subVs[2].second.translation().mag();

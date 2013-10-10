@@ -1,3 +1,9 @@
+2013-10-10 Sarka Todorova <sarka.todorova@cern.ch>
+	* partial build of MTG in mig5 
+	* missing resolved active layers, turned off by default 
+	* ( problems in gluing of subcomponents & identification )
+	* tagged as MuonTrackingGeometry-01-00-03
+
 2013-09-28 Niels van Eldik
 	* cleanup config
 	* tagged as MuonTrackingGeometry-01-00-02

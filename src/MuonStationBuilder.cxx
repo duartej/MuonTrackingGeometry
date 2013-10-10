@@ -81,7 +81,7 @@ Muon::MuonStationBuilder::MuonStationBuilder(const std::string& t, const std::st
   m_buildEndcap(true),
   m_buildCsc(true),
   m_buildTgc(true),
-  m_resolveActiveLayers(true)
+  m_resolveActiveLayers(false)
 {
   declareInterface<Trk::IDetachedTrackingVolumeBuilder>(this);
   declareProperty("StationTypeBuilder",               m_muonStationTypeBuilder);
@@ -1247,7 +1247,10 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
       const MuonGM::MdtReadoutElement* multilayer = m_muonMgr->getMdtReadoutElement(nameIndexC,eta+8,phi-1,multi);
       if (multilayer) {
         const Trk::TrackingVolume* assocVol = station->associatedSubVolume(transf.inverse()*multilayer->center());
-        if (!assocVol ) ATH_MSG_WARNING( "valid multilayer outside station:" << stationName );
+        if (!assocVol ) {
+	  ATH_MSG_WARNING( "valid multilayer outside station:" << stationName );
+	  //ATH_MSG_WARNING( "multilayer position:" << multilayer->center()<<", local: "<< transf.inverse()*multilayer->center() );
+	}
         if (assocVol) {
 	  int nLayers = multilayer->getNLayers();
 	  for (int layer =1; layer <= nLayers ; layer++) {

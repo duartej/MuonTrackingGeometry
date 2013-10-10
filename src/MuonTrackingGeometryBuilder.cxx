@@ -1168,15 +1168,16 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 
   // R/H binning ?
   unsigned int etaN = zSteps.size()-1;
-  unsigned int phiN = m_adjustedPhi.size();   
+  unsigned int phiN = m_adjustedPhi.size();
+   
   int phiTypeMax = 0;                // count different partitions
 
   if ( mode > -1 ) {
     // create z,phi bin utilities
     //Trk::BinUtility1DZZ* zBinUtil = new Trk::BinUtility1DZZ(zSteps);
     //Trk::BinUtility1DF* pBinUtil = new Trk::BinUtility1DF(m_adjustedPhi);
-    Trk::BinUtility* zBinUtil = new Trk::BinUtility(zSteps, Trk::BinningOption::open, Trk::BinningValue::binZ );
-    Trk::BinUtility* pBinUtil = new Trk::BinUtility(m_adjustedPhi,  Trk::BinningOption::closed, Trk::BinningValue::binPhi ); 
+    Trk::BinUtility* zBinUtil = new Trk::BinUtility(zSteps, Trk::open, Trk::binZ );
+    Trk::BinUtility* pBinUtil = new Trk::BinUtility(m_adjustedPhi,  Trk::closed, Trk::binPhi ); 
     std::vector<std::vector<Trk::BinUtility*> >*  hBinUtil=new std::vector<std::vector<Trk::BinUtility*> >;
     for (unsigned iz=0;iz < zSteps.size()-1; iz++) {
       std::vector<Trk::BinUtility*> phBinUtil; 
@@ -1263,8 +1264,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	  const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( *subVol,
 								     m_muonMaterial,
 								     detVols,
-								     volName );
-                                                                              
+								     volName );                                                                  
+     
 	  // statistics
 	  m_frameNum++ ; if (detVols) m_frameStat += detVols->size();  
 	  // prepare blending
@@ -1347,7 +1348,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
     }
 
     //Trk::BinUtility3DZFH* volBinUtil=new Trk::BinUtility3DZFH(zBinUtil,pBinUtil,hBinUtil,new Amg::Transform3D(vol->transform()));
-
+  
     Trk::BinnedArray1D1D1D<Trk::TrackingVolume>* subVols=new Trk::BinnedArray1D1D1D<Trk::TrackingVolume>(subVolumesVect,zBinUtil,pBinUtil,hBinUtil);
 
     tVol = new Trk::TrackingVolume( *vol,
@@ -1543,7 +1544,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
   //Trk::BinUtility1DZZ* zBinUtil = new Trk::BinUtility1DZZ(zSteps);
   //Trk::BinUtility1DF* pBinUtil = new Trk::BinUtility1DF(m_adjustedPhi);
   Trk::BinUtility* zBinUtil = new Trk::BinUtility(zSteps, Trk::BinningOption::open, Trk::BinningValue::binZ );
-  Trk::BinUtility* pBinUtil = new Trk::BinUtility(m_adjustedPhi,  Trk::BinningOption::closed, Trk::BinningValue::binPhi ); 
+  //Trk::BinUtility* pBinUtil = new Trk::BinUtility(m_adjustedPhi,  Trk::BinningOption::closed, Trk::BinningValue::binPhi );
+  Trk::BinUtility* pBinUtil = new Trk::BinUtility( 1, -M_PI, M_PI, Trk::BinningOption::closed, Trk::BinningValue::binPhi ); 
   std::vector<std::vector<Trk::BinUtility*> >*  hBinUtil=new std::vector<std::vector<Trk::BinUtility*> >;
   float phiRef = 0.;
   for (unsigned iz=0;iz < zSteps.size()-1; iz++) {
@@ -1646,7 +1648,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processShield(cons
   }
     
   //Trk::BinUtility3DZFH* volBinUtil=new Trk::BinUtility3DZFH(zBinUtil,pBinUtil,hBinUtil,new Amg::Transform3D(vol->transform()));
-  
+
   Trk::BinnedArray1D1D1D<Trk::TrackingVolume>* subVols=new Trk::BinnedArray1D1D1D<Trk::TrackingVolume>(subVolumesVect,zBinUtil,pBinUtil,hBinUtil);
   
   tVol = new Trk::TrackingVolume( *vol,

@@ -311,7 +311,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		  nid = m_muonMgr->stgcIdHelper()->channelID(m_muonMgr->stgcIdHelper()->stationName(id),
 							     m_muonMgr->stgcIdHelper()->stationEta(id),
 							     m_muonMgr->stgcIdHelper()->stationPhi(id)+it,
-							     m_muonMgr->stgcIdHelper()->multiplet(id),
+							     m_muonMgr->stgcIdHelper()->multilayer(id),
 							     m_muonMgr->stgcIdHelper()->gasGap(id),1,1);
 		  //const MuonGM::sTgcReadoutElement* stgc=m_muonMgr->getsTgcReadoutElement(nid);
 		  //if (stgc) std::cout <<"stgcRE recovered:"<<nid<<","<< stgc->center(nid) << std::endl;
@@ -319,7 +319,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		  nid = m_muonMgr->mmIdHelper()->channelID(m_muonMgr->mmIdHelper()->stationName(id),
 							   m_muonMgr->mmIdHelper()->stationEta(id),
 							   m_muonMgr->mmIdHelper()->stationPhi(id)+it,
-							   m_muonMgr->mmIdHelper()->multiplet(id),
+							   m_muonMgr->mmIdHelper()->multilayer(id),
 							   m_muonMgr->mmIdHelper()->gasGap(id),1);
 		  //const MuonGM::MMReadoutElement* mm=m_muonMgr->getMMReadoutElement(nid);
 		  //if (mm) std::cout <<"mmRE recovered:"<<nid<<","<< mm->center(nid) << std::endl;
@@ -345,13 +345,13 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		//std::cout <<"cloned layer position:"<<(*lays)[il]->surfaceRepresentation().center();
 		//std::cout <<"recalculating:"<<id<<","<<m_muonMgr->mmIdHelper()->is_stgc(id)<<","<<m_muonMgr->mmIdHelper()->stationName(id)<<  std::endl;
 		//std::cout <<"recalculating:"<< m_muonMgr->mmIdHelper()->stationName(id)<<","<< m_muonMgr->mmIdHelper()->stationEta(id)<<","<<
-		//  m_muonMgr->mmIdHelper()->stationPhi(id)<<","<< m_muonMgr->mmIdHelper()->multiplet(id)<<","<< m_muonMgr->mmIdHelper()->gasGap(id)<<std::endl;
+		//  m_muonMgr->mmIdHelper()->stationPhi(id)<<","<< m_muonMgr->mmIdHelper()->multilayer(id)<<","<< m_muonMgr->mmIdHelper()->gasGap(id)<<std::endl;
 		Identifier nid(0);
 		if (m_muonMgr->mmIdHelper()->is_stgc(id)) {
 		  nid = m_muonMgr->stgcIdHelper()->channelID(m_muonMgr->stgcIdHelper()->stationName(id),
 							     -m_muonMgr->stgcIdHelper()->stationEta(id),
 							     m_muonMgr->stgcIdHelper()->stationPhi(id),
-							     m_muonMgr->stgcIdHelper()->multiplet(id),
+							     m_muonMgr->stgcIdHelper()->multilayer(id),
 							     m_muonMgr->stgcIdHelper()->gasGap(id),1,1);
 		  //const MuonGM::sTgcReadoutElement* stgc=m_muonMgr->getsTgcReadoutElement(nid);
 		  //if (stgc) std::cout <<"stgcRE recovered:"<<nid<<","<< stgc->center(nid) << std::endl;
@@ -359,7 +359,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		  nid = m_muonMgr->mmIdHelper()->channelID(m_muonMgr->mmIdHelper()->stationName(id),
 							   -m_muonMgr->mmIdHelper()->stationEta(id),
 							   m_muonMgr->mmIdHelper()->stationPhi(id),
-							   m_muonMgr->mmIdHelper()->multiplet(id),
+							   m_muonMgr->mmIdHelper()->multilayer(id),
 							   m_muonMgr->mmIdHelper()->gasGap(id),1);
 		  //const MuonGM::MMReadoutElement* mm=m_muonMgr->getMMReadoutElement(nid);
 		  //if (mm) std::cout <<"mmRE recovered:"<<nid<<","<< mm->center(nid) << std::endl;
@@ -384,13 +384,13 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		  //std::cout <<"cloned layer position:"<<(*lays)[il]->surfaceRepresentation().center();
 		  //std::cout <<"recalculating:"<<id<<","<<m_muonMgr->mmIdHelper()->is_stgc(id)<<","<<m_muonMgr->mmIdHelper()->stationName(id)<<  std::endl;
 		  //std::cout <<"recalculating:"<< m_muonMgr->mmIdHelper()->stationName(id)<<","<< m_muonMgr->mmIdHelper()->stationEta(id)<<","<<
-		  //  m_muonMgr->mmIdHelper()->stationPhi(id)<<","<< m_muonMgr->mmIdHelper()->multiplet(id)<<","<< m_muonMgr->mmIdHelper()->gasGap(id)<<std::endl;
+		  //  m_muonMgr->mmIdHelper()->stationPhi(id)<<","<< m_muonMgr->mmIdHelper()->multilayer(id)<<","<< m_muonMgr->mmIdHelper()->gasGap(id)<<std::endl;
 		  Identifier nid(0);
 		  if (m_muonMgr->mmIdHelper()->is_stgc(id)) {
 		    nid = m_muonMgr->stgcIdHelper()->channelID(m_muonMgr->stgcIdHelper()->stationName(id),
 							       m_muonMgr->stgcIdHelper()->stationEta(id),
 							       m_muonMgr->stgcIdHelper()->stationPhi(id)+it,
-							       m_muonMgr->stgcIdHelper()->multiplet(id),
+							       m_muonMgr->stgcIdHelper()->multilayer(id),
 							       m_muonMgr->stgcIdHelper()->gasGap(id),1,1);
 		    //const MuonGM::sTgcReadoutElement* stgc=m_muonMgr->getsTgcReadoutElement(nid);
 		    //if (stgc) std::cout <<"stgcRE recovered:"<<nid<<","<< stgc->center(nid) << std::endl;
@@ -398,7 +398,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		    nid = m_muonMgr->mmIdHelper()->channelID(m_muonMgr->mmIdHelper()->stationName(id),
 							     m_muonMgr->mmIdHelper()->stationEta(id),
 							     m_muonMgr->mmIdHelper()->stationPhi(id)+it,
-							     m_muonMgr->mmIdHelper()->multiplet(id),
+							     m_muonMgr->mmIdHelper()->multilayer(id),
 							     m_muonMgr->mmIdHelper()->gasGap(id),1);
 		    //const MuonGM::MMReadoutElement* mm=m_muonMgr->getMMReadoutElement(nid);
 		    //if (mm) std::cout <<"mmRE recovered:"<<nid<<","<< mm->center(nid) << std::endl;
@@ -430,13 +430,13 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		//std::cout <<"cloned layer position:"<<(*lays)[il]->surfaceRepresentation().center();
 		//std::cout <<"recalculating:"<<id<<","<<m_muonMgr->mmIdHelper()->is_stgc(id)<<","<<m_muonMgr->mmIdHelper()->stationName(id)<<  std::endl;
 		//std::cout <<"recalculating:"<< m_muonMgr->mmIdHelper()->stationName(id)<<","<< m_muonMgr->mmIdHelper()->stationEta(id)<<","<<
-		//  m_muonMgr->mmIdHelper()->stationPhi(id)<<","<< m_muonMgr->mmIdHelper()->multiplet(id)<<","<< m_muonMgr->mmIdHelper()->gasGap(id)<<std::endl;
+		//  m_muonMgr->mmIdHelper()->stationPhi(id)<<","<< m_muonMgr->mmIdHelper()->multilayer(id)<<","<< m_muonMgr->mmIdHelper()->gasGap(id)<<std::endl;
 		Identifier nid(0);
 		if (m_muonMgr->mmIdHelper()->is_stgc(id)) {
 		  nid = m_muonMgr->stgcIdHelper()->channelID(m_muonMgr->stgcIdHelper()->stationName(id),
 							     m_muonMgr->stgcIdHelper()->stationEta(id),
 							     m_muonMgr->stgcIdHelper()->stationPhi(id)+it,
-							     m_muonMgr->stgcIdHelper()->multiplet(id),
+							     m_muonMgr->stgcIdHelper()->multilayer(id),
 							     m_muonMgr->stgcIdHelper()->gasGap(id),1,1);
 		  //const MuonGM::sTgcReadoutElement* stgc=m_muonMgr->getsTgcReadoutElement(nid);
 		  //if (stgc) std::cout <<"stgcRE recovered:"<<nid<<","<< stgc->center(nid) << std::endl;
@@ -444,7 +444,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		  nid = m_muonMgr->mmIdHelper()->channelID(m_muonMgr->mmIdHelper()->stationName(id),
 							   m_muonMgr->mmIdHelper()->stationEta(id),
 							   m_muonMgr->mmIdHelper()->stationPhi(id)+it,
-							   m_muonMgr->mmIdHelper()->multiplet(id),
+							   m_muonMgr->mmIdHelper()->multilayer(id),
 							   m_muonMgr->mmIdHelper()->gasGap(id),1);
 		  //const MuonGM::MMReadoutElement* mm=m_muonMgr->getMMReadoutElement(nid);
 		  //if (mm) std::cout <<"mmRE recovered:"<<nid<<","<< mm->center(nid) << std::endl;
@@ -474,13 +474,13 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		//std::cout <<"cloned layer position:"<<(*lays)[il]->surfaceRepresentation().center();
 		//std::cout <<"recalculating:"<<id<<","<<m_muonMgr->mmIdHelper()->is_stgc(id)<<","<<m_muonMgr->mmIdHelper()->stationName(id)<<  std::endl;
 		//std::cout <<"recalculating:"<< m_muonMgr->mmIdHelper()->stationName(id)<<","<< m_muonMgr->mmIdHelper()->stationEta(id)<<","<<
-		//  m_muonMgr->mmIdHelper()->stationPhi(id)<<","<< m_muonMgr->mmIdHelper()->multiplet(id)<<","<< m_muonMgr->mmIdHelper()->gasGap(id)<<std::endl;
+		//  m_muonMgr->mmIdHelper()->stationPhi(id)<<","<< m_muonMgr->mmIdHelper()->multilayer(id)<<","<< m_muonMgr->mmIdHelper()->gasGap(id)<<std::endl;
 		Identifier nid(0);
 		if (m_muonMgr->mmIdHelper()->is_stgc(id)) {
 		  nid = m_muonMgr->stgcIdHelper()->channelID(m_muonMgr->stgcIdHelper()->stationName(id),
 							     -m_muonMgr->stgcIdHelper()->stationEta(id),
 							     m_muonMgr->stgcIdHelper()->stationPhi(id),
-							     m_muonMgr->stgcIdHelper()->multiplet(id),
+							     m_muonMgr->stgcIdHelper()->multilayer(id),
 							     m_muonMgr->stgcIdHelper()->gasGap(id),1,1);
 		  //const MuonGM::sTgcReadoutElement* stgc=m_muonMgr->getsTgcReadoutElement(nid);
 		  //if (stgc) std::cout <<"stgcRE recovered:"<<nid<<","<< stgc->center(nid) << std::endl;
@@ -488,7 +488,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		  nid = m_muonMgr->mmIdHelper()->channelID(m_muonMgr->mmIdHelper()->stationName(id),
 							   -m_muonMgr->mmIdHelper()->stationEta(id),
 							   m_muonMgr->mmIdHelper()->stationPhi(id),
-							   m_muonMgr->mmIdHelper()->multiplet(id),
+							   m_muonMgr->mmIdHelper()->multilayer(id),
 							   m_muonMgr->mmIdHelper()->gasGap(id),1);
 		  //const MuonGM::MMReadoutElement* mm=m_muonMgr->getMMReadoutElement(nid);
 		  //if (mm) std::cout <<"mmRE recovered:"<<nid<<","<< mm->center(nid) << std::endl;
@@ -513,13 +513,13 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		  //std::cout <<"cloned layer position:"<<(*lays)[il]->surfaceRepresentation().center();
 		  //std::cout <<"recalculating:"<<id<<","<<m_muonMgr->mmIdHelper()->is_stgc(id)<<","<<m_muonMgr->mmIdHelper()->stationName(id)<<  std::endl;
 		  //std::cout <<"recalculating:"<< m_muonMgr->mmIdHelper()->stationName(id)<<","<< m_muonMgr->mmIdHelper()->stationEta(id)<<","<<
-		  //  m_muonMgr->mmIdHelper()->stationPhi(id)<<","<< m_muonMgr->mmIdHelper()->multiplet(id)<<","<< m_muonMgr->mmIdHelper()->gasGap(id)<<std::endl;
+		  //  m_muonMgr->mmIdHelper()->stationPhi(id)<<","<< m_muonMgr->mmIdHelper()->multilayer(id)<<","<< m_muonMgr->mmIdHelper()->gasGap(id)<<std::endl;
 		  Identifier nid(0);
 		  if (m_muonMgr->mmIdHelper()->is_stgc(id)) {
 		    nid = m_muonMgr->stgcIdHelper()->channelID(m_muonMgr->stgcIdHelper()->stationName(id),
 							       m_muonMgr->stgcIdHelper()->stationEta(id),
 							       m_muonMgr->stgcIdHelper()->stationPhi(id)+it,
-							       m_muonMgr->stgcIdHelper()->multiplet(id),
+							       m_muonMgr->stgcIdHelper()->multilayer(id),
 							       m_muonMgr->stgcIdHelper()->gasGap(id),1,1);
 		    //const MuonGM::sTgcReadoutElement* stgc=m_muonMgr->getsTgcReadoutElement(nid);
 		    //if (stgc) std::cout <<"stgcRE recovered:"<<nid<<","<< stgc->center(nid) << std::endl;
@@ -527,7 +527,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		    nid = m_muonMgr->mmIdHelper()->channelID(m_muonMgr->mmIdHelper()->stationName(id),
 							     m_muonMgr->mmIdHelper()->stationEta(id),
 							     m_muonMgr->mmIdHelper()->stationPhi(id)+it,
-							     m_muonMgr->mmIdHelper()->multiplet(id),
+							     m_muonMgr->mmIdHelper()->multilayer(id),
 							     m_muonMgr->mmIdHelper()->gasGap(id),1);
 		    //const MuonGM::MMReadoutElement* mm=m_muonMgr->getMMReadoutElement(nid);
 		    //if (mm) std::cout <<"mmRE recovered:"<<nid<<","<< mm->center(nid) << std::endl;

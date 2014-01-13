@@ -22,6 +22,7 @@ from MuonTrackingGeometry.MuonTrackingGeometryConf import Muon__MuonTrackingGeom
 MuonTrackingGeometryBuilder= Muon__MuonTrackingGeometryBuilder(name = 'MuonTrackingGeometryBuilder')
 MuonTrackingGeometryBuilder.EntryVolumeName = TrkDetFlags.MuonSystemEntryVolumeName()
 MuonTrackingGeometryBuilder.ExitVolumeName  = TrkDetFlags.MuonSystemContainerName()
+MuonTrackingGeometryBuilder.OutputLevel     = TrkDetFlags.MuonBuildingOutputLevel()
 ToolSvc += MuonTrackingGeometryBuilder
 
 #print MuonTrackingGeometryBuilder

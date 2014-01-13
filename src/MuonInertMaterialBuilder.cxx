@@ -293,6 +293,7 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<Amg::
 	    if (found) continue;
             // m_geoShapeConverter->decodeShape(input_shapes[ish]);
             Amg::Transform3D ident;
+            ident.setIdentity();
 	    const Trk::Volume* trObject = m_geoShapeConverter->translateGeoShape(input_shapes[ish],&ident);
 	    if (trObject) {  
 	      Trk::MaterialProperties mat = m_materialConverter->convert( vols[ish].first->getMaterial() );

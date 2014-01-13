@@ -1152,7 +1152,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processRpc(Trk::Volume*
           //printChildren(gv[ic]);
           unsigned int ngc = gv[ic]->getNChildVols();
           for (unsigned int igc=0; igc<ngc; igc++) {
-	    Amg::Transform3D trgc;             
+	    Amg::Transform3D trgc(Trk::s_idTransform);             
             if (transfc[ic].rotation().isIdentity()) trgc = Amg::CLHEPTransformToEigen(gv[ic]->getXToChildVol(igc));
             else trgc = Amg::AngleAxis3D(M_PI,Amg::Vector3D(0.,0.,1.))*Amg::CLHEPTransformToEigen(gv[ic]->getXToChildVol(igc)); 
 	    
@@ -2160,7 +2160,7 @@ const Trk::LayerArray* Muon::MuonStationTypeBuilder::processCSCTrdComponent(cons
   //Trk::BinUtility* binUtility = new Trk::BinUtility1DX( lowX, new std::vector<double>(binSteps));
   Trk::BinUtility* binUtility = new Trk::BinUtility( binSteps, Trk::BinningOption::open, Trk::BinningValue::binX);
   Trk::LayerArray* cscLayerArray = 0;
-  cscLayerArray = new Trk::NavBinnedArray1D<Trk::Layer>(layerOrder, binUtility, new Amg::Transform3D());     
+  cscLayerArray = new Trk::NavBinnedArray1D<Trk::Layer>(layerOrder, binUtility, new Amg::Transform3D(Trk::s_idTransform));     
   
   return cscLayerArray;
 
@@ -2797,7 +2797,7 @@ const Trk::Layer* Muon::MuonStationTypeBuilder::createLayer(const Trk::TrackingV
       Amg::Vector3D mtg_pos=(transf*subt*trVol->transform()).translation();
       transf *= Amg::Translation3D(mrg_pos-mtg_pos);
     } else {
-      const std::vector<const Trk::Surface*>* surfs = trdBounds->decomposeToSurfaces(Amg::Transform3D());
+      const std::vector<const Trk::Surface*>* surfs = trdBounds->decomposeToSurfaces(Amg::Transform3D(Trk::s_idTransform));
       const Trk::TrapezoidBounds* tbounds = dynamic_cast<const Trk::TrapezoidBounds*> (&(*(surfs))[0]->bounds());
       Trk::SharedObject<const Trk::SurfaceBounds> bounds(new Trk::TrapezoidBounds(*tbounds));
       layer = new Trk::PlaneLayer(new Amg::Transform3D(subt*trVol->transform()),

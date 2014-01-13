@@ -1158,6 +1158,8 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
   }
   zSteps.push_back(z2);
 
+  for (unsigned int iz=0;iz<zSteps.size(); iz++) ATH_MSG_DEBUG( "z partition in volume:"<<volumeName<<":"<<iz<<":"<<zSteps[iz]); 
+
   // phi binning
   if (fabs(zPos)> m_barrelZ && cyl->outerRadius()<m_outerBarrelRadius) getPhiParts(0);
   else if (fabs(zPos)<= m_ectZ) getPhiParts(2);

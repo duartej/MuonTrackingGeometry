@@ -225,7 +225,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 
           // get bounds and transform from readout geometry
 	  const Trk::RotatedTrapezoidBounds* rtrd=0;
-	  Amg::Transform3D layTransf;
+	  Amg::Transform3D layTransf(Trk::s_idTransform);
 	  if (m_muonMgr->stgcIdHelper()->is_stgc(nswId)) {
 	    const MuonGM::sTgcReadoutElement* stgc=m_muonMgr->getsTgcReadoutElement(nswId);
 	    if (stgc) rtrd = dynamic_cast<const Trk::RotatedTrapezoidBounds*> (&stgc->bounds(nswId));

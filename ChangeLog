@@ -1,3 +1,8 @@
+2014-01-14 Sarka Todorova <sarka.todorova@cern.ch>
+	* cleanup of transform initialization 
+	* output level configured
+	* tagged as MuonTrackingGeometry-01-00-06
+
 2013-12-03 Sarka Todorova <sarka.todorova@cern.ch>
 	* allow larger enclosed volume (synchronized boundaries) 
 	* tagged as MuonTrackingGeometry-01-00-05

@@ -1,3 +1,8 @@
+2014-01-27 Sarka Todorova <sarka.todorova@cern.ch>
+	* fix of layer material averaging
+	* fix of spacer beams warnings
+	* tagged as MuonTrackingGeometry-01-00-07
+
 2014-01-14 Sarka Todorova <sarka.todorova@cern.ch>
 	* cleanup of transform initialization 
 	* output level configured

@@ -1356,7 +1356,7 @@ void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std:
   //std::cout << "getObjsForTranslation from:"<< pv->getLogVol()->getName()<<","<<pv->getLogVol()->getMaterial()->getName()<<", looping over "<< nc << " children" << std::endl;
   double thick = 2*m_muonStationTypeBuilder->get_x_size(pv);
   double vol = m_muonStationTypeBuilder->getVolume(pv->getLogVol()->getShape()); 
-  Trk::MaterialProperties* matComb = m_muonStationTypeBuilder->getAveragedLayerMaterial(pv,vol,thick);
+  LayerMaterial matComb = m_muonStationTypeBuilder->getAveragedLayerMaterial(pv,vol,thick);
   //if (matComb) std::cout << "thickness, averaged x0:"<< matComb->thickness()<<","<< matComb->x0()<< std::endl;
   //double dInX0 = matComb->thickness()/matComb->x0(); 
   for (unsigned int ic=0; ic<nc; ic++) {
@@ -1403,10 +1403,8 @@ void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std:
 	std::vector<Amg::Transform3D > volTr;
 	volTr.push_back(transform*transf);
         // divide mother material ? seems strange - check !
-        double scale =  1.;     // 1./nc;
-	Trk::MaterialProperties* nMat=new Trk::MaterialProperties(matComb->x0()/scale,matComb->l0()/scale,
-								  matComb->averageZ(),matComb->averageA(),
-								  matComb->averageRho()*scale);
+        //double scale =  1.;     // 1./nc;
+	Trk::MaterialProperties* nMat=new Trk::MaterialProperties(matComb.material);
 
 	std::pair<const GeoLogVol*,Trk::MaterialProperties*> cpair(clv,nMat);
 	vols.push_back(std::pair<std::pair<const GeoLogVol*,Trk::MaterialProperties*>,std::vector<Amg::Transform3D> > (cpair,volTr) );
@@ -1418,7 +1416,6 @@ void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std:
       getObjsForTranslation(cv, cName, transform*transf, vols, volNames);
     }
   }
-  delete matComb;
 }
 
 /*

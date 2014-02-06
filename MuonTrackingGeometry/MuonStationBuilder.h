@@ -7,7 +7,6 @@
 
 //Trk
 #include "TrkDetDescrInterfaces/IDetachedTrackingVolumeBuilder.h"
-#include "TrkGeometry/MaterialProperties.h"
 #include "TrkGeometry/DetachedTrackingVolume.h"
 #include "TrkGeometry/TrackingVolume.h"
 // Gaudi
@@ -35,7 +34,7 @@ namespace Trk {
  class ITrackingVolumeHelper;
  class ILayerBuilder;
  class ILayerArrayCreator;
- class ExtendedMaterialProperties;
+ class MaterialProperties;
 }
 
 namespace MuonGM {
@@ -84,16 +83,16 @@ namespace Muon {
       const CscIdHelper*            m_cscIdHelper;           //!< 
       const TgcIdHelper*            m_tgcIdHelper;           //!< 
       const sTgcIdHelper*           m_stgcIdHelper;           //!< 
-      const MmIdHelper*            m_mmIdHelper;           //!< 
-      std::string                         m_muonMgrLocation;       //!< the location of the Muon Manager
+      const MmIdHelper*             m_mmIdHelper;           //!< 
+      std::string                   m_muonMgrLocation;       //!< the location of the Muon Manager
 
       ToolHandle<Muon::MuonStationTypeBuilder>  m_muonStationTypeBuilder; //!< Helper Tool to create TrackingVolume Arrays
 
       ToolHandle<Trk::ITrackingVolumeHelper>    m_trackingVolumeHelper;   //!< Helper Tool to create TrackingVolumes
 
-      mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
-      mutable std::pair<bool,Trk::MaterialProperties>   m_sTgcMaterial;  //!< the material
-      mutable std::pair<bool,Trk::MaterialProperties>   m_mmMaterial;    //!< the material
+      mutable Trk::Material                   m_muonMaterial;               //!< the material
+      //mutable std::pair<bool,Trk::Material>   m_sTgcMaterial;  //!< the material
+      //mutable std::pair<bool,Trk::Material>   m_mmMaterial;    //!< the material
       Trk::GeoShapeConverter*             m_geoShapeConverter;          //!< shape converter
       Trk::GeoMaterialConverter*          m_materialConverter;          //!< material converter
       bool                                m_buildBarrel;

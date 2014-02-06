@@ -37,7 +37,7 @@ namespace Trk {
  class ILayerArrayCreator;
 
 //mw
- class MaterialProperties;
+ class Material;
 
 }
 
@@ -103,7 +103,7 @@ namespace Muon {
       bool                                m_buildShields;               // build shieldings 
       bool                                m_buildSupports;              // build other 
       double                              m_blendLimit;                 // volume limit for blending (except shields) 
-      mutable Trk::MaterialProperties     m_muonMaterial;               //!< the material
+      mutable Trk::Material               m_muonMaterial;               //!< the material
 //mw
       Trk::GeoMaterialConverter*           m_materialConverter;          //!< material converter
       Trk::GeoShapeConverter*              m_geoShapeConverter;          //!< shape converter

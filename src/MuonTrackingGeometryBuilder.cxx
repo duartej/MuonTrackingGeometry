@@ -32,6 +32,7 @@
 #include "TrkGeometry/TrackingGeometry.h"
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkGeometry/GlueVolumesDescriptor.h"
+#include "TrkGeometry/Material.h"
 #include<fstream>
 
 // STD
@@ -217,7 +218,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
  
   // 0) Preparation //////////////////////////////////////////////////////////////////////////////////////
   
-  m_muonMaterial = Trk::MaterialProperties(10e10,10e10,0.,0.,0.);      // default material properties
+  m_muonMaterial = Trk::Material(10e10,10e10,0.,0.,0.);      // default material properties
     
   // dummy substructures
   const Trk::LayerArray* dummyLayers = 0;
@@ -1410,7 +1411,7 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
         // enclosed muon objects ?   
 	std::string volName = volumeName +MuonGM::buildString(eta,2) +MuonGM::buildString(phi,2) ; 
 
-	Trk::MaterialProperties mat=m_muonMaterial;
+	Trk::Material mat=m_muonMaterial;
         blendVols.clear();
         std::vector<const Trk::DetachedTrackingVolume*>* detVols= getDetachedObjects( &subVol, blendVols);
         const Trk::TrackingVolume* sVol = new Trk::TrackingVolume( subVol,
@@ -2392,8 +2393,8 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
     cs = (*viter)->constituents();
     if (!cs) continue;
     // find material source
-    //const Trk::MaterialProperties* detMat = (*mIter).first->trackingVolume();
-    const Trk::MaterialProperties* detMat = (*viter)->trackingVolume();
+    //const Trk::Material* detMat = (*mIter).first->trackingVolume();
+    const Trk::Material* detMat = (*viter)->trackingVolume();
     //if ( (*mIter).first->trackingVolume()->confinedDenseVolumes()) detMat = (*(*mIter).first->trackingVolume()->confinedDenseVolumes())[0];
     if ( (*viter)->trackingVolume()->confinedDenseVolumes()) detMat = (*(*viter)->trackingVolume()->confinedDenseVolumes())[0];
     for (unsigned int ic=0; ic<cs->size(); ic++) {

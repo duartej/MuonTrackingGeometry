@@ -41,6 +41,7 @@
 #include "TrkGeometry/TrackingVolume.h"
 #include "TrkGeometry/TrackingGeometry.h"
 #include "TrkGeometry/Layer.h"
+#include "TrkGeometry/MaterialProperties.h"
 #include "TrkGeometry/HomogeneousLayerMaterial.h"
 #include<fstream>
 #include "GeoModelKernel/GeoShape.h"
@@ -142,7 +143,7 @@ StatusCode Muon::MuonStationBuilder::initialize()
 
     // if no muon materials are declared, take default ones
   
-    m_muonMaterial = Trk::MaterialProperties(10e10,10e10,0.,0.,0.);      // default material properties
+    m_muonMaterial = Trk::Material(10e10,10e10,0.,0.,0.);      // default material properties
 
     m_materialConverter= new Trk::GeoMaterialConverter();
     m_geoShapeConverter= new Trk::GeoShapeConverter();
@@ -246,7 +247,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	    //m_geoShapeConverter->decodeShape(input_shapes[ish]);
 	    const Trk::Volume* trObject = m_geoShapeConverter->translateGeoShape(input_shapes[ish],&ident);
             if (trObject) {
-              const Trk::TrackingVolume* newType=new Trk::TrackingVolume(*trObject,*(vols[ish].first.second),0,0,protoName);
+              const Trk::TrackingVolume* newType=new Trk::TrackingVolume(*trObject,vols[ish].first.second->material(),0,0,protoName);
               layer = m_muonStationTypeBuilder->createLayer(newType,vols[ish].first.second,vols[ish].second[0]);
               if (layer) layer->moveLayer(vols[ish].second[0]);
               delete trObject;
@@ -1356,7 +1357,7 @@ void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std:
   //std::cout << "getObjsForTranslation from:"<< pv->getLogVol()->getName()<<","<<pv->getLogVol()->getMaterial()->getName()<<", looping over "<< nc << " children" << std::endl;
   double thick = 2*m_muonStationTypeBuilder->get_x_size(pv);
   double vol = m_muonStationTypeBuilder->getVolume(pv->getLogVol()->getShape()); 
-  LayerMaterial matComb = m_muonStationTypeBuilder->getAveragedLayerMaterial(pv,vol,thick);
+  Trk::MaterialProperties matComb = m_muonStationTypeBuilder->getAveragedLayerMaterial(pv,vol,thick);
   //if (matComb) std::cout << "thickness, averaged x0:"<< matComb->thickness()<<","<< matComb->x0()<< std::endl;
   //double dInX0 = matComb->thickness()/matComb->x0(); 
   for (unsigned int ic=0; ic<nc; ic++) {
@@ -1404,7 +1405,7 @@ void Muon::MuonStationBuilder::getObjsForTranslation(const GeoVPhysVol* pv, std:
 	volTr.push_back(transform*transf);
         // divide mother material ? seems strange - check !
         //double scale =  1.;     // 1./nc;
-	Trk::MaterialProperties* nMat=new Trk::MaterialProperties(matComb.material);
+	Trk::MaterialProperties* nMat=new Trk::MaterialProperties(matComb);
 
 	std::pair<const GeoLogVol*,Trk::MaterialProperties*> cpair(clv,nMat);
 	vols.push_back(std::pair<std::pair<const GeoLogVol*,Trk::MaterialProperties*>,std::vector<Amg::Transform3D> > (cpair,volTr) );

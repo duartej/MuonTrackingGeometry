@@ -138,7 +138,7 @@ StatusCode Muon::MuonInertMaterialBuilder::initialize()
  
     // if no muon materials are declared, take default ones
   
-    m_muonMaterial = Trk::MaterialProperties(10e10,10e10,0.,0.,0.);      // default material properties
+    m_muonMaterial = Trk::Material(10e10,10e10,0.,0.,0.);      // default material properties
 
 // mw
     m_materialConverter= new Trk::GeoMaterialConverter();
@@ -296,7 +296,7 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<Amg::
             ident.setIdentity();
 	    const Trk::Volume* trObject = m_geoShapeConverter->translateGeoShape(input_shapes[ish],&ident);
 	    if (trObject) {  
-	      Trk::MaterialProperties mat = m_materialConverter->convert( vols[ish].first->getMaterial() );
+	      Trk::Material mat = m_materialConverter->convert( vols[ish].first->getMaterial() );
 	      const Trk::TrackingVolume* newType= new Trk::TrackingVolume( *trObject, mat, 0,0,protoName);
 	      const Trk::TrackingVolume* simType = simplifyShape(newType,blend);
 	      const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(protoName,simType);
@@ -318,8 +318,8 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<Amg::
       float scmat1 = m_extraX0*m_extraFraction/10.*88.93;
       float scmat2 = m_extraX0*(1.-m_extraFraction)/10.*88.93;
       // used : z = 14; A=28 ; rho = 2.33 g/cm^3, X0 = 93.7 mmm, l0 = 465.2 mm (Silicium)
-      Trk::MaterialProperties mat1(93.7/scmat1,465.2/scmat1,scmat1*14,scmat1*28,0.0023,0.);
-      Trk::MaterialProperties mat2(93.7/scmat2,465.2/scmat2,scmat2*14,scmat2*28,0.0023,0.);
+      Trk::Material mat1(93.7/scmat1,465.2/scmat1,scmat1*14,scmat1*28,0.0023,0.);
+      Trk::Material mat2(93.7/scmat2,465.2/scmat2,scmat2*14,scmat2*28,0.0023,0.);
       const Trk::LayerArray* dummyLayers = 0;
       const Trk::TrackingVolumeArray* dummyVolumes = 0;
       Trk::VolumeBounds* extraBounds1 = new Trk::CylinderVolumeBounds(850.,13000.,5.);
@@ -438,7 +438,7 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
     if (constituents.size()==1) {   // simplified volume : the scale factor refers to the density scaling
       double fraction = constituents.front().second.first;
       // simplified material rescales X0, l0 and density
-      Trk::MaterialProperties mat(trVol->x0()/fraction,trVol->l0()/fraction,trVol->averageA(),trVol->averageZ(),fraction*trVol->zOverAtimesRho());
+      Trk::Material mat(trVol->X0/fraction,trVol->L0/fraction,trVol->A,trVol->Z,fraction*trVol->rho);
       newVol = new Trk::TrackingVolume( *envelope, mat,  0, 0, envName);  
       delete trVol;  
       delete confinedVols;
@@ -446,7 +446,7 @@ const Trk::TrackingVolume* Muon::MuonInertMaterialBuilder::simplifyShape(const T
       for (unsigned int ic=0;ic<constituents.size();ic++) { 
 	double fraction = constituents[ic].second.first;
 	// simplified material rescales X0, l0 and density
-	Trk::MaterialProperties mat(trVol->x0()/fraction,trVol->l0()/fraction,trVol->averageA(),trVol->averageZ(),fraction*trVol->zOverAtimesRho());
+	Trk::Material mat(trVol->X0/fraction,trVol->L0/fraction,trVol->A,trVol->Z,fraction*trVol->rho);
 	Trk::TrackingVolume* trc = new Trk::TrackingVolume(*(constituents[ic].first),mat, 0, 0, trVol->volumeName());
         confinedVols->push_back(trc);
       }  

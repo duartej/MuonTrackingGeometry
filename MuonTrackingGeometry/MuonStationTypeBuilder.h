@@ -7,6 +7,7 @@
 
 //Trk
 #include "TrkGeometry/TrackingVolume.h"
+#include "TrkGeometry/Material.h"
 #include "TrkDetDescrUtils/SharedObject.h"
 #include "TrkDetDescrGeoModelCnv/GeoMaterialConverter.h"
 // Gaudi
@@ -36,47 +37,6 @@ namespace MuonGM {
 }
  
 namespace Muon {
-
-  struct LayerMaterial{
-    Trk::MaterialProperties material;
-    float                   thickness;
-
-    LayerMaterial(){
-      material = Trk::MaterialProperties(10.e10,10.e10,0.,0.,0.);
-      thickness = 0.;
-    }
-
-    void addMaterial(Trk::MaterialProperties mat, float d) {
-  
-      thickness += d;
-      float fnew = d/thickness;
-      float fold = 1.-fnew;
-      
-      material = Trk::MaterialProperties(1./(fnew/mat.x0()+fold/material.x0()),
-					 1./(fnew/mat.l0()+fold/material.l0()),
-				         fnew*mat.averageA()+fold*material.averageA(),
-				         fnew*mat.averageZ()+fold*material.averageZ(),
-				         fnew*mat.averageRho()+fold*material.averageRho());
-        
-    }
-
-    void scale( float factor ) {     // scaling of material thickness
-
-      thickness *= factor;
-      material   = Trk::MaterialProperties( factor*material.x0(), factor*material.l0(),
-                                            material.averageA(), material.averageZ(),
-                                            material.averageRho()/factor );        
-    }
-
-    LayerMaterial operator=( const LayerMaterial layMat) {
-      material = layMat.material;
-      thickness = layMat.thickness;
-      return (*this);
-    } 
-
-    bool empty() { return !(thickness>0.) ;  }
-
-  };
 
   typedef std::pair<Trk::SharedObject<const Trk::Layer>,const Amg::Transform3D*> LayTr;
      
@@ -123,9 +83,9 @@ namespace Muon {
       double get_x_size(const GeoVPhysVol*) const ;
       double decodeX(const GeoShape*) const ;
       double getVolume(const GeoShape*) const;
-      LayerMaterial getAveragedLayerMaterial(const GeoVPhysVol*,double,double) const;
-      void collectMaterial(const GeoVPhysVol*,LayerMaterial&,double) const;
-      LayerMaterial collectStationMaterial(const Trk::TrackingVolume* trVol,double) const; 
+      Trk::MaterialProperties getAveragedLayerMaterial(const GeoVPhysVol*,double,double) const;
+      void collectMaterial(const GeoVPhysVol*,Trk::MaterialProperties&,double) const;
+      Trk::MaterialProperties collectStationMaterial(const Trk::TrackingVolume* trVol,double) const; 
 
   private:
      /** Private method to fill default material */
@@ -138,21 +98,21 @@ namespace Muon {
 
       ToolHandle<Trk::ITrackingVolumeArrayCreator>   m_trackingVolumeArrayCreator;  //!< Helper Tool to create TrackingVolume Arrays
 
-      mutable Trk::MaterialProperties*     m_muonMaterial;               //!< the material
+      mutable Trk::Material*              m_muonMaterial;               //!< the material
  
-      mutable LayerMaterial    m_mdtTubeMat;                  //
-      mutable std::vector<LayerMaterial>   m_mdtFoamMat;                  //
-      mutable LayerMaterial    m_rpc46;                  
-      mutable std::vector<LayerMaterial>   m_rpcDed;                
-      mutable LayerMaterial    m_rpcLayer;                  
-      mutable LayerMaterial    m_rpcExtPanel;                  
-      mutable LayerMaterial    m_rpcMidPanel;                  
-      mutable LayerMaterial    m_matCSC01;                  //
-      mutable LayerMaterial    m_matCSCspacer1;                  //
-      mutable LayerMaterial    m_matCSC02;                  //
-      mutable LayerMaterial    m_matCSCspacer2;                  //
-      mutable LayerMaterial    m_matTGC01;                  //
-      mutable LayerMaterial    m_matTGC06;                  //
+      mutable Trk::MaterialProperties*      m_mdtTubeMat;                  //
+      mutable std::vector<Trk::MaterialProperties*>   m_mdtFoamMat;                  //
+      mutable Trk::MaterialProperties*    m_rpc46;                  
+      mutable std::vector<Trk::MaterialProperties*>   m_rpcDed;                
+      mutable Trk::MaterialProperties*    m_rpcLayer;                  
+      mutable Trk::MaterialProperties*    m_rpcExtPanel;                  
+      mutable Trk::MaterialProperties*    m_rpcMidPanel;                  
+      mutable Trk::MaterialProperties*    m_matCSC01;                  //
+      mutable Trk::MaterialProperties*    m_matCSCspacer1;                  //
+      mutable Trk::MaterialProperties*    m_matCSC02;                  //
+      mutable Trk::MaterialProperties*    m_matCSCspacer2;                  //
+      mutable Trk::MaterialProperties*    m_matTGC01;                  //
+      mutable Trk::MaterialProperties*    m_matTGC06;                  //
       Trk::GeoMaterialConverter*                  m_materialConverter;
 
     };

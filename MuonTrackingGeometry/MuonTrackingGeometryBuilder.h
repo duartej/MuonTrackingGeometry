@@ -8,7 +8,6 @@
 //Trk
 #include "TrkDetDescrInterfaces/IGeometryBuilder.h"
 #include "TrkDetDescrUtils/GeometrySignature.h"
-#include "TrkGeometry/MaterialProperties.h"
 // Gaudi
 #include "AthenaBaseComps/AthAlgTool.h"
 #include "GaudiKernel/ToolHandle.h"
@@ -19,6 +18,7 @@
 
 namespace Trk {
  class TrackingGeometry;
+ class Material; 
  class VolumeBounds;
  class ITrackingVolumeBuilder;
  class ITrackingVolumeHelper;
@@ -121,7 +121,7 @@ namespace Muon {
       double                              m_outerShieldRadius;
       double                              m_diskShieldZ;
 
-      mutable Trk::MaterialProperties       m_muonMaterial;               //!< the (empty) material
+      mutable Trk::Material               m_muonMaterial;               //!< the (empty) material
 
       mutable Trk::TrackingVolume*        m_standaloneTrackingVolume;   // muon standalone tracking volume                 
       int                                 m_barrelEtaPartition;

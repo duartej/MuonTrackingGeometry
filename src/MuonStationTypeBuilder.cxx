@@ -1989,7 +1989,7 @@ void Muon::MuonStationTypeBuilder::collectMaterial(const GeoVPhysVol* pv, Trk::M
       }
     }
     double d = vol / sf;
-    layMat.addMaterial(newMP,d); 
+    layMat.addMaterial(newMP,d/newMP.x0()); 
 
   } 
   // subcomponents
@@ -2827,7 +2827,7 @@ Trk::MaterialProperties Muon::MuonStationTypeBuilder::collectStationMaterial(con
     for (unsigned il=0; il<lays.size(); il++) {
       const Trk::MaterialProperties* mLay = lays[il]->layerMaterialProperties()->fullMaterial(lays[il]->surfaceRepresentation().center());
       if (mLay) {
-        layMat.addMaterial(mLay->material(),lays[il]->thickness());
+        layMat.addMaterial(mLay->material(),lays[il]->thickness()/mLay->material().x0());
       }
     }
   } 
@@ -2841,7 +2841,7 @@ Trk::MaterialProperties Muon::MuonStationTypeBuilder::collectStationMaterial(con
       if ((rect || trap) && mLay) {
 	double scale = rect ? 4*rect->halflengthX()*rect->halflengthY()/sf 
 	  : 2*(trap->minHalflengthX()+trap->maxHalflengthX())*trap->halflengthY()/sf;
-        layMat.addMaterial(mLay->material(),scale*lays[il]->thickness());
+        layMat.addMaterial(mLay->material(),scale*lays[il]->thickness()/mLay->material().x0());
       }
     }
   } 
@@ -2853,7 +2853,7 @@ Trk::MaterialProperties Muon::MuonStationTypeBuilder::collectStationMaterial(con
 	const std::vector<const Trk::Layer*> lays = subVols[iv]->confinedLayers()->arrayObjects();
 	for (unsigned il=0; il<lays.size(); il++) {
 	  const Trk::MaterialProperties* mLay = lays[il]->layerMaterialProperties()->fullMaterial(lays[il]->surfaceRepresentation().center());
-          if (mLay) layMat.addMaterial(mLay->material(),lays[il]->thickness());
+          if (mLay) layMat.addMaterial(mLay->material(),lays[il]->thickness()/mLay->material().x0());
         }
       } 
       if (subVols[iv]->confinedArbitraryLayers()){
@@ -2866,7 +2866,7 @@ Trk::MaterialProperties Muon::MuonStationTypeBuilder::collectStationMaterial(con
 	  if ((rect || trap) && mLay) {
 	    double scale = rect ? 4*rect->halflengthX()*rect->halflengthY()/sf
 	      : 2*(trap->minHalflengthX()+trap->maxHalflengthX())*trap->halflengthY()/sf;
-	    layMat.addMaterial(mLay->material(),scale*lays[il]->thickness());
+	    layMat.addMaterial(mLay->material(),scale*lays[il]->thickness()/mLay->material().x0());
 	  }
         }
       }     

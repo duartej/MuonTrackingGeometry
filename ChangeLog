@@ -1,3 +1,7 @@
+2014-02-13 Sarka Todorova <sarka.todorova@cern.ch>
+	* bugfix in sum of layer material (change of interface)
+	* tagged as MuonTrackingGeometry-01-00-09
+
 2014-02-06 Sarka Todorova <sarka.todorova@cern.ch>
 	* change in material interface
 	* tagged as MuonTrackingGeometry-01-00-08

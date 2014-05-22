@@ -70,7 +70,7 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_phiPartition(16),
   m_adjustStatic(true),
   m_static3d(true),
-  m_blendInertMaterial(true),
+  m_blendInertMaterial(false),
   m_removeBlended(false),
   m_inertPerm(0),
   m_alignTolerance(0.),

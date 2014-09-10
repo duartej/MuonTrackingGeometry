@@ -193,16 +193,16 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
 	  halfZ  = box->getZHalfLength(); 
           volBounds = new Trk::CuboidVolumeBounds(halfX1,halfY1,halfZ);
         }
-	// std::cout << "dimensions:"<<halfX1<<","<<halfX2<<","<<halfY1<<","<<halfY2<<","<<halfZ<<std::endl;
+	ATH_MSG_VERBOSE("dimensions of the subvolume:"<< ich<<":hX1,hX2,hY1,hY2,hZ"<<halfX1<<","<<halfX2<<","<<halfY1<<","<<halfY2<<","<<halfZ);
         if ( clv->getShape()->type()!="Trd" && clv->getShape()->type()!="Box" ) {
  	  //std::cout << "WARNING:component shape not Box nor Trapezoid, determining the x size from subcomponents" << std::endl; 
           double xSize = get_x_size(cv);
-	  //std::cout << "estimated x size:" << xSize << std::endl;
+	  ATH_MSG_VERBOSE("subvolume not box nor trapezoid, estimated x size:" << xSize);
           //printChildren(cv);
           volBounds = new Trk::CuboidVolumeBounds(xSize,envelope->halflengthY(),envelope->halflengthZ());
         }
 	vol = new Trk::Volume(new Amg::Transform3D(transf),volBounds);
-	//std::cout <<"volume center:"<< vol->center() << ","<< ich << std::endl;
+	ATH_MSG_VERBOSE("subvolume center:"<< vol->center().x()<<","<< vol->center().y()<<","<< vol->center().z());
 	std::string cname = clv->getName();
 	std::string vname = mv->getLogVol()->getName();
         int nameSize = vname.size()-8;
@@ -225,12 +225,14 @@ const Trk::TrackingVolumeArray* Muon::MuonStationTypeBuilder::processBoxStationC
           compTransf.insert(transfIter,transf);
         } 
       } // loop over components
+      
       /* 
       // check components ordering
       for (unsigned i=0; i<compVol.size();i++){
-         std::cout << compVol[i]->center()[0]<<" "<<compName[i]<<std::endl; 
+	ATH_MSG_VERBOSE("list compononents:xcoord:name:"<<i<<":"<< compVol[i]->center()[0]<<" "<<compName[i]); 
       } 
-      */
+      */      
+
       // define enveloping volumes for each "technology"
       std::vector<const Trk::TrackingVolume*> trkVols;
       double envX = envelope->halflengthX();

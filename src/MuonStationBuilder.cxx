@@ -82,7 +82,7 @@ Muon::MuonStationBuilder::MuonStationBuilder(const std::string& t, const std::st
   m_buildEndcap(true),
   m_buildCsc(true),
   m_buildTgc(true),
-  m_resolveActiveLayers(false)
+  m_resolveActiveLayers(true)
 {
   declareInterface<Trk::IDetachedTrackingVolumeBuilder>(this);
   declareProperty("StationTypeBuilder",               m_muonStationTypeBuilder);
@@ -199,9 +199,6 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	input_shapes.resize(vols.size());             
 	for (unsigned int i=0;i<vols.size();i++) input_shapes[i]=vols[i].first.first->getShape();
 
-        
-	std::cout <<"number of prototypes to process for NSW:"<<vols.size()<<std::endl;
-
         // initial solution 
         // Large/Small sector envelope englobing (4+4+1+4+4)x 4(rings) =  68 layers identified with simId (station type,ring,phi,sector,multi,layer)
         //
@@ -273,8 +270,6 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 	    ATH_MSG_INFO( "new prototype build for: " << protoName <<","<<vols[ish].second.size() );
 	  }
 	} // end new object
-
-	std::cout <<"number of layers:large:small:"<< sectorL.size()<<","<<sectorS.size() << std::endl;
 
         // create station prototypes
         const Trk::TrackingVolume* newTypeL=m_muonStationTypeBuilder->processNSW(sectorL); 
@@ -832,7 +827,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 		  Amg::Transform3D* transf=new Amg::Transform3D(Trk::s_idTransform); 
 		  if (halfY1==halfY2) {
 		    envBounds = new Trk::TrapezoidVolumeBounds(halfX1,halfX2,halfY1,halfZ);
-		    std::cout << "CAUTION!!!: this trapezoid volume does not require XY -> YZ switch" << std::endl;
+		    ATH_MSG_VERBOSE( "CAUTION!!!: this trapezoid volume does not require XY -> YZ switch" );
 		  }
 		  if (halfY1!=halfY2 && halfX1 == halfX2 ) {
 		    delete transf;
@@ -840,7 +835,7 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 						   Amg::AngleAxis3D(0.5*M_PI,Amg::Vector3D(0.,0.,1.)));
 		    envBounds = new Trk::TrapezoidVolumeBounds(halfY1,halfY2,halfZ,halfX1); 
 		  }
-		  if (halfX1!=halfX2 && halfY1!=halfY2 ) std::cout << "station envelope arbitrary trapezoid?" << std::endl;
+		  if (halfX1!=halfX2 && halfY1!=halfY2 )  ATH_MSG_WARNING( "station envelope arbitrary trapezoid?"<< name );
 		  // station components
 		  if (m_muonStationTypeBuilder) confinedVolumes = 
 						  m_muonStationTypeBuilder->processTrdStationComponents(cv,envBounds); 
@@ -1055,6 +1050,7 @@ void Muon::MuonStationBuilder::identifyLayers(const Trk::DetachedTrackingVolume*
   if (stationName.substr(0,1)=="B" || stationName.substr(0,1)=="E" ) { 
     // recalculate id
     Identifier stId(station->layerRepresentation()->layerType());
+   
     int nameIndex = m_mdtIdHelper->stationNameIndex( stationName.substr(0,3) ); 
     if (station->trackingVolume()->confinedVolumes()) {
       const std::vector<const Trk::TrackingVolume*> cVols = station->trackingVolume()->confinedVolumes()->arrayObjects();
@@ -1244,6 +1240,9 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
     int nameIndexC = nameIndex;
     if (stationName.substr(0,3)=="EIS") nameIndexC = 22; 
     if (stationName.substr(0,3)=="BIM") nameIndexC = 23; 
+    if (stationName.substr(0,3)=="BME") nameIndexC = 24; 
+    if (stationName.substr(0,3)=="BOE") nameIndexC = 25; 
+
     for (int multi = 0; multi < 2; multi++ ) {
       const MuonGM::MdtReadoutElement* multilayer = m_muonMgr->getMdtReadoutElement(nameIndexC,eta+8,phi-1,multi);
       if (multilayer) {
@@ -1263,10 +1262,15 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
 	      unsigned int iD = id.get_identifier32().get_compact();
 	      if (assocLay) assocLay->setLayerType(iD); 
 	      //if (assocLay) {
-	      //	const Trk::LocalPosition* locPos = (assocLay->surfaceRepresentation()).globalToLocal(gp,0.001);
-	      //	if (fabs(assocLay->getRef()-(*locPos)[Trk::locY])>0.01) 
-	      //  std::cout << "ERROR REFERENCE:"<< stationName<<","<<assocLay->getRef()<<","<<(*locPos)[Trk::locY]<<std::endl;
-	      //	if (locPos) assocLay->setRef((*locPos)[Trk::locY]);
+	      //  const Amg::Vector2D* locPos = (assocLay->surfaceRepresentation()).globalToLocal(gp,0.001);
+              //  if (locPos) {
+	      //    if (fabs(assocLay->getRef()-(*locPos)[Trk::locY])>0.01) { 
+	      //    std::cout << "ERROR REFERENCE:"<< stationName<<","<<assocLay->getRef()<<","<<(*locPos)[Trk::locY]<<std::endl;
+	      //  } else {
+	      //    std::cout << "station identified:"<< stationName<<","<<assocLay->getRef()<<","<<(*locPos)[Trk::locY]<<std::endl;
+	      //  }
+	      //  assocLay->setRef((*locPos)[Trk::locY]);
+	      //}
 	      //}
 	    } 
           }
@@ -1282,6 +1286,8 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
         // for active layers do a search of associated ROE
         const std::vector<const Trk::Layer*>* layers = vols[iv]->confinedArbitraryLayers();
         int nameIndex = m_rpcIdHelper->stationNameIndex( stationName.substr(0,3) ); 
+        if (stationName.substr(0,3)=="BME") nameIndex=12;              // hack for BME
+        if (stationName.substr(0,3)=="BOE") nameIndex=13;              // hack for BOE
         // loop over doubletR, doubletZ 
 	for (int doubletR = 0; doubletR < 2; doubletR++ ) {
 	for (int doubletZ = 0; doubletZ < 3; doubletZ++ ) {
@@ -1305,7 +1311,6 @@ void Muon::MuonStationBuilder::identifyPrototype(const Trk::TrackingVolume* stat
                       const Amg::Vector3D locPos = (*layers)[il]->surfaceRepresentation().transform().inverse()
 			*transf.inverse()*rpc->surface(etaId).center(); 
 		      (*layers)[il]->setRef(swap + locPos[0]);
-		      //std::cout <<"identifying RPC:"<<stationName<<","<<iv<<","<<il<<":"<<id <<std::endl;
                       //turn eta position into integer to truncate
 		      //HepGeom::Point3D<double> locPosEta = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(etaId));
 		      //HepGeom::Point3D<double> locPosPhi = ((*layers)[il]->surfaceRepresentation().transform().inverse()) * (rpc->stripPos(phiId));

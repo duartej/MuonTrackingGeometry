@@ -1,3 +1,7 @@
+2014-11-06 Peter Kluit 
+	* enlarge outer barrel cylinder for new GEO R07
+	* tagged as MuonTrackingGeometry-01-00-12
+
 2014-09-10 Sarka Todorova <sarka.todorova@cern.ch>
 	* elevator stations included and identified
 	* default to resolved layers

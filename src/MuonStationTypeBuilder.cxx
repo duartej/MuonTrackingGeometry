@@ -1956,6 +1956,7 @@ Trk::MaterialProperties Muon::MuonStationTypeBuilder::getAveragedLayerMaterial( 
     sumMat.material().X0 /=sf; 
     sumMat.material().L0 /=sf; 
     sumMat.material().rho *=sf; 
+    ATH_MSG_VERBOSE( "averaged material scale :"<< sf <<" sumMat.material().X0() "<<sumMat.material().X0 << " sumMat.material().L0 " << sumMat.material().L0 << " sumMat.material().rho " << sumMat.material().rho  << " sumMat.material().x0() " << sumMat.material().x0() );
     ATH_MSG_VERBOSE( "averaged material:d,x0,dInX0:"<< sumMat.thickness()<<","<<sumMat.material().x0() );
     return sumMat;
   }  

@@ -254,6 +254,8 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<Amg::
           //if ( vname=="EdgeBTVoussoir" && accepted && m_simplify ) accepted = false;
 
 	  if (accepted) ATH_MSG_VERBOSE( name() << " INERT muon object found:" << vname );
+	  if(accepted) ATH_MSG_VERBOSE( " INERT muon object found and accepted :" << vname );
+	  if(!accepted)  ATH_MSG_VERBOSE(" INERT muon object found and rejected :" << vname );
 
 	  
 	  if (!accepted) { vol.next(); continue; }  

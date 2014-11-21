@@ -54,17 +54,17 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_innerBarrelRadius(4255.),
 //  m_outerBarrelRadius(13400.),
   m_outerBarrelRadius(13910.),
-  m_barrelZ(6785.),
+  m_barrelZ(6783.),
   m_innerEndcapZ(12900.),
   m_outerEndcapZ(26050.),
   m_bigWheel(15600.),
   m_outerWheel(21000.),
-  m_ectZ(7880.),
+  m_ectZ(7920.),
   m_beamPipeRadius(70.),
   //m_innerShieldRadius(810.),
   m_innerShieldRadius(850.),
   m_outerShieldRadius(1550.),
-  m_diskShieldZ(6909.),
+  m_diskShieldZ(6915.),
   m_barrelEtaPartition(9),
   m_innerEndcapEtaPartition(3),
   m_outerEndcapEtaPartition(3),
@@ -758,11 +758,25 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
   const Trk::SimplePolygonBrepVolumeBounds* spb = dynamic_cast<const Trk::SimplePolygonBrepVolumeBounds*> (volBounds);
   const Trk::PrismVolumeBounds* prism = dynamic_cast<const Trk::PrismVolumeBounds*> (volBounds);
 
+  if(box)  ATH_MSG_VERBOSE(" findVolumeSpan box " );
+  if(trd)  ATH_MSG_VERBOSE(" findVolumeSpan trd " );
+  if(dtrd) ATH_MSG_VERBOSE( " findVolumeSpan dtrd " );
+  if(bcyl) ATH_MSG_VERBOSE(" findVolumeSpan bcyl " );
+  if(cyl)  ATH_MSG_VERBOSE(" findVolumeSpan cyl " );
+  if(sub)  ATH_MSG_VERBOSE(" findVolumeSpan sub " );
+  if(comb) ATH_MSG_VERBOSE(" findVolumeSpan comb " );
+  if(spb)  ATH_MSG_VERBOSE(" findVolumeSpan spb " );
+  if(prism) ATH_MSG_VERBOSE(" findVolumeSpan prism " );
+
   if (sub) return findVolumeSpan(&(sub->outer()->volumeBounds()),transform*sub->outer()->transform(),zTol,phiTol);
 
   if (comb) {
     const Muon::Span* s1 = findVolumeSpan(&(comb->first()->volumeBounds()),transform*comb->first()->transform(),zTol,phiTol);     
     const Muon::Span* s2 = findVolumeSpan(&(comb->second()->volumeBounds()),transform*comb->second()->transform(),zTol,phiTol);     
+
+    ATH_MSG_VERBOSE( "Combined span1:"<<name()<< ","<<(*s1)[0]<<","<< (*s1)[1]<<","<<(*s1)[2]<<"," << (*s1)[3]<<","<< (*s1)[4]<<","<< (*s1)[5]);
+    ATH_MSG_VERBOSE( "Combined span2:"<<name()<< ","<<(*s2)[0]<<","<< (*s2)[1]<<","<<(*s2)[2]<<"," << (*s2)[3]<<","<< (*s2)[4]<<","<< (*s2)[5]);
+
     Muon::Span scomb;
     scomb.reserve(6); 
     scomb.push_back(fmin((*s1)[0],(*s2)[0]));
@@ -801,6 +815,8 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     edges.push_back( Amg::Vector3D(0., box->halflengthY(),0.) );
   }
   if (trd) {
+//     std::cout <<  " Trapezoid minHalflengthX " << trd->minHalflengthX() << " maxHalflengthX() " << trd->maxHalflengthX() << " halflengthY() " << trd->halflengthY() << " halflengthZ " << trd->halflengthZ() << std::endl;
+  
     edges.push_back( Amg::Vector3D(trd->maxHalflengthX(),trd->halflengthY(),trd->halflengthZ()) );
     edges.push_back( Amg::Vector3D(-trd->maxHalflengthX(),trd->halflengthY(),trd->halflengthZ()) );
     edges.push_back( Amg::Vector3D(trd->minHalflengthX(),-trd->halflengthY(),trd->halflengthZ()) );
@@ -811,8 +827,8 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     edges.push_back( Amg::Vector3D(-trd->minHalflengthX(),-trd->halflengthY(),-trd->halflengthZ()) );
     edges.push_back( Amg::Vector3D(0.,0.,-trd->halflengthZ()) );
     edges.push_back( Amg::Vector3D(0.,0., trd->halflengthZ()) );
-    edges.push_back( Amg::Vector3D(-0.5*(trd->minHalflengthX()+trd->maxHalflengthX()),0.,0.) );
-    edges.push_back( Amg::Vector3D( 0.5*(trd->minHalflengthX()+trd->maxHalflengthX()),0.,0.) );
+    edges.push_back( Amg::Vector3D(-0.5*(trd->minHalflengthX()-trd->maxHalflengthX()),0.,0.) );
+    edges.push_back( Amg::Vector3D( 0.5*(trd->minHalflengthX()-trd->maxHalflengthX()),0.,0.) );
     edges.push_back( Amg::Vector3D(0.,-trd->halflengthY(),0.) );
     edges.push_back( Amg::Vector3D(0., trd->halflengthY(),0.) );
   }
@@ -854,6 +870,10 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
       edges.push_back( Amg::Vector3D(vtcs[i].first,vtcs[i].second, spb->halflengthZ()) );
       edges.push_back( Amg::Vector3D(vtcs[i].first,vtcs[i].second, -spb->halflengthZ()) );
     }
+// center
+    edges.push_back( Amg::Vector3D(0.,0.,spb->halflengthZ()));
+    edges.push_back( Amg::Vector3D(0.,0.,-spb->halflengthZ()));
+
   }
   if (prism) {
 #ifdef TRKDETDESCR_USEFLOATPRECISON
@@ -867,13 +887,26 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
       edges.push_back( Amg::Vector3D(vtcs[i].first,vtcs[i].second, prism->halflengthZ()) );
       edges.push_back( Amg::Vector3D(vtcs[i].first,vtcs[i].second, -prism->halflengthZ()) );
     }
+    edges.push_back( Amg::Vector3D(0.,0.,prism->halflengthZ()));
+    edges.push_back( Amg::Vector3D(0.,0.,-prism->halflengthZ()));
+
   }
   // apply transform and get span
   double minP0=M_PI; double maxP0 = 0.; double minP1=2*M_PI; double maxP1=M_PI;
+  // determine phiStep for prism and spb
+  double phiStep = 0.;
   for (unsigned int ie=0; ie < edges.size() ; ie++) {
     Amg::Vector3D gp = transform*edges[ie];
     double phi = gp.phi()+M_PI; 
-    ATH_MSG_VERBOSE( "edges:"<< ie<<","<<gp<<","<< phi);
+
+    ATH_MSG_VERBOSE( " local edges:"<< ie<<" x "<< edges[ie].x() << " y " << edges[ie].y() << " z " << edges[ie].z() << " phi "<< edges[ie].phi());
+    ATH_MSG_VERBOSE( " Global edges:"<< ie<<" x "<< gp.x() << " y " << gp.y() << " z " << gp.z() << " phi position + pi "<< phi);
+
+    if(ie>0&&phiStep<0.001) {
+       double phin = (transform*edges[ie-1]).phi() - M_PI;
+       phiStep = acos(cos(phi)*cos(phin) + sin(phi)*sin(phin));
+       ATH_MSG_VERBOSE( " "<< ie<<" phiStep  "<< phiStep );
+    }
     double rad = gp.perp();
     if (cyl || bcyl) {
       double radius = 0.; double hz = 0.;
@@ -917,6 +950,16 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
     else { minPhi = minP1 ; maxPhi = maxP0; }  
     if (maxPhi<0.001 && minPhi>2*M_PI-0.001) {minPhi=0; maxPhi=2*M_PI;}
   }
+//
+// correct edges for spb or prism
+//
+  if(spb||prism) {
+    if(minP0<phiStep&&2*M_PI-maxP1<phiStep) {
+      minPhi = 0.;
+      maxPhi = 2*M_PI;
+    }
+  }
+
   if ( box || trd || dtrd || spb ) {
     span.push_back( minZ - zTol );  
     span.push_back( maxZ + zTol );  
@@ -950,28 +993,62 @@ const std::vector<std::vector<std::pair<const Trk::DetachedTrackingVolume*,const
   for (unsigned int iobj=0; iobj<objs->size(); iobj++) {
     Amg::Transform3D  transform = (*objs)[iobj]->trackingVolume()->transform();
     const Muon::Span* span = findVolumeSpan(&((*objs)[iobj]->trackingVolume()->volumeBounds()), transform, zTol, phiTol);
-    ATH_MSG_VERBOSE( "span:"<<(*objs)[iobj]->name()<< ","<<(*span)[0]<<","<< (*span)[1]<<","<<(*span)[2]<<","
-    << (*span)[3]<<","<< (*span)[4]<<","<< (*span)[5] );  
+    double x0 = (*objs)[iobj]->trackingVolume()->X0;
+    double intX0 = fabs((*span)[0]-(*span)[1])/(x0+0.000000001);
+    double l0 = (*objs)[iobj]->trackingVolume()->L0;
+    ATH_MSG_DEBUG( "span:"<<(*objs)[iobj]->name()<< ","<<(*span)[0]<<","<< (*span)[1]<<","<<(*span)[2]<<","
+     << (*span)[3]<<","<< (*span)[4]<<","<< (*span)[5] << " X0 " << x0 << " L0 "<< l0 << " intX0 for span0 span1 " << intX0 );
+
+    int nspans = 0;
     // negative outer wheel
-    if ( (*span)[0] < -m_bigWheel ) (*spans)[0]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
-    // negative big wheen
-    if ( (*span)[0] < -m_innerEndcapZ && (*span)[1]>-m_bigWheel ) (*spans)[1]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+    if ( (*span)[0] < -m_bigWheel ) {
+        (*spans)[0]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+        nspans++;
+    } 
+    // negative big wheel
+    if ( (*span)[0] < -m_innerEndcapZ && (*span)[1]>-m_bigWheel ) {
+        (*spans)[1]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+        nspans++;
+    } 
     // neg.ect
-    if ( (*span)[0] < -m_ectZ && (*span)[1]>-m_innerEndcapZ )     (*spans)[2]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
-    // neg.small whell
-    if ( (*span)[0] < -m_diskShieldZ && (*span)[1]>-m_ectZ )          (*spans)[3]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+    if ( (*span)[0] < -m_ectZ && (*span)[1]>-m_innerEndcapZ ) {
+        (*spans)[2]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+        nspans++;
+    } 
+    // neg.small wheel
+    if ( (*span)[0] < -m_diskShieldZ && (*span)[1]>-m_ectZ ) {
+        (*spans)[3]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+        nspans++;
+    } 
     // barrel  
-    if ( (*span)[0] <  m_diskShieldZ && (*span)[1]> -m_diskShieldZ  &&
-	 ((*span)[5]> m_innerBarrelRadius || (*span)[0]<-m_barrelZ || (*span)[1]>m_barrelZ)  )
-                                                                  (*spans)[4]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
-    // pos.small whell
-    if ( (*span)[0] < m_ectZ && (*span)[1]> m_diskShieldZ )            (*spans)[5]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+    if ( (*span)[0] <  m_diskShieldZ && (*span)[1]> -m_diskShieldZ ) {
+//	 && ((*span)[5]> m_innerBarrelRadius || (*span)[0]<-m_barrelZ || (*span)[1]>m_barrelZ)  ) {
+        (*spans)[4]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+        nspans++;
+    } 
+    // pos.small wheel
+    if ( (*span)[0] < m_ectZ && (*span)[1]> m_diskShieldZ ) {
+        (*spans)[5]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+        nspans++;
+    } 
     // pos.ect
-    if ( (*span)[0] < m_innerEndcapZ && (*span)[1]> m_ectZ )       (*spans)[6]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+    if ( (*span)[0] < m_innerEndcapZ && (*span)[1]> m_ectZ ) {
+        (*spans)[6]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+        nspans++;
+    } 
     // positive big wheel
-    if ( (*span)[0] < m_bigWheel && (*span)[1]> m_innerEndcapZ )   (*spans)[7]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+    if ( (*span)[0] < m_bigWheel && (*span)[1]> m_innerEndcapZ ) {
+        (*spans)[7]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+        nspans++;
+    } 
     // positive outer wheel
-    if ( (*span)[1] >  m_bigWheel )                                (*spans)[8]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+    if ( (*span)[1] >  m_bigWheel ) {
+        (*spans)[8]->push_back(std::pair<const Trk::DetachedTrackingVolume*,const Span*>((*objs)[iobj],span));
+        nspans++;
+    } 
+
+    if(nspans == 0) ATH_MSG_WARNING( " object not selected in span regions " << (*objs)[iobj]->name() );
+    if(nspans > 1) ATH_MSG_VERBOSE( " object selected in " << nspans << " span regions " << (*objs)[iobj]->name() );
 
     m_spans.push_back(span);                 // keep track of things to delete
   }
@@ -1192,7 +1269,9 @@ const Trk::TrackingVolume* Muon::MuonTrackingGeometryBuilder::processVolume(cons
 	else phiRef += 0.5*m_adjustedPhi[0]+M_PI ;
 
         if (m_adjustedPhiType[ip]>phiTypeMax) phiTypeMax = m_adjustedPhiType[ip];
-
+        for (std::pair<int,float> i: m_hPartitions[mode][zTypes[iz]][m_adjustedPhiType[ip]]) {
+          ATH_MSG_VERBOSE( " mode " << mode << " phiRef " << phiRef << " zTypes[iz] " << zTypes[iz] << " m_adjustedPhiType[ip] " << m_adjustedPhiType[ip] << " hPartitions " << i.second );
+        }
         phBinUtil.push_back(new Trk::BinUtility(phiRef,m_hPartitions[mode][zTypes[iz]][m_adjustedPhiType[ip]]));
       }
       hBinUtil->push_back(phBinUtil);
@@ -1714,6 +1793,8 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
     phiLim = true;
   } 
 
+  ATH_MSG_VERBOSE( " zMin "<< zMin <<" zMax " <<zMax << " rMin "<< rMin <<" rMax "<<rMax << " rMaxc " << rMaxc << " phi limits "<< pMin <<" phiMax "<<pMax <<  " phiLim " << phiLim);
+
   // define detector region : can extend over several
   int gMin = (zMax <= -m_bigWheel) ? 0 : 1;
   if ( zMin >= m_bigWheel ) gMin = 8;
@@ -1731,6 +1812,8 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
   else if ( zMax <= m_diskShieldZ )      gMax = 4;
   else if ( zMax <= m_ectZ )         gMax = 5;
   else if ( zMax <= m_innerEndcapZ ) gMax = 6;
+
+  ATH_MSG_VERBOSE( " active volumes gMin "<< gMin<<" gMax "<<gMax);
    
   std::list<const Trk::DetachedTrackingVolume*> detached;
   // active, use corrected rMax
@@ -1740,22 +1823,34 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
 	const Muon::Span* s = (*((*m_stationSpan)[gMode]))[i].second;          // span
 	const Trk::DetachedTrackingVolume* station = (*((*m_stationSpan)[gMode]))[i].first;   // station
 	bool rLimit = !m_static3d || ( (*s)[4] <= rMaxc && (*s)[5] >= rMin );
-	
-	if ( rLimit && (*s)[0] < zMax && (*s)[1] > zMin ) {
-	  if (phiLim) {
-	    if (pMin>=0 && pMax<=2*M_PI) {
-	      if ( (*s)[2]<=(*s)[3] && (*s)[2] <= pMax && (*s)[3] >= pMin ) detached.push_back(station);
-	      if ( (*s)[2]>(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin) ) detached.push_back(station);
-	    } else if (pMin < 0) {
-	      if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin+2*M_PI) ) detached.push_back(station);
-	      if ( (*s)[2]>(*s)[3]  ) detached.push_back(station);
-	    } else if (pMax > 2*M_PI) {
-	      if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax-2*M_PI || (*s)[3] >= pMin) ) detached.push_back(station);
-	      if ( (*s)[2]>(*s)[3]  ) detached.push_back(station);
-	    }
-	  } else {
-	    detached.push_back(station);
-	  }
+// Check meanZ for BME stations
+        bool meanZOK = false;
+        if(station->name()=="BME1_Station"||station->name()=="BME2_Station") {
+            if( ((*s)[0]+(*s)[1])/2.< zMax&&((*s)[0]+(*s)[1])/2.> zMin ) meanZOK = true;
+            if( ((*s)[2]+(*s)[3])/2 <pMin&&phiLim) meanZOK = false;
+            if( ((*s)[2]+(*s)[3])/2 <pMin&&phiLim) meanZOK = false;
+        }
+        if ( rLimit && (((*s)[0] < zMax && (*s)[1] > zMin)||meanZOK) ) {
+          bool accepted = false;
+          if (phiLim) {
+              if (pMin>=0 && pMax<=2*M_PI) {
+                if ( (*s)[2]<=(*s)[3] && (*s)[2] <= pMax && (*s)[3] >= pMin )  accepted = true;
+                if ( (*s)[2]>(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin) ) accepted = true;
+              } else if (pMin < 0) {
+                if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax || (*s)[3] >= pMin+2*M_PI) ) accepted = true;
+                if ( (*s)[2]>(*s)[3]  ) accepted = true;
+              } else if (pMax > 2*M_PI) {
+                if ( (*s)[2]<=(*s)[3] && ((*s)[2] <= pMax-2*M_PI || (*s)[3] >= pMin) ) accepted = true;
+                if ( (*s)[2]>(*s)[3]  ) accepted = true;
+              }
+          } else  accepted = true;
+          if(meanZOK) accepted = true;
+          if (accepted) {
+              detached.push_back(station);
+              ATH_MSG_VERBOSE(" active volume accepted by rLimit " <<  station->name() << " zMin " << zMin << " zMax " << zMax << " rMin " << rMin << " rMax " << rMax << " PhiMin " << pMin  << " PhiMax " << pMax);
+          }
+        } else {
+//            ATH_MSG_VERBOSE( " active volume rejected by rLimit " <<  station->name() );
 	} 
       }
     }
@@ -1786,6 +1881,7 @@ std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonTrackingGeometryBuild
 	    bool perm = inert->name().substr(inert->name().size()-4,4)=="PERM";
 	    if ( !m_blendInertMaterial || !m_removeBlended || perm ) detached.push_back(inert);
 	    if ( m_blendInertMaterial && !perm ) blendVols.push_back(inert);
+            ATH_MSG_VERBOSE( " Inert volume accepted by rLimit " <<  inert->name() << " zMin " << zMin << " zMax " << zMax << " rMin " << rMin << " rMax " << rMax << " PhiMin " << pMin  << " PhiMax " << pMax);
 	  }
 	}
       } 
@@ -1932,7 +2028,7 @@ void Muon::MuonTrackingGeometryBuilder::getZParts() const
   if (m_inertAdjustLevel>1) { m_zPartitions.push_back(-8800.);  m_zPartitionsType.push_back(0); }   // ect
   if (m_inertAdjustLevel>0) { m_zPartitions.push_back(-8610.);  m_zPartitionsType.push_back(1); }   // BT
   if (m_inertAdjustLevel>0) { m_zPartitions.push_back(-8000.);  m_zPartitionsType.push_back(1); }   // BT
-  m_zPartitions.push_back(-m_ectZ);  m_zPartitionsType.push_back(0);              // ECT/small whell
+  m_zPartitions.push_back(-m_ectZ);  m_zPartitionsType.push_back(0);              // ECT/small wheel
   if (m_activeAdjustLevel>0) { m_zPartitions.push_back(-7450.); m_zPartitionsType.push_back(0); }   // EIS 
   if (m_activeAdjustLevel>2) { m_zPartitions.push_back(-7364.); m_zPartitionsType.push_back(0); }   // EIS 
   if (m_activeAdjustLevel>0 || m_inertAdjustLevel>0) {m_zPartitions.push_back(-7170.); m_zPartitionsType.push_back(0);}   // cone assembly,TGC 
@@ -2284,11 +2380,11 @@ void Muon::MuonTrackingGeometryBuilder::getShieldParts() const
   m_shieldZPart[1]=-21500.;      // elm1
   m_shieldZPart[2]=-21000.;      // octogon
   m_shieldZPart[3]=-18000.;      // tube
-  m_shieldZPart[4]=-12790.;      // ect
-  m_shieldZPart[5]= -8000.;      // ect
-  m_shieldZPart[6]= -7169.;      // cone
-  m_shieldZPart[7]= -6829.;      // disk
-  m_shieldZPart[8]= -6779.;       //
+  m_shieldZPart[4]=-12882.;      // ect
+  m_shieldZPart[5]= -7930.;      // ect
+  m_shieldZPart[6]= -7914.;      // cone
+  m_shieldZPart[7]= -6941.;      // disk
+  m_shieldZPart[8]= -6783.;       //
 
   for (unsigned int i = 9; i<18 ; i++) m_shieldZPart[i] = - m_shieldZPart[17-i];  
 

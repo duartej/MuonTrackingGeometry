@@ -1,3 +1,11 @@
+2014-11-21 Peter Kluit 
+	* Several fixes and updates MuonInertMaterialBuider and MuonTrackingGeometryBuilder 
+	* add detailed debug and warnings to track down volumes and materials (X0)
+        * MIMB: simplifyShape is only called for blended material 
+        * MTGB: update parameter z values for endcap 
+	* fix some edge/boundary calculations 
+	* tagged as MuonTrackingGeometry-01-00-13
+
 2014-11-06 Peter Kluit 
 	* enlarge outer barrel cylinder for new GEO R07
 	* tagged as MuonTrackingGeometry-01-00-12

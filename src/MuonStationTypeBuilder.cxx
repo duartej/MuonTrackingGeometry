@@ -1419,9 +1419,11 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 	    Trk::HomogeneousLayerMaterial spacerMaterial(material,0.);
 	    Trk::SubtractedPlaneLayer* layx = new Trk::SubtractedPlaneLayer(subPlane,spacerMaterial, thickness, od, 0 );
 	    layers.push_back(layx) ; 
-	    Trk::SubtractedPlaneSurface* subPlaneX=new Trk::SubtractedPlaneSurface(*subPlane,Amg::Transform3D(Amg::Translation3D(-2*shift,0.,0.)));
-	    Trk::SubtractedPlaneLayer* layxx = new Trk::SubtractedPlaneLayer(subPlaneX,spacerMaterial, thickness, od, 0 );
-	    // TODO find out why copy with shift crashes in the destructor ( double transform delete )
+	    //Trk::SubtractedPlaneSurface* subPlaneX
+	    //        = new Trk::SubtractedPlaneSurface(*subPlane,Amg::Transform3D(Amg::Translation3D(-2*shift,0.,0.)));
+	    std::unique_ptr<Trk::SubtractedPlaneSurface> 
+	      subPlaneX(new Trk::SubtractedPlaneSurface(*subPlane,Amg::Transform3D(Amg::Translation3D(-2*shift,0.,0.))));
+	    Trk::SubtractedPlaneLayer* layxx = new Trk::SubtractedPlaneLayer(subPlaneX.get(),spacerMaterial, thickness, od, 0 );
 	    layers.push_back(layxx) ;
             delete subPlane;
 

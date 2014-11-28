@@ -1,3 +1,7 @@
+2014-11-28 Sarka Todorova <sarka.todorova@cern.ch>
+	* restore inner object envelopes for better cpu performance
+	* tagged as MuonTrackingGeometry-01-00-15
+
 2014-11-27 Sarka Todorova <sarka.todorova@cern.ch>
 	* memory leak fix (Goetz Gaycken)
 	* tagged as MuonTrackingGeometry-01-00-14

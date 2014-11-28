@@ -305,22 +305,10 @@ const std::vector<std::pair<const Trk::DetachedTrackingVolume*,std::vector<Amg::
 	    if (trObject) {  
 	      Trk::Material mat = m_materialConverter->convert( vols[ish].first->getMaterial() );
 	      const Trk::TrackingVolume* newType= new Trk::TrackingVolume( *trObject, mat, 0,0,protoName);
-              if(blend) {
-	        const Trk::TrackingVolume* simType = simplifyShape(newType,blend);
-    	        const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(protoName,simType);
-                typeStat->saveConstituents(m_constituents.back());
-	        objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<Amg::Transform3D> >(typeStat,vols[ish].second));
-                ATH_MSG_VERBOSE (" Blended Inert volume translated " << typeStat->name());
-                ATH_MSG_VERBOSE (" Converted Material averaged x0: "<< mat.x0() << " X0 " << vols[ish].first->getMaterial()->getRadLength());
-                ATH_MSG_VERBOSE (" simplified Type material X0 " << simType->X0 << " Original X0 " << newType->X0);
-                if(fabs(simType->X0-newType->X0)>0.01) ATH_MSG_WARNING (" X0 of material changed in simplifyShape " << " simplified Type material X0 " << simType->X0 << " Original X0 " << newType->X0);
-              } else {
-	        const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(protoName,newType);
-	        objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<Amg::Transform3D> >(typeStat,vols[ish].second));
-                ATH_MSG_VERBOSE (" Inert volume translated " << typeStat->name());
-                ATH_MSG_VERBOSE (" Converted Material averaged x0: "<< mat.x0() << " X0 " << vols[ish].first->getMaterial()->getRadLength());
-                ATH_MSG_VERBOSE (" Original X0 " << newType->X0);
-              }
+              const Trk::TrackingVolume* simType = simplifyShape(newType,blend);
+	      const Trk::DetachedTrackingVolume* typeStat = new Trk::DetachedTrackingVolume(protoName,simType);
+	      if (blend) typeStat->saveConstituents(m_constituents.back());
+	      objs.push_back(std::pair<const Trk::DetachedTrackingVolume*,std::vector<Amg::Transform3D> >(typeStat,vols[ish].second));
               delete trObject;
 
 	    }  else {

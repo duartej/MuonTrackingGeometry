@@ -54,7 +54,8 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_innerBarrelRadius(4255.),
 //  m_outerBarrelRadius(13400.),
   m_outerBarrelRadius(13910.),
-  m_barrelZ(6783.),
+//  m_barrelZ(6783.),
+  m_barrelZ(6785.),
   m_innerEndcapZ(12900.),
   m_outerEndcapZ(26050.),
   m_bigWheel(15600.),
@@ -284,6 +285,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
     bool msEntryDefined = false;
     if ( tvol->volumeName() == m_entryVolume ) msEntryDefined = true; 
     // get dimensions
+    ATH_MSG_DEBUG(" msEntryDefined " << msEntryDefined);
     const Trk::CylinderVolumeBounds* enclosedDetectorBounds 
       = dynamic_cast<const Trk::CylinderVolumeBounds*>(&(tvol->volumeBounds()));
     
@@ -377,6 +379,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 											       "All::Gaps::BarrelZP");    
         // set name
 	std::string nameEncl = msEntryDefined ? "All::Gaps::Barrel" : m_entryVolume ;
+        ATH_MSG_DEBUG( " nameEncl " << nameEncl);
 	enclosed = m_trackingVolumeHelper->glueTrackingVolumeArrays(*barrelZP, Trk::negativeFaceXY,
 								    *barrelZMBuffer,Trk::positiveFaceXY, 
 								    nameEncl);    
@@ -389,6 +392,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
     if (m_loadMSentry && m_enclosingEnvelopeSvc ) {
       RZPairVector& envelopeDefs = m_enclosingEnvelopeSvc->getCaloRZValues();
       // to be implemented in detail - for the moment, take just maximal extent
+      ATH_MSG_DEBUG( " m_loadMSentry " << m_loadMSentry << " m_enclosingEnvelopeSvc " << m_enclosingEnvelopeSvc );
       double rmax = 0.; double zmax = 0.;
       for (unsigned int i=0; i<envelopeDefs.size(); i++) { 
 	if ( envelopeDefs[i].first>rmax ) rmax= envelopeDefs[i].first;
@@ -411,6 +415,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 				       dummyLayers,dummyVolumes,
 				       m_entryVolume);
     enclosed->registerColorCode(0); 
+    ATH_MSG_DEBUG( " register Barrel m_entryVolume " << m_entryVolume);
   }
   
   // create central volume ("enclosed" + disk shields ) - this is to allow safe gluing with 3D MS binning

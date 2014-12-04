@@ -1,3 +1,7 @@
+2014-12-04 Sarka Todorova <sarka.todorova@cern.ch>
+	* fpe fix in span calculation
+	* tagged as MuonTrackingGeometry-01-00-17
+
 2014-11-29 Peter Kluit
         * fix to build MuonSpectrometerEntrance
         * tagged as MuonTrackingGeometry-01-00-16

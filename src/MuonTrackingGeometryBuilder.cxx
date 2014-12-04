@@ -52,9 +52,9 @@ Muon::MuonTrackingGeometryBuilder::MuonTrackingGeometryBuilder(const std::string
   m_muonActive(true),
   m_muonInert(true),
   m_innerBarrelRadius(4255.),
-//  m_outerBarrelRadius(13400.),
+  //  m_outerBarrelRadius(13400.),
   m_outerBarrelRadius(13910.),
-//  m_barrelZ(6783.),
+  //  m_barrelZ(6783.),
   m_barrelZ(6785.),
   m_innerEndcapZ(12900.),
   m_outerEndcapZ(26050.),
@@ -909,7 +909,8 @@ const Muon::Span* Muon::MuonTrackingGeometryBuilder::findVolumeSpan(const Trk::V
 
     if(ie>0&&phiStep<0.001) {
        double phin = (transform*edges[ie-1]).phi() - M_PI;
-       phiStep = acos(cos(phi)*cos(phin) + sin(phi)*sin(phin));
+       double cph = cos(phi)*cos(phin) + sin(phi)*sin(phin);
+       phiStep = fabs(cph)<=1 ? acos(cph) : M_PI;     // TODO check this logic  
        ATH_MSG_VERBOSE( " "<< ie<<" phiStep  "<< phiStep );
     }
     double rad = gp.perp();
@@ -2390,7 +2391,6 @@ void Muon::MuonTrackingGeometryBuilder::getShieldParts() const
   m_shieldZPart[6]= -7914.;      // cone
   m_shieldZPart[7]= -6941.;      // disk
   m_shieldZPart[8]= -6783.;       //
-
   for (unsigned int i = 9; i<18 ; i++) m_shieldZPart[i] = - m_shieldZPart[17-i];  
 
   m_shieldHPart.clear();

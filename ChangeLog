@@ -1,3 +1,8 @@
+2014-12-09 Sarka Todorova <sarka.todorova@cern.ch>
+	* fixing coverity issues : 11696,11695,11727,11726,11692,11693,11690,11724,11725,
+	*    11728,11650,11649,11666,11301,11401,11400,11571
+	* tagged as MuonTrackingGeometry-01-00-18
+
 2014-12-04 Sarka Todorova <sarka.todorova@cern.ch>
 	* fpe fix in span calculation
 	* tagged as MuonTrackingGeometry-01-00-17

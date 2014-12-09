@@ -801,15 +801,14 @@ Amg::Vector3D Muon::MuonInertMaterialBuilder::getScanPoint(const Trk::Volume* vo
 #endif       
       //std::cout << "prism vertices:"<< xy.size()<< std::endl;
       gp = Amg::Vector3D(xy[2].first +sqrt(rndm[1])*( xy[0].first -xy[2].first 
-							    + rndm[2]*( xy[1].first -xy[0].first  ) ),
-			       xy[2].second+sqrt(rndm[1])*( xy[0].second-xy[2].second 
-							    + rndm[2]*( xy[1].second-xy[0].second ) ),
+						      + rndm[2]*( xy[1].first -xy[0].first  ) ),
+			 xy[2].second+sqrt(rndm[1])*( xy[0].second-xy[2].second 
+						      + rndm[2]*( xy[1].second-xy[0].second ) ),
 			       -z + zfr*2*z);
     }
     
-  } else {
-    ATH_MSG_DEBUG("volume bounds not recognized in scan");
   }
+
   if (!vol->inside(vol->transform()*gp,0.001)) ATH_MSG_DEBUG("test hit:wrong scan hit:"<<gp);
   
   return (vol->transform()*gp);

@@ -578,7 +578,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 						"Muon::Detectors::NegativeBigWheel" ); 
    //
    Amg::Vector3D posBigWheelShift(0.,0.,2*(m_innerEndcapZ+bigWheelZHalfSize));
-   Trk::Volume posBWVol(negBWVol,*(new Amg::Transform3D(Amg::Translation3D(posBigWheelShift))));
+   Trk::Volume posBWVol(negBWVol,Amg::Transform3D(Amg::Translation3D(posBigWheelShift)));
    if (m_adjustStatic && m_static3d) positiveMuonBigWheel = processVolume( &posBWVol,3,"Muon::Detectors::PositiveBigWheel" ); 
    else if (m_adjustStatic) positiveMuonBigWheel = processVolume( &posBWVol,-1,"Muon::Detectors::PositiveBigWheel" ); 
    else positiveMuonBigWheel = processVolume( &posBWVol,m_outerEndcapEtaPartition,m_phiPartition,

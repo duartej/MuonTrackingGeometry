@@ -288,7 +288,10 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
     ATH_MSG_DEBUG(" msEntryDefined " << msEntryDefined);
     const Trk::CylinderVolumeBounds* enclosedDetectorBounds 
       = dynamic_cast<const Trk::CylinderVolumeBounds*>(&(tvol->volumeBounds()));
-    
+    if (!enclosedDetectorBounds) {    
+      ATH_MSG_ERROR(" dynamic cast of enclosed volume to the cylinder bounds failed, aborting MTG build-up ");
+      return 0;
+    }
     double enclosedDetectorHalfZ = enclosedDetectorBounds->halflengthZ();
     double enclosedDetectorOuterRadius = enclosedDetectorBounds->outerRadius();
     // get subvolumes at navigation level and check THEIR dimensions      
@@ -2505,38 +2508,40 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
       double fraction = (*cs)[ic].second;
       double csVol = fraction*calculateVolume(nCs);      
       const Muon::Span* s = findVolumeSpan(&(nCs->volumeBounds()), nCs->transform(), 0.,0.) ;
-      if (s) ATH_MSG_VERBOSE("constituent:"<<ic<<":z:"<< (*s)[0]<<","<<(*s)[1]<<":r:"<< (*s)[4]<<","<<(*s)[5]
-	    <<":phi:"<<(*s)[2]<<","<<(*s)[3]);      
-      double enVol = 0.;
-      // loop over frame volumes, check if confined
-      //std::vector<const Trk::TrackingVolume*>::iterator fIter = (*mIter).second->begin(); 
-      std::vector<const Trk::TrackingVolume*>* vv =m_blendMap[*viter]; 
-      std::vector<const Trk::TrackingVolume*>::iterator fIter=vv->begin(); 
-      std::vector<bool> fEncl; 
-      fEncl.clear();
-      // blending factors can be saved, and not recalculated for each clone
-      //for ( ; fIter!=(*mIter).second->end(); fIter++) {
-      for ( ; fIter!=vv->end(); fIter++) {
-        fEncl.push_back(enclosed(*fIter,s));
-        if ( fEncl.back() ) enVol += calculateVolume(*fIter);
-      }
-      delete nCs; delete s;
-      // diluting factor
-      double dil =  enVol>0. ?  csVol/enVol : 0.;
-      //std::cout << "const:dil:"<< ic<<","<<dil<< std::endl;
-      if (dil>0.) { 
-	//for ( fIter=(*mIter).second->begin(); fIter!=(*mIter).second->end(); fIter++) { 
-	for ( fIter=vv->begin(); fIter!=vv->end(); fIter++) { 
-	  //if (fEncl[fIter-(*mIter).second->begin()]) { (*fIter)->addMaterial(*detMat,dil); if (m_colorCode==0) (*fIter)->registerColorCode(12) ; 
-	  if (fEncl[fIter-vv->begin()]) { (*fIter)->addMaterial(*detMat,dil); if (m_colorCode==0) (*fIter)->registerColorCode(12) ; 
-	    //ATH_MSG_VERBOSE((*fIter)->volumeName()<<" acquires material from "<<  (*mIter).first->name());  }
-	    ATH_MSG_VERBOSE((*fIter)->volumeName()<<" acquires material from "<<  (*viter)->name());  }
+      if (s) {
+	ATH_MSG_VERBOSE("constituent:"<<ic<<":z:"<< (*s)[0]<<","<<(*s)[1]<<":r:"<< (*s)[4]<<","<<(*s)[5]
+			<<":phi:"<<(*s)[2]<<","<<(*s)[3]);      
+	double enVol = 0.;
+	// loop over frame volumes, check if confined
+	//std::vector<const Trk::TrackingVolume*>::iterator fIter = (*mIter).second->begin(); 
+	std::vector<const Trk::TrackingVolume*>* vv =m_blendMap[*viter]; 
+	std::vector<const Trk::TrackingVolume*>::iterator fIter=vv->begin(); 
+	std::vector<bool> fEncl; 
+	fEncl.clear();
+	// blending factors can be saved, and not recalculated for each clone
+	//for ( ; fIter!=(*mIter).second->end(); fIter++) {
+	for ( ; fIter!=vv->end(); fIter++) {
+	  fEncl.push_back(enclosed(*fIter,s));
+	  if ( fEncl.back() ) enVol += calculateVolume(*fIter);
 	}
-	ATH_MSG_VERBOSE("diluting factor:"<< dil<<" for "<< (*viter)->name()<<","<<ic);
-      } else {
-	ATH_MSG_VERBOSE("diluting factor:"<< dil<<" for "<< (*viter)->name()<<","<<ic);
+	delete nCs; delete s;
+	// diluting factor
+	double dil =  enVol>0. ?  csVol/enVol : 0.;
+	//std::cout << "const:dil:"<< ic<<","<<dil<< std::endl;
+	if (dil>0.) { 
+	  //for ( fIter=(*mIter).second->begin(); fIter!=(*mIter).second->end(); fIter++) { 
+	  for ( fIter=vv->begin(); fIter!=vv->end(); fIter++) { 
+	    //if (fEncl[fIter-(*mIter).second->begin()]) { (*fIter)->addMaterial(*detMat,dil); if (m_colorCode==0) (*fIter)->registerColorCode(12) ; 
+	    if (fEncl[fIter-vv->begin()]) { (*fIter)->addMaterial(*detMat,dil); if (m_colorCode==0) (*fIter)->registerColorCode(12) ; 
+	      //ATH_MSG_VERBOSE((*fIter)->volumeName()<<" acquires material from "<<  (*mIter).first->name());  }
+	      ATH_MSG_VERBOSE((*fIter)->volumeName()<<" acquires material from "<<  (*viter)->name());  }
+	  }
+	  ATH_MSG_VERBOSE("diluting factor:"<< dil<<" for "<< (*viter)->name()<<","<<ic);
+	} else {
+	  ATH_MSG_VERBOSE("diluting factor:"<< dil<<" for "<< (*viter)->name()<<","<<ic);
+	}
       }
-  }
-  if ( m_removeBlended ) {  ATH_MSG_VERBOSE("deleting "<< (*viter)->name()); delete *viter; }
+    }
+    if ( m_removeBlended ) {  ATH_MSG_VERBOSE("deleting "<< (*viter)->name()); delete *viter; }
   }
 }

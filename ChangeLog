@@ -1,3 +1,9 @@
+2014-12-10 Sarka Todorova <sarka.todorova@cern.ch>
+	* fixing coverity issues : 11323,11324,11408,11409,11396,11305,11837,11755,11756,
+	*    11432(bugfix),11315-9,11410,11386,11398,11637-41
+	* coverity suggestions not followed in 11691(SharedObject init),11231(not a bug)  
+	* tagged as MuonTrackingGeometry-01-00-19
+
 2014-12-09 Sarka Todorova <sarka.todorova@cern.ch>
 	* fixing coverity issues : 11696,11695,11727,11726,11692,11693,11690,11724,11725,
 	*    11728,11650,11649,11666,11301,11401,11400,11571

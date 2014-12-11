@@ -1431,7 +1431,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
             delete subPlane;
 	    layers.push_back(lay) ; 
 	  }
-          delete v1; delete v2;          
+          //delete v1; delete v2;          
 	}
       } else {
 	std::cout << "unresolved spacer component "<< clv->getName() << std::endl; 

@@ -1,3 +1,7 @@
+2014-12-11 Sarka Todorova <sarka.todorova@cern.ch>
+	* fixing bug introduced in -01-00-18
+	* tagged as MuonTrackingGeometry-01-00-20
+
 2014-12-10 Sarka Todorova <sarka.todorova@cern.ch>
 	* fixing coverity issues : 11323,11324,11408,11409,11396,11305,11837,11755,11756,
 	*    11432(bugfix),11315-9,11410,11386,11398,11637-41

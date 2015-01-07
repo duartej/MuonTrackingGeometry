@@ -844,6 +844,8 @@ const std::vector<const Trk::DetachedTrackingVolume*>* Muon::MuonStationBuilder:
 						    m_muonStationTypeBuilder->processTrdStationComponents(cv,envBounds); 
 		    // enveloping volume
 		    envelope= new Trk::Volume(transf,envBounds);
+		  } else {
+                    delete transf; 
 		  }
 		}
 		// hack to verify BI/BM stations

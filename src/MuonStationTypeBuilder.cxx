@@ -1255,7 +1255,7 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 	gv.push_back(&(*((*vIter)->getChildVol(ich))));
         transf.push_back(Amg::Transform3D( (*tIter)*Amg::CLHEPTransformToEigen((*vIter)->getXToChildVol(ich))));  
       }
-      gv.erase(vIter); transf.erase(tIter);
+      vIter=gv.erase(vIter); tIter=transf.erase(tIter);
     } else { vIter++; tIter++; }
   } 
   // translate into layers
@@ -1430,8 +1430,9 @@ const Trk::TrackingVolume* Muon::MuonStationTypeBuilder::processSpacer(Trk::Volu
 	    Trk::SubtractedPlaneLayer* lay = new Trk::SubtractedPlaneLayer(subPlane,spacerMaterial, thickness, od, 0 );
             delete subPlane;
 	    layers.push_back(lay) ; 
-	  }
-          //delete v1; delete v2;          
+	  } else {
+            delete v1; delete v2;
+	  }          
 	}
       } else {
 	std::cout << "unresolved spacer component "<< clv->getName() << std::endl; 

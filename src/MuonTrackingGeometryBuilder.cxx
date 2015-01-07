@@ -562,7 +562,7 @@ const Trk::TrackingGeometry* Muon::MuonTrackingGeometryBuilder::trackingGeometry
 						"Muon::Detectors::NegativeOuterBuffer" ); 
    //
    Amg::Vector3D posOuterBufferShift(0.,0.,2*(m_bigWheel+outerBufferZHalfSize));
-   Trk::Volume posBuffVol(negBuffVol,*(new Amg::Transform3D(Amg::Translation3D(posOuterBufferShift))));
+   Trk::Volume posBuffVol(negBuffVol,Amg::Transform3D(Amg::Translation3D(posOuterBufferShift)));
    if (m_adjustStatic && m_static3d) positiveMuonOuterBuffer = processVolume( &posBuffVol,3,"Muon::Detectors::PositiveOuterBuffer" ); 
    else if (m_adjustStatic) positiveMuonOuterBuffer = processVolume( &posBuffVol,-1,"Muon::Detectors::PositiveOuterBuffer" ); 
    else positiveMuonOuterBuffer = processVolume( &posBuffVol,m_outerEndcapEtaPartition,m_phiPartition,
@@ -2524,7 +2524,6 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
 	  fEncl.push_back(enclosed(*fIter,s));
 	  if ( fEncl.back() ) enVol += calculateVolume(*fIter);
 	}
-	delete nCs; delete s;
 	// diluting factor
 	double dil =  enVol>0. ?  csVol/enVol : 0.;
 	//std::cout << "const:dil:"<< ic<<","<<dil<< std::endl;
@@ -2541,6 +2540,7 @@ void Muon::MuonTrackingGeometryBuilder::blendMaterial() const
 	  ATH_MSG_VERBOSE("diluting factor:"<< dil<<" for "<< (*viter)->name()<<","<<ic);
 	}
       }
+      delete nCs; delete s;
     }
     if ( m_removeBlended ) {  ATH_MSG_VERBOSE("deleting "<< (*viter)->name()); delete *viter; }
   }

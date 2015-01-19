@@ -1,3 +1,8 @@
+2015-01-19 Sarka Todorova <sarka.todorova@cern.ch>
+	* re-fixing coverity issues: 28662,11666
+	* won't fix : 11231(false warning),28666(SharedObject takes ownership)
+	* tagged as MuonTrackingGeometry-01-00-22
+
 2015-01-07 Sarka Todorova <sarka.todorova@cern.ch>
 	* fixing coverity issues: 28662,28665,28667-9,11666
 	* won't fix : 11231(false warning),28666(SharedObject takes ownership)
